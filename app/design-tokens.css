@@ -1,0 +1,165 @@
+/**
+ * Orderly Design Tokens
+ * Figma file: UTUTU — "Orderly — Foundations" board / Variables (Color, Spacing, Radius, Size)
+ * Source of truth: Figma Variables. Keep this file in sync when values change in Figma.
+ * Generated: 2026-07-22
+ *
+ * 新デザイン（/order 配下）専用のトークン。
+ * 既存の :root（globals.css）とは名前空間が分かれているため衝突しない。
+ * spacing / borderRadius(sm,md,lg,xl) / boxShadow(card,float) は
+ * Tailwind のデフォルト値・既存拡張値と同名で異なる値になるため、
+ * tailwind.config.ts の theme.extend には意図的にマージしていない。
+ * /order の新規JSXでは `p-[var(--space-16)]` や `rounded-[var(--radius-xl)]`
+ * のような任意値記法、または style={{ ... }} で直接これらの変数を参照すること。
+ */
+
+:root {
+  /* ============================================================
+   * COLOR — Brand (YORKYS mode)
+   * Accent set is the only brand-swappable group. Swapping a
+   * future brand = redefining these 4 values only.
+   * ============================================================ */
+  --color-accent-primary: #FAC03D; /* CTA / selected state. Black text on this = 10.5:1 (AAA) */
+  --color-accent-pressed: #E5A817; /* hover / active state for accent-primary */
+  --color-accent-deep:    #996B00; /* white text on this = 4.7:1 (AA) */
+  --color-accent-subtle:  #FFFCF7; /* selection bg / tint */
+
+  /* COLOR — Text */
+  --color-text-primary:   #1A1A1A;
+  --color-text-secondary: #646464;
+  --color-text-tertiary:  #969696;
+  --color-text-disabled:  #C4C4C4;
+  --color-text-inverse:   #FFFFFF;
+
+  /* COLOR — Border */
+  --color-border-divider: #EDEDED; /* hairline separators */
+  --color-border-default: #DDDDDD; /* input / outline borders */
+
+  /* COLOR — Background (3-step scale) */
+  --color-bg-primary:   #FAFAFA;
+  --color-bg-secondary: #F5F5F5;
+  --color-bg-tertiary:  #EFEFEF;
+  /* 暖色（クリーム寄り）背景。Cartページのルート背景・Bottom Summary Bar背景用。
+   * Demoテーマ（Green）を導入する場合はこの1行を #F6F9F3 に差し替える想定。 */
+  --color-bg-warm:      #FCF7EE;
+
+  /* COLOR — Surface */
+  --color-surface-white: #FFFFFF;
+  --color-surface-ink:   #1A1A1A;
+
+  /* COLOR — Status（スタッフ管理画面: 厨房Order Card・Staff Call Chip・Status Badge等） */
+  --color-status-urgent-subtle:  #FCE8E8;
+  --color-status-urgent:         #DC2626;
+  --color-status-warning-subtle: #FEF3E2;
+  --color-status-warning:        #F59E0B;
+  --color-status-success-subtle: #E3F5E9;
+  --color-status-success:        #16A34A;
+  --color-status-info-subtle:    #E3EDFB;
+  --color-status-info:           #2563EB;
+
+  /* COLOR — Tag (category chip backgrounds, brand-independent) */
+  --color-tag-yellow: #FBEEC5;
+  --color-tag-orange: #FCE8D8;
+  --color-tag-pink:   #FBE4EA;
+  --color-tag-red:    #FBE0DC;
+  --color-tag-green:  #E3F2DF;
+  --color-tag-teal:   #DEF1EC;
+  --color-tag-blue:   #E1EDF8;
+  --color-tag-purple: #EBE5F6;
+  --color-tag-brown:  #F0E8DC;
+  --color-tag-gray:   #ECEDEF;
+
+  /* ============================================================
+   * SPACING — 15-step scale (padding / margin / gap)
+   * ============================================================ */
+  --space-2:   2px;
+  --space-4:   4px;
+  --space-8:   8px;
+  --space-12:  12px;
+  --space-16:  16px;
+  --space-20:  20px;
+  --space-24:  24px;
+  --space-32:  32px;
+  --space-40:  40px;
+  --space-48:  48px;
+  --space-64:  64px;
+  --space-80:  80px;
+  --space-96:  96px;
+  --space-112: 112px;
+  --space-128: 128px;
+
+  /* ============================================================
+   * RADIUS
+   * ============================================================ */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-full: 9999px;
+
+  /* ============================================================
+   * SIZE — control heights, icons, touch target
+   * ============================================================ */
+  --size-touch-min:      44px;
+  --size-control-sm:     36px;
+  --size-control-md:     44px;
+  --size-control-lg:     52px;
+  --size-icon-sm:        16px;
+  --size-icon-md:        20px;
+  --size-icon-lg:        24px;
+
+  /* Screen reference sizes (for reasoning about layout, not literal CSS width) */
+  --screen-mobile-w:  390px;
+  --screen-mobile-h:  844px;
+  --screen-tablet-w:  1180px;
+  --screen-tablet-h:  820px;
+
+  /* ============================================================
+   * ELEVATION — box-shadow presets
+   * ============================================================ */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-bottom-bar: 0 -4px 16px rgba(0, 0, 0, 0.08);
+
+  /* ============================================================
+   * TYPOGRAPHY — font families
+   * Weights needed: Noto Sans JP 500/700, Barlow 500/600/700
+   * NOTE: --font-jp / --font-en は next/font（lib/fonts.ts）が
+   * <html> のクラス経由で定義する。ここで再宣言すると cascade の
+   * 順序次第で next/font のロード済みフォントを上書きしてしまうため
+   * 意図的に宣言しない。フォールバックは tailwind.config.ts 側の
+   * fontFamily.jp / fontFamily.en に持たせている。
+   * ============================================================ */
+}
+
+/*
+ * ============================================================
+ * TYPE SCALE REFERENCE (implement as utility classes or CSS
+ * classes to match your project's conventions — not prescribed
+ * here since Tailwind version/setup varies)
+ * ============================================================
+ *
+ * Name              Font   Weight    Size  Line-height  Letter-spacing
+ * ----------------  -----  --------  ----  -----------  --------------
+ * jp-heading-xl      JP    700       22px  130%         0（スタッフ管理画面Top Bar専用）
+ * jp-heading-l       JP    700       20px  140%         1%
+ * jp-heading-m       JP    700       17px  140%         1%
+ * jp-heading-s       JP    700       15px  145%         1%
+ * jp-body            JP    500       14px  160%         1%
+ * jp-body-bold       JP    700       14px  160%         1%
+ * jp-caption         JP    500       12px  150%         1%
+ * jp-caption-bold    JP    700       12px  150%         1%
+ * jp-label           JP    500       11px  140%         2%
+ * en-price-l         EN    600       22px  120%         0
+ * en-price-m         EN    600       17px  120%         0
+ * en-price-s         EN    600       14px  120%         0
+ * en-label           EN    500       12px  120%         4%
+ * en-display-s       EN    500       20px  120%         0
+ * en-display-m       EN    500       24px  120%         0
+ * en-display-l       EN    500       28px  120%         0
+ * en-display-xl      EN    500       40px  110%         0
+ *
+ * Price fields should use `font-variant-numeric: tabular-nums;`
+ * (Tailwind: `tabular-nums`) so digits don't shift width.
+ */
