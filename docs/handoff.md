@@ -1,4 +1,9 @@
-# Orderly リデザイン作業 引き継ぎメモ
+# GOOD ORDER リデザイン作業 引き継ぎメモ
+
+**サービス名は「GOOD ORDER」**（旧称 Orderly）。表示文言・パッケージ名・リポジトリ名は
+すべて改名済み。ただし以下3つは**意図的に `orderly` のまま残している**（後述の理由）:
+`lib/store.ts` のカート永続化キー / `lib/kitchenAck.ts` の確認済みキー /
+Postgres関数 `public.orderly_business_date()`。
 
 次のセッションはここから読めば続きに着手できるはず。
 
@@ -17,7 +22,8 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 **Git状況（2026-07-26 更新）**: ここまでのリデザイン作業は全て
 `main` に14コミットに分けてcommit済みで、**GitHubへpush完了**。
 
-- リモート: https://github.com/temmahirasawa-spec/Orderly （**public**）
+- リモート: https://github.com/temmahirasawa-spec/good-order （**public**）
+  旧名 `Orderly` から改名済み（GitHubが旧URLからリダイレクトするので古いリンクも生きる）
 - 公開前に機密スキャン実施済み（JWT・Webhook URL・実Supabase URL・パスワード代入とも0件。
   `.env.local` は `.gitignore` で除外、`.env.local.example` はプレースホルダのみ）
 - **publicなので、今後 `.env.local` 等をうっかりコミットしないよう特に注意すること**
@@ -517,6 +523,25 @@ Componentsページ（`46:16`）しか返らないが、これはツールの挙
 - dev稼働中にも`Cannot find module './948.js'`系のチャンク欠落で500になることがある。
   同じく dev停止 →`rm -rf .next`→ dev再起動で直る。
 - devサーバーのログは`/tmp/orderly-dev.log`。
+
+### サービス名の改名（Orderly → GOOD ORDER）で**変えなかった**もの
+表示に出ない永続化キー・DBオブジェクトなので、改名するとデータや挙動が壊れる。
+名前の見た目のために払うコストに見合わないため、意図的に `orderly` を残している。
+
+- `lib/store.ts` の `name: "orderly-cart"` — カート（zustand persist）のLocalStorageキー。
+  変えると**既存のお客様のカート・注文履歴・テーブル番号が全部消える**
+- `lib/kitchenAck.ts` の `orderly_kitchen_ack` — 厨房の「確認済み注文」キー。
+  変えると一度だけ全注文が新規扱いになり、アラートと通知音が鳴る
+- `supabase/pickup_no.sql` の `public.orderly_business_date()` — **本番DBに作成済みの関数**。
+  SQLファイルだけ書き換えてもDBは変わらず、DB側を変えるなら採番トリガーと
+  バックフィルの参照も同時に張り替える必要がある（受渡番号の採番が止まるリスク）
+
+将来どうしても揃えたい場合は、LocalStorageキーは「旧キーがあれば読み込んで新キーに
+コピーする」移行コードを噛ませれば無害に変えられる。DB関数は
+`ALTER FUNCTION … RENAME TO …` とトリガー再作成をセットで行うこと。
+
+なお `app/design-tokens.css` の `Figma file: UTUTU — "Orderly — Foundations" board` は
+**Figma側のボード名そのもの**なので、Figmaを改名するまでは変えていない。
 
 ### その他
 - Tailwindのカスタムクラス（`type-jp-*`, `type-en-*`など`app/typography.css`で定義された

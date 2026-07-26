@@ -1,5 +1,5 @@
 /**
- * Orderly Typography Utilities
+ * GOOD ORDER Typography Utilities
  * Figma Text Styles (JP/* and EN/*) を1:1で実装するユーティリティクラス。
  * Tailwindのキーとの衝突を避けるため、theme.extendにはマージせず
  * このままグローバルCSSとして読み込む（design-tokens.cssの後に）。

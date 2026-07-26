@@ -136,7 +136,7 @@ function TopContent() {
           className="text-[10px] text-white/40 tracking-widest"
           style={{ fontFamily: "HalisR, sans-serif" }}
         >
-          POWERED BY ORDERLY
+          POWERED BY GOOD ORDER
         </p>
       </div>
     </main>

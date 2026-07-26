@@ -261,12 +261,12 @@ export default function KitchenPage() {
   useEffect(() => {
     if (!shouldAlert) {
       const urgentText = urgentCount > 0 ? `🚨 緊急${urgentCount} ` : "";
-      document.title = `${urgentText}(${groups.length}) 厨房 — Orderly`;
+      document.title = `${urgentText}(${groups.length}) 厨房 — GOOD ORDER`;
       return;
     }
     let blink = true;
     const titleInterval = setInterval(() => {
-      document.title = blink ? "🔔 新規注文！" : `(${groups.length}) 厨房 — Orderly`;
+      document.title = blink ? "🔔 新規注文！" : `(${groups.length}) 厨房 — GOOD ORDER`;
       blink = !blink;
     }, 600);
 

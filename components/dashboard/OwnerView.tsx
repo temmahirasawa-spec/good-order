@@ -170,7 +170,7 @@ export default function OwnerView() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `orderly_sales_${period}_${todayYmd()}.csv`;
+    a.download = `good_order_sales_${period}_${todayYmd()}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
