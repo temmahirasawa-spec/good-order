@@ -1,27 +1,632 @@
+@import "./design-tokens.css";
+@import "./typography.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ─── Halis Rounded ─────────────────────────────────────── */
+@font-face {
+  font-family: "HalisR";
+  src: url("/fonts/Ahmet Altun - HalisR-Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "HalisR";
+  src: url("/fonts/Ahmet Altun - HalisR-Book.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "HalisR";
+  src: url("/fonts/Ahmet Altun - HalisR-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "HalisR";
+  src: url("/fonts/Ahmet Altun - HalisR-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "HalisR";
+  src: url("/fonts/Ahmet Altun - HalisR-Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─── Root variables ─────────────────────────────────────── */
+:root {
+  /* ── Inks（黒） ── */
+  --ink:       #1A1A1A;                    /* 90% 相当：本文 */
+  --ink-sub:   rgba(26, 26, 26, 0.70);     /* 70% 相当：補助テキスト */
+  --ink-mute:  rgba(26, 26, 26, 0.45);     /* 45% 相当：最も弱い */
+  --ink-soft:  rgba(26, 26, 26, 0.70);     /* 旧 --ink-soft の alias（新規コードでは --ink-sub 推奨） */
+  --text:      var(--ink);                 /* 旧 --text の alias */
+  --muted:     rgba(26, 26, 26, 0.45);     /* 旧ベージュから black 45% へ差し替え */
+
+  /* ── Gold（ブランドカラー） ── */
+  --gold:      #FAC03D;
+  --gold-dk:   #C99413;                    /* ゴールド文字用の濃色 */
+  --gold-lt:   #FFF5DA;                    /* バッジ/背景用の明色 */
+  --gold-on:   #1A1A1A;                    /* ゴールド背景の上の文字色（必ず黒） */
+
+  /* ── Surfaces ── */
+  --bg:        #FDF8F2;
+  --surface:   #FDFAF4;
+  --surf:      #FDFAF4;
+  --white:     #FFFFFF;
+  --border:    #E8DCC8;
+
+  /* ── Status ── */
+  --status-pending:    #C99413;
+  --status-pending-bg: #FFF5DA;
+  --status-served:     #2A7A4F;
+  --status-served-bg:  #E8F5EE;
+
+  /* ── 旧 alias（互換用） ── */
+  --primary: #FAC547;
+  --accent:  #FAC03D;
+
+  /* 価格などの数字表記用 */
+  --font-price: var(--font-urbanist), system-ui, sans-serif;
+
+  /* ── Motion system ─────────────────────────── */
+  /* Easing */
+  --ease-breath:    cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-snap:      cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-soft:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Duration */
+  --t-instant: 80ms;
+  --t-quick:   160ms;
+  --t-base:    220ms;
+  --t-slow:    380ms;
+  --transition-base: all var(--t-base) var(--ease-breath);
+}
+
+/* OS のモーション軽減設定に追随 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+
+/* ─── Base ───────────────────────────────────────────────── */
+html {
+  background-color: var(--bg);
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  background-color: var(--bg);
+  font-family: var(--font-noto), "Noto Sans JP", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 0; background: transparent; }
+
+/* ─── Utilities ──────────────────────────────────────────── */
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .font-halis { font-family: "HalisR", sans-serif; }
+  .font-urbanist { font-family: var(--font-urbanist), system-ui, sans-serif; }
+  .text-balance { text-wrap: balance; }
+
+  /* 価格・数字表記用ユーティリティ */
+  .font-price {
+    font-family: var(--font-price);
+    font-weight: 500;
+    color: var(--ink);
+    font-feature-settings: "tnum" 1;
   }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+}
+
+/* ────────────────────────────────────────────────
+   Motion: 共通のマイクロインタラクション
+   ──────────────────────────────────────────────── */
+
+/* ── ページトランジション（components/PageTransition.tsx）──
+   fill-mode なし = アニメ完了後にスタイルが自動で消えるため、
+   transform 残留による position:fixed 破壊が起きない */
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.page-fade-in {
+  animation: page-fade-in 220ms var(--ease-breath);
+}
+
+@keyframes page-slide-up {
+  from { transform: translateY(100vh); }
+  to   { transform: translateY(0); }
+}
+.page-slide-up {
+  animation: page-slide-up 380ms var(--ease-breath);
+}
+
+/* 商品詳細ページの×ボタン: 下へスライドアウトしてから遷移する
+   （app/order/item/[id]/page.tsx の CLOSE_ANIM_MS と時間を合わせること） */
+@keyframes page-slide-down {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100vh); }
+}
+.page-slide-down {
+  animation: page-slide-down 320ms var(--ease-breath) forwards;
+}
+
+/* ============================================================
+   厨房画面（テーブルグルーピング + 3 段階アイテム）
+   ============================================================ */
+
+.kitchen-card {
+  background: var(--white);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 220ms ease, background 220ms ease;
+}
+.kitchen-card--normal { background: #fffaf0; border-color: #f3e9d4; }
+.kitchen-card--warning { background: #fff4e0; border-color: #e8b855; }
+.kitchen-card--warning .elapsed { color: #b8780f; font-weight: 700; }
+.kitchen-card--urgent {
+  background: #ffece0;
+  border-color: #d44a1f;
+  animation: urgent-pulse 2s ease-in-out infinite;
+}
+.kitchen-card--urgent .elapsed { color: #b03010; font-weight: 800; }
+@keyframes urgent-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 74, 31, 0); }
+  50%      { box-shadow: 0 0 0 6px rgba(212, 74, 31, 0.15); }
+}
+
+/* 未確認パルス（緊急色がある時はそちらを優先） */
+.kitchen-card--unack:not(.kitchen-card--urgent) {
+  border-color: var(--gold);
+  animation: ack-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ack-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 192, 61, 0); }
+  50%      { box-shadow: 0 0 0 8px rgba(250, 192, 61, 0.25); }
+}
+
+.ack-banner {
+  width: 100%;
+  background: var(--gold);
+  color: var(--ink);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: background 120ms ease, transform 100ms ease;
+}
+.ack-banner:active { background: #e0a820; transform: scale(0.99); }
+
+.kitchen-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--border);
+  margin-bottom: 14px;
+}
+.kitchen-card-table {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -0.5px;
+}
+.kitchen-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.elapsed {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-sub);
+  font-family: var(--font-urbanist), system-ui, sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+
+.round-block { margin-top: 14px; }
+.round-block:first-child { margin-top: 0; }
+.round-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+.item-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+  margin-bottom: 8px;
+  min-height: 56px;
+  text-align: left;
+}
+.item-row:active { transform: scale(0.99); }
+.item-row.item-pending { background: var(--white); }
+.item-row.item-cooking {
+  background: #fff4e0;
+  border-color: #e8b855;
+  color: #8a5510;
+}
+.item-row.item-cooking .item-status-icon {
+  animation: cooking-flicker 1.5s ease-in-out infinite;
+}
+.item-row.item-done {
+  background: #e8f5ee;
+  border-color: #2a7a4f;
+  color: #1a5538;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.item-status-icon { font-size: 20px; text-align: center; }
+@keyframes cooking-flicker {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
+.cooking-progress {
+  font-size: 13px;
+  color: var(--ink-sub);
+  text-align: center;
+  padding: 12px 0;
+  font-weight: 600;
+}
+
+.btn-served-ready {
+  width: 100%;
+  background: #2a7a4f;
+  color: var(--white);
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 120ms ease, transform 100ms ease;
+}
+.btn-served-ready:active { background: #1a5538; transform: scale(0.99); }
+
+/* テイクアウト商品バッジ（ラベル併記用） */
+.takeout-flag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--ink);
+  color: var(--white);
+  padding: 2px 6px;
+  border-radius: 999px;
+  margin-right: 6px;
+  letter-spacing: 0.05em;
+}
+
+/* サマリー */
+.kitchen-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.kitchen-summary h1 {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.kitchen-summary p {
+  font-size: 13px;
+  color: var(--ink-sub);
+  font-weight: 600;
+}
+.urgent-badge {
+  display: inline-block;
+  margin-left: 8px;
+  background: #d44a1f;
+  color: var(--white);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* ── 戻るボタン（ヘッダー左上、常にホームへ戻る） ── */
+.back-to-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(26, 26, 26, 0.04);
+  color: var(--ink);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease-out, transform 100ms ease-out;
+}
+.back-to-home:active {
+  background: rgba(26, 26, 26, 0.10);
+  transform: scale(0.96);
+}
+.back-to-home svg { flex-shrink: 0; }
+
+/* ── ドロワー内のセクション区切り ── */
+.drawer-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 16px;
+}
+
+/* ── ボトムシート共通 ── */
+.sheet-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(26, 26, 26, 0.06);
+  color: var(--ink);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: background 120ms ease-out;
+}
+.sheet-close:active { background: rgba(26, 26, 26, 0.12); }
+
+.bottom-sheet {
+  max-height: calc(100dvh - 60px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-sheet-actions {
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+/* ───────────────────────────────────────────
+   ボタン: プライマリ / セカンダリ / 詳細
+   Apple HIG 準拠：小 8px / 中 10px / 大 14px
+   ─────────────────────────────────────────── */
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--gold-on);        /* 黒字 */
+  border: none;
+  border-radius: 8px;
+  height: 36px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-primary:active { background: #E8AA20; }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink-sub);
+  border: 1.5px solid var(--ink-sub);
+  border-radius: 8px;
+  height: 36px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-secondary:active { background: rgba(26, 26, 26, 0.04); }
+
+.btn-confirm {
+  background: var(--gold);
+  color: var(--gold-on);
+  border: none;
+  border-radius: 14px;
+  height: 56px;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(250, 192, 61, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* E-1, E-2: ボタン / カードのタップ感 */
+button, .btn {
+  transition: transform var(--t-instant) var(--ease-snap),
+              box-shadow var(--t-quick) var(--ease-breath);
+}
+button:active, .btn:active {
+  transform: scale(0.97);
+}
+.card:active {
+  transform: scale(0.98);
+  transition: transform 80ms ease-out;
+}
+
+/* C-1: カートアイコンのピョコン */
+@keyframes cart-bump {
+  0%   { transform: scale(1)    rotate(0deg); }
+  20%  { transform: scale(1.25) rotate(-8deg); }
+  40%  { transform: scale(0.95) rotate(6deg); }
+  60%  { transform: scale(1.1)  rotate(-3deg); }
+  80%  { transform: scale(0.98) rotate(1deg); }
+  100% { transform: scale(1)    rotate(0deg); }
+}
+.cart-bump { animation: cart-bump 600ms var(--ease-out-soft); }
+
+/* カートバッジ数字のポップ */
+@keyframes badge-pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+.badge-pop { animation: badge-pop 180ms ease-out; }
+
+/* C-3: ゴールドの波紋 */
+@keyframes ripple-glow {
+  0%   { transform: scale(0); opacity: 0.45; }
+  100% { transform: scale(4); opacity: 0; }
+}
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(250, 192, 61, 0.55);
+  pointer-events: none;
+  transform: scale(0);
+  animation: ripple-glow 480ms var(--ease-out-soft);
+}
+.ripple-btn { position: relative; overflow: hidden; }
+
+/* C-4: トーストの標準アニメーション */
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.toast-enter { animation: toast-in 220ms var(--ease-breath) forwards; }
+.toast-leave { animation: toast-out 180ms ease-out forwards; }
+
+/* D: スケルトン shimmer */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0ebe0 0%,
+    #f8f4ea 50%,
+    #f0ebe0 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite linear;
+  border-radius: 8px;
+}
+
+/* ★ 完了画面：注文確定ボタンの光フラッシュ */
+.confirm-btn {
+  transition: transform 100ms ease-out, box-shadow 200ms ease-out;
+}
+.confirm-btn.confirming {
+  transform: scale(0.95);
+  box-shadow:
+    0 0 0 8px rgba(250, 192, 61, 0.3),
+    0 0 40px rgba(250, 192, 61, 0.6);
+}
+
+/* /complete ページ専用 */
+.complete-page {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 18vh 20px 40px;
+  overflow: hidden;
+}
+.complete-page .bg-glow {
+  position: absolute;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(250, 192, 61, 0.25) 0%,
+    rgba(250, 192, 61, 0.08) 40%,
+    rgba(250, 192, 61, 0) 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+.complete-page .check-icon {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #fff;
+  font-size: 48px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(250, 192, 61, 0.4);
+  z-index: 2;
+}
+.complete-page .ring-pulse {
+  position: absolute;
+  top: 18vh;
+  left: 50%;
+  width: 96px;
+  height: 96px;
+  margin-left: -48px;
+  margin-top: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  pointer-events: none;
+  z-index: 1;
+}
+.complete-page > * { position: relative; z-index: 2; }
+.complete-page .bg-glow, .complete-page .ring-pulse { z-index: 1; }
+
+/* 画面全体の白フェード（注文確定 → /complete 遷移時） */
+.screen-flash {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  animation: screen-flash-in 300ms ease-out forwards;
+}
+@keyframes screen-flash-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
