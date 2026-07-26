@@ -34,3 +34,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Dropbox が同期競合時に作るコピー
+# （本体と紛れてビルドを壊すのでコミットしない。docs/handoff.md 参照）
+*競合コピー*
+*conflicted copy*
+
+# 作業中に保存したターミナルログ（プロジェクトの成果物ではない）
+ターミナルで保存した出力.txt
