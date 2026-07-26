@@ -22,7 +22,9 @@ export default function NavItem({
   onClick?: () => void;
   className?: string;
 }) {
-  const base = `flex gap-[var(--space-12)] h-[44px] items-center p-[var(--space-12)] rounded-[var(--radius-sm)] w-full text-left ${
+  /* 「テーブル/二次元コード」のように改行を含むラベルがあるので高さは最小値で持つ。
+     h-[44px] 固定だと2行のときに文字がはみ出す */
+  const base = `flex gap-[var(--space-12)] min-h-[44px] items-center p-[var(--space-12)] rounded-[var(--radius-sm)] w-full text-left ${
     active ? "bg-surface-ink" : ""
   } ${className}`;
   const content = (
@@ -32,7 +34,7 @@ export default function NavItem({
         className={`shrink-0 w-4 h-4 ${active ? "text-text-inverse" : "text-text-primary"}`}
       />
       <span
-        className={`flex-1 min-w-0 ${
+        className={`flex-1 min-w-0 whitespace-pre-line ${
           active ? "type-jp-heading-s text-text-inverse" : "type-jp-body text-text-primary"
         }`}
       >

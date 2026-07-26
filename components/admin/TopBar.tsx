@@ -17,6 +17,7 @@ export default function TopBar({
   action,
   onMenuClick,
   strip,
+  stripPcOnly = false,
 }: {
   title: string;
   /** PC版のみ、件数の前に付ける接頭辞（例: "対応中"） */
@@ -26,6 +27,8 @@ export default function TopBar({
   action?: React.ReactNode;
   onMenuClick: () => void;
   strip?: React.ReactNode;
+  /** ストリップ行をPCだけに出す（SPでは別の場所に置く画面向け。ダッシュボードの期間セレクター等） */
+  stripPcOnly?: boolean;
 }) {
   return (
     <div className="bg-surface-white border-b border-border-divider shrink-0">
@@ -60,7 +63,7 @@ export default function TopBar({
             </span>
           )}
         </div>
-        {strip && (
+        {strip && !stripPcOnly && (
           <div
             className="flex gap-[var(--space-12)] items-start overflow-x-auto pb-[var(--space-12)] px-[var(--space-16)]"
             style={{ scrollbarWidth: "none" }}

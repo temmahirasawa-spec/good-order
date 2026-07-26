@@ -18,8 +18,17 @@ const NAV_ICONS: Record<string, IconName> = {
   "/admin/kitchen":   "flame",
   "/admin/register":  "receipt",
   "/admin/pickup":    "check",
-  "/admin/takeout":   "bag",
+  "/admin/tables":    "qr",
 };
+
+/** ops群とmanage群の間に入れる区切り線（上下パディング8・左右12の中に1px） */
+function NavDivider() {
+  return (
+    <div className="px-[var(--space-12)] py-[var(--space-8)] w-full">
+      <div className="border-t border-border-divider" />
+    </div>
+  );
+}
 
 export default function NavContent({
   role,
@@ -34,26 +43,39 @@ export default function NavContent({
   const pathname = usePathname();
   const items = ADMIN_NAV_ITEMS.filter((item) => item.roles.includes(role));
 
+  /* 区切り線とスペーサーの位置をグループで決める。
+     ロールによっては片方のグループが空になる（例: kitchenロールは manage/review が無い）ので、
+     線が浮いたり下端に何も無いのにスペーサーだけ入ったりしないよう、都度存在を確認する。 */
+  const renderItem = (item: (typeof items)[number]) =>
+    item.href === "/admin/menu" ? (
+      <MenuAccordionNavItem key={item.href} pathname={pathname} onNavigate={onNavigate} />
+    ) : (
+      <NavItem
+        key={item.href}
+        href={item.href}
+        icon={NAV_ICONS[item.href] ?? "list"}
+        label={item.label}
+        active={pathname.startsWith(item.href)}
+        onClick={onNavigate}
+      />
+    );
+
+  const ops    = items.filter((i) => i.group === "ops");
+  const manage = items.filter((i) => i.group === "manage");
+  const review = items.filter((i) => i.group === "review");
+
   return (
     <>
-      {items.map((item) =>
-        item.href === "/admin/menu" ? (
-          <MenuAccordionNavItem key={item.href} pathname={pathname} onNavigate={onNavigate} />
-        ) : (
-          <NavItem
-            key={item.href}
-            href={item.href}
-            icon={NAV_ICONS[item.href] ?? "list"}
-            label={item.label}
-            active={pathname.startsWith(item.href)}
-            onClick={onNavigate}
-          />
-        )
-      )}
+      {ops.map(renderItem)}
 
+      {ops.length > 0 && manage.length > 0 && <NavDivider />}
+      {manage.map(renderItem)}
+
+      {/* 締め後に開く画面（ダッシュボード）をログアウトの直上まで押し下げる */}
       <div className="flex-1 min-h-px w-full" />
+      {review.map(renderItem)}
 
-      <div className="border-t border-border-divider flex flex-col gap-[var(--space-2)] pl-[var(--space-12)] pt-[var(--space-12)] w-full">
+      <div className="border-t border-border-divider flex flex-col gap-[var(--space-2)] mt-[var(--space-8)] pl-[var(--space-12)] pt-[var(--space-12)] w-full">
         <p className="type-jp-chip-label text-text-primary">
           {STAFF_ROLE_LABEL[role]}
         </p>

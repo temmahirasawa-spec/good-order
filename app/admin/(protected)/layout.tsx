@@ -20,7 +20,16 @@ import { ADMIN_NAV_ITEMS, parseStaffRole, type StaffRole } from "@/lib/staffRole
  * 内包しているため）。移行が進むごとに REDESIGNED_PREFIXES を増やし、
  * 全ページ移行完了後は旧chrome自体を削除する想定。
  */
-const REDESIGNED_PREFIXES = ["/admin/kitchen", "/admin/register", "/admin/menu", "/admin/pickup"];
+/* Step3-N で全ページの移行が完了したため、admin配下は常に新しいnav chromeを使う。
+   旧トップバー枠のコードは残していないので、この配列に載らないパスはもう無い。 */
+const REDESIGNED_PREFIXES = [
+  "/admin/kitchen",
+  "/admin/register",
+  "/admin/menu",
+  "/admin/pickup",
+  "/admin/dashboard",
+  "/admin/tables",
+];
 
 export default function AdminProtectedLayout({
   children,

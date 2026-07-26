@@ -9,7 +9,8 @@ export type IconName =
   | "menu" | "close" | "return" | "bell" | "bag" | "map-pin"
   | "clock" | "phone" | "water-drop" | "card" | "trash"
   | "dashboard" | "flame" | "receipt" | "list" | "bowl"
-  | "grip" | "edit" | "check" | "plus";
+  | "grip" | "edit" | "check" | "plus"
+  | "qr" | "copy" | "download" | "more";
 
 const paths: Record<IconName, JSX.Element> = {
   crown: (
@@ -147,6 +148,41 @@ const paths: Record<IconName, JSX.Element> = {
      Figma側は同寸の角丸長方形2本で組んである。 */
   plus: (
     <path d="M8 2.8V13.2M2.8 8H13.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+  ),
+  /* ── テーブル・二次元コード管理（Step3-O）用 ──
+     UI表記は「二次元コード」で統一するが、アイコン名などコード内部の識別子は qr のまま。 */
+  qr: (
+    <>
+      <rect x="1.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <rect x="9.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <rect x="1.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <rect x="3.4" y="3.4" width="1.2" height="1.2" fill="currentColor" />
+      <rect x="11.4" y="3.4" width="1.2" height="1.2" fill="currentColor" />
+      <rect x="3.4" y="11.4" width="1.2" height="1.2" fill="currentColor" />
+      <rect x="9.5" y="9.5" width="2.2" height="2.2" fill="currentColor" />
+      <rect x="12.8" y="9.5" width="1.7" height="1.7" fill="currentColor" />
+      <rect x="9.5" y="12.8" width="1.7" height="1.7" fill="currentColor" />
+      <rect x="12.8" y="12.8" width="1.7" height="1.7" fill="currentColor" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="2.2" y="2.2" width="8.6" height="8.6" rx="1.8" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <rect x="5.2" y="5.2" width="8.6" height="8.6" rx="1.8" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M8 2V10.2M8 10.2L4.8 7M8 10.2L11.2 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M2.5 13.2H13.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+    </>
+  ),
+  more: (
+    <>
+      <circle cx="3.1" cy="8" r="1.3" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+      <circle cx="12.9" cy="8" r="1.3" fill="currentColor" />
+    </>
   ),
   /* ── レジ画面（Order Group Header）用: 店内アイコン（お椀+湯気） ── */
   bowl: (

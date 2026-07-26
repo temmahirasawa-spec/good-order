@@ -43,6 +43,10 @@ import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import { Icon } from "@/components/Icon";
 
+/* カテゴリーslugと衝突しないフィルター用の番兵。
+   テイクアウトはカテゴリーではなく「提供形態」の軸なので別扱いにする。 */
+const TAKEOUT_FILTER = "__takeout__";
+
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
 const MAX_IMAGES = 5;
 const MAX_VIDEOS = 1;
@@ -146,15 +150,24 @@ export default function AdminMenuPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── フィルタ ── */
-  const displayed = filterSlug === "all"
-    ? items
-    : items.filter((i) => i.category_id === categories.find((c) => c.slug === filterSlug)?.id);
+  /* ── フィルタ ──
+     テイクアウト商品は category_id が NULL なのでどのカテゴリーにも該当しない。
+     専用チップで絞れないと店内メニューに埋もれて実質たどり着けないため、
+     「提供形態」の軸として独立したフィルターを用意する。 */
+  const displayed =
+    filterSlug === "all"
+      ? items
+      : filterSlug === TAKEOUT_FILTER
+        ? items.filter((i) => i.is_takeout)
+        : items.filter((i) => i.category_id === categories.find((c) => c.slug === filterSlug)?.id);
 
   /* ── ⠿ ドラッグ並び替え（display_order を1リクエストで永続化）──
-     カテゴリーフィルター適用中は一覧が部分集合になり、行の入れ替え位置を
-     全体の順序に正しく写像できないため無効化する（下のヒント文言で告知）。 */
-  const reorderEnabled = filterSlug === "all";
+     カテゴリーフィルター適用中は、絞り込んだ集合が「カテゴリー内の一部」でしかなく、
+     並べ替えた結果が全体順序のどこに落ちるか操作者に見えないため無効化している。
+     テイクアウトだけは例外で許可する: 絞り込んだ集合が /order/takeout に出る
+     全商品そのものなので、その中の並びと全体順序が食い違わない。
+     ここを塞ぐとテイクアウト商品の並び順を永久に変えられなくなる。 */
+  const reorderEnabled = filterSlug === "all" || filterSlug === TAKEOUT_FILTER;
   const persistOrder = useCallback(
     async (changed: { id: string; display_order: number }[]) => {
       const { error } = await supabase.rpc("reorder_menu_items", { p_items: changed });
@@ -169,12 +182,21 @@ export default function AdminMenuPage() {
     disabled: !reorderEnabled,
   });
 
-  /* ── パネルを開く ── */
+  /* ── パネルを開く ──
+     初期値は「いま見ているフィルター」に合わせる。
+     旧 /admin/takeout を統合したので、テイクアウト商品の追加はこの画面の
+     テイクアウトフィルター＋＜新規追加＞が入口になる。そこで作った商品が
+     追加直後にリストから消える（＝is_takeout が false のまま保存される）のを防ぐため、
+     テイクアウトフィルター中はトグルONかつカテゴリーなしを既定にする。 */
   const openCreate = () => {
     setEditItem(null);
+    const isTakeoutFilter = filterSlug === TAKEOUT_FILTER;
     setForm({
       ...EMPTY_FORM,
-      category_id: categories[0]?.id ?? "",
+      is_takeout: isTakeoutFilter,
+      category_id: isTakeoutFilter
+        ? ""
+        : (categories.find((c) => c.slug === filterSlug)?.id ?? categories[0]?.id ?? ""),
     });
     setPanelOpen(true);
   };
@@ -444,17 +466,23 @@ export default function AdminMenuPage() {
                 main が flex-col + overflow-y-auto のため、shrink-0 を付けないと
                 下の一覧（flex-1）に押し潰されて高さが欠ける ── */}
             <p className="hidden lg:block shrink-0 px-[var(--space-24)] py-[var(--space-4)] type-jp-caption text-text-tertiary">
-              {reorderEnabled
-                ? "⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります"
-                : "カテゴリーで絞り込み中は並び替えできません（「すべて」に戻すと並び替えできます）"}
+              {filterSlug === TAKEOUT_FILTER
+                ? "⠿ をドラッグして並び替えると、テイクアウト画面での表示順が変わります"
+                : reorderEnabled
+                  ? "⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります"
+                  : "カテゴリーで絞り込み中は並び替えできません（「すべて」に戻すと並び替えできます）"}
             </p>
             <p className="lg:hidden shrink-0 px-[var(--space-16)] pt-[var(--space-20)] pb-[var(--space-12)] type-jp-caption text-text-secondary">
-              {reorderEnabled
-                ? "⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります。編集ボタンから表示・非表示の切り替えができます。"
-                : "カテゴリーで絞り込み中は並び替えできません（「すべて」に戻すと並び替えできます）。編集ボタンから表示・非表示の切り替えができます。"}
+              {filterSlug === TAKEOUT_FILTER
+                ? "⠿ をドラッグして並び替えると、テイクアウト画面での表示順が変わります。編集ボタンから表示・非表示の切り替えができます。"
+                : reorderEnabled
+                  ? "⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります。編集ボタンから表示・非表示の切り替えができます。"
+                  : "カテゴリーで絞り込み中は並び替えできません（「すべて」に戻すと並び替えできます）。編集ボタンから表示・非表示の切り替えができます。"}
             </p>
 
-            {/* ── カテゴリーフィルター（既存機能を維持。Figmaにはこの行は無い）
+            {/* ── フィルター行（すべて → テイクアウト → 各カテゴリー）
+                テイクアウトを2番目に置くのは、カテゴリーではなく「提供形態」の別軸だと
+                示すためと、SP幅(390px)でも横スクロールせず常に見える位置に収めるため。
                 shrink-0 が無いと一覧に押し潰されてチップが1/3しか見えなくなる ── */}
             <div
               className="flex shrink-0 gap-[var(--space-8)] overflow-x-auto px-[var(--space-16)] lg:px-[var(--space-24)] pb-[var(--space-12)]"
@@ -463,23 +491,35 @@ export default function AdminMenuPage() {
               <button
                 type="button"
                 onClick={() => setFilterSlug("all")}
-                className={`shrink-0 px-[14px] py-[var(--space-8)] rounded-[var(--radius-full)] type-jp-caption-bold whitespace-nowrap ${
+                className={`shrink-0 px-[14px] py-[var(--space-8)] rounded-[var(--radius-full)] type-jp-body whitespace-nowrap ${
                   filterSlug === "all"
                     ? "bg-surface-ink text-text-inverse"
-                    : "bg-surface-white border border-border text-text-secondary"
+                    : "bg-bg-tertiary text-text-primary"
                 }`}
               >
                 すべて
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterSlug(TAKEOUT_FILTER)}
+                className={`shrink-0 flex gap-[6px] items-center px-[14px] py-[var(--space-8)] rounded-[var(--radius-full)] type-jp-body whitespace-nowrap ${
+                  filterSlug === TAKEOUT_FILTER
+                    ? "bg-surface-ink text-text-inverse"
+                    : "bg-bg-tertiary text-text-primary"
+                }`}
+              >
+                <Icon name="bag" className="shrink-0 w-3.5 h-3.5" />
+                テイクアウト
               </button>
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => setFilterSlug(cat.slug)}
-                  className={`shrink-0 px-[14px] py-[var(--space-8)] rounded-[var(--radius-full)] type-jp-caption-bold whitespace-nowrap ${
+                  className={`shrink-0 px-[14px] py-[var(--space-8)] rounded-[var(--radius-full)] type-jp-body whitespace-nowrap ${
                     filterSlug === cat.slug
                       ? "bg-surface-ink text-text-inverse"
-                      : "bg-surface-white border border-border text-text-secondary"
+                      : "bg-bg-tertiary text-text-primary"
                   }`}
                 >
                   {cat.name}

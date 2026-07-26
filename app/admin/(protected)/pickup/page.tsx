@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * テイクアウト受渡画面（Step3-M、Figma: Takeout Pickup — Pickup Card 462:2923）
+ * テイクアウト（受渡）画面（Step3-M、Figma: Takeout Pickup — Pickup Card 462:2923）
+ * 画面名はサイドバー・Top Barとも「テイクアウト」。商品CRUDの /admin/takeout を
+ * /admin/menu に統合して区別の必要が無くなったため Step3-N で短縮した。
  *
  * 調理完了（order_type=takeout かつ status=served）の注文を一覧し、
  * 既存の markOrderPickedUp()（served → picked_up）を呼ぶ。
@@ -139,7 +141,7 @@ export default function PickupPage() {
       {({ openDrawer }) => (
         <>
           <TopBar
-            title="テイクアウト受渡"
+            title="テイクアウト"
             count={`受渡待ち ${orders.length}件`}
             onMenuClick={openDrawer}
           />
