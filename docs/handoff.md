@@ -15,10 +15,12 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 リデザイン完了済み。現在はスタッフ側（`/admin/*`）のリデザインを進行中。
 
 **Git状況（2026-07-26 更新）**: ここまでのリデザイン作業は全て
-`main` に **13コミット**に分けてcommit済み（`d910a6f`〜`3f31c96`）。working treeはクリーン。
-**ただしリモートリポジトリが未設定のため、まだpushできていない。**
-GitHubにリポジトリを作るのは天真さんの担当（public/privateの判断があるため）。
-作成後に `git remote add origin <URL>` → `git push -u origin main` で送れる状態。
+`main` に14コミットに分けてcommit済みで、**GitHubへpush完了**。
+
+- リモート: https://github.com/temmahirasawa-spec/Orderly （**public**）
+- 公開前に機密スキャン実施済み（JWT・Webhook URL・実Supabase URL・パスワード代入とも0件。
+  `.env.local` は `.gitignore` で除外、`.env.local.example` はプレースホルダのみ）
+- **publicなので、今後 `.env.local` 等をうっかりコミットしないよう特に注意すること**
 
 ユーザーから明示的に指示されない限りcommitしない運用は継続（既存ルール通り）。
 
