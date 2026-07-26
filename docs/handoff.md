@@ -445,6 +445,297 @@ Figmaのフレームを縦Hugにすれば揃う。**未修正**（今回の指�
 - `StoreInfoModal` / `StaffCallSheet` / `FilterPlaceholderSheet` の見出し
   `text-[22px] leading-[1.4]` は JP/Heading/XL（1.3）と**行間だけ違う**ので要判断
 
+## `/admin/takeout` を `/admin/menu` に統合（`prompts/takeout-merge-prompt.md`）
+
+テイクアウト商品のCRUD専用だった `/admin/takeout` を廃止し、`/admin/menu` に一本化した。
+`/admin/pickup`（テイクアウト受渡）は**別画面なのでそのまま残している**（混同注意）。
+
+### やったこと
+- `app/admin/(protected)/takeout/` を削除（`git rm -r`）
+- `next.config.mjs` に `redirects()` を追加し `/admin/takeout` → `/admin/menu`（307）
+- `lib/staffRoles.ts` の `ADMIN_NAV_ITEMS` から `/admin/takeout` を削除、
+  `NavContent.tsx` の `NAV_ICONS` からも削除
+- `/admin/menu` のフィルター行に「テイクアウト」チップを**2番目**に追加
+  （`TAKEOUT_FILTER = "__takeout__"` というsentinelで管理。カテゴリのslugと衝突しない）
+- 「新規追加」の初期値をフィルターに追従させた（`openCreate`）。
+  テイクアウトフィルター中は `is_takeout: true` ＋ カテゴリーなし、
+  カテゴリーで絞り込み中はそのカテゴリーを初期選択
+
+### 判断した点（ユーザー報告済み）
+- **リダイレクトはページ削除＋`next.config.mjs`**。`(protected)` レイアウトの権限ガードは
+  「ナビに無いURLならダッシュボードへ飛ばす」ので、page.tsxを残してリダイレクトすると
+  そちらに吸われる。ルーティング層で処理すればガードより先に効く。
+  `permanent: false`（307）にしたのはブラウザに永続キャッシュさせないため。
+- **`display_order` は単一のグローバル列のまま**（テイクアウト用の第2ソート列は作らない）。
+  ドラッグ時は「掴んだ行を、ドロップ先の行のグローバル位置へ移す」だけなので、
+  テイクアウト部分列の相対順序も、それ以外の商品の相対順序も同時に保たれる。
+  実測でも `reorder_menu_items` は1リクエスト・変更行のみを送っている。
+
+### 検証状況（実画面で確認済み）
+- テイクアウトチップ → 5件だけ表示、ヒント文言が「テイクアウト画面での表示順が変わります」に変化
+- テイクアウトフィルター中に⠿でドラッグ → 楽観更新 → リロード後も順序が永続（検証後に元へ戻した）
+- テイクアウト商品の編集→保存（カテゴリーなしのまま）が成功
+- 「新規追加」でテイクアウト商品を作成→一覧に即反映→削除まで `/admin/menu` だけで完結
+  （作成時は「公開する」をOFFにして客側に出ないようにした。検証後に削除済み）
+- `tsc --noEmit` / `next lint` / `npm run build` すべて通過。ビルド結果に `/admin/takeout` は無い
+
+## Step3-N: ダッシュボード新デザイン ＋ サイドバー並び替え（`prompts/STEP3-N_dashboard_prompt.md`）
+
+管理画面リデザインの最終ページ。これで `/admin` 配下は全ページが
+Nav Sidebar v2 / Nav Drawer の新chromeに載った（`REDESIGNED_PREFIXES` に全パスが入っている）。
+
+### 1. `EN/Data` 系に `tabular-nums` を追加
+`app/typography.css` の `type-en-data-2xs` 〜 `type-en-data-xl` 全6クラスに
+`font-variant-numeric: tabular-nums` を入れ、`EN/Price` 系と揃えた。
+呼び出し側で重複していた `PickupCard` の `tabular-nums` は外した。
+**Figmaのテキストスタイルはこの機能を保持できないのでコード側が正**。
+
+### 2. サイドバーの並び替え
+`厨房 / レジ / テイクアウト`（ops）→ 区切り線 → `メニュー`（manage）→
+スペーサー → `ダッシュボード`（review）→ 区切り線 → スタッフ名/ログアウト。
+
+- `lib/staffRoles.ts` の `AdminNavItem` に `group: "ops" | "manage" | "review"` を追加。
+  区切り線とスペーサーの位置は `NavContent.tsx` がこのグループで決める。
+  ロールによっては片方のグループが空になる（kitchenロールなど）ので、
+  線が浮かないよう都度存在チェックしている
+- `テイクアウト受渡` → **`テイクアウト`** にリネーム。`/admin/takeout` を統合して
+  区別が不要になったため。Top Bar（`/admin/pickup`）のタイトルも同時に短縮し、
+  「画面名はサイドバーとTop Barで1つ」の方針を維持している
+
+**権限ガードへの影響（プロンプト6章の確認事項）**:
+`layout.tsx` のフォールバックは `ADMIN_NAV_ITEMS.filter(...)[0].href`＝
+**配列の先頭＝サイドバー最上段**。並び替えにより、マネージャーが権限外URLを直打ちした
+ときの着地先が `/admin/dashboard` → **`/admin/kitchen`** に変わった。
+kitchen/register/counter は元々1画面しか見えないので影響なし。
+「最初に見るべき画面＝最上段」という対応は意図的に1つの配列で兼ねている。
+
+### 3. ダッシュボード本体
+`app/admin/(protected)/dashboard/page.tsx` を全面書き換え。
+集計は `lib/salesData.ts` をそのまま使い、**recharts の使用をやめて div/SVG で描いている**
+（Figmaのグラフがすべて単純な矩形とポリラインで、recharts経由だと逆に寄せにくいため）。
+結果 `/admin/dashboard` のバンドルは 126kB → 10.8kB。
+`package.json` の `recharts` はどこからも参照されなくなった（削除は未実施）。
+
+新規コンポーネント:
+- `components/dashboard/dashboardTheme.ts` — グラフ配色・4区分定義・ヒートマップ色関数
+- `components/dashboard/DashboardCard.tsx` / `StatCard.tsx` / `PeriodSelector.tsx`
+- `components/dashboard/cards/` — HeroKpi / SalesChart / PopularMenu / PeakHeatmap /
+  CategoryBreakdown / TableUtilization / SpendHistogram / DineInTakeout の8枚
+
+削除: `components/dashboard/OwnerView.tsx` / `StaffView.tsx`
+
+SPは Top Bar → Tab Nav（8セクション）→ Period Selector →カード縦1列。
+PCは Top Bar（タイトル＋CSVボタン／ストリップ行に期間チップ）→ グリッド。
+`TopBar` に `stripPcOnly` を足して、SPだけストリップ行を出さないようにしている。
+
+### 4. 判断した点（すべてユーザー報告済み）
+- **スタッフ/オーナー切替タブ・日報送信・受付停止トグルはダッシュボードから削除**
+  （天真さんの判断「Figma通りに全部落とす」）。`/api/daily-report` と
+  `lib/api.ts` の `isAcceptingOrders`/`setAcceptingOrders` は残してある。
+  後者は `/cart` と `lib/store.ts` が注文時のチェックに使っているので消してはいけない
+- **人気メニューのTOP5カードとTOP10カードは1枚に統合**（プロンプト4章）。
+  タブ＋横バー＋「もっと見る（TOP10）」の段階開示でPC/SP共通。
+  空いた枠のぶん、PCの売上推移カードを全幅にした
+- **scrollspyは IntersectionObserver ではなくスクロール位置計算**。
+  `/order` と違って main が固定高のスクロールコンテナなので、最後のカードは
+  末尾まで送っても判定帯まで上がれずアクティブにならない。
+  「判定線より上に来た最後のセクション」＋「末尾到達なら最終セクション」で判定している
+- **時間別グラフは売上0の時間帯を前後から落とす**。8〜24時の16本はSP幅で潰れるため
+- 前期比は prev が0のとき**バッジ自体を出さない**（旧実装は「— 前期間比」を表示）
+
+### 5. Figmaの PC/SP テンプレート間で食い違っていた点（コード側で1つに寄せた）
+Figma側の追随は天真さんが行う前提。
+| 箇所 | PC | SP | 採用 |
+|---|---|---|---|
+| 店内/テイクアウトの色 | 店内=accent/deep, TO=status/info | 逆 | **PC側**（旧実装と同じ） |
+| 期間チップ選択中 | surface/ink | accent/primary | **SP側**（プロンプトに明記） |
+| 人気メニューのタブ選択中 | surface/ink | accent/primary | **SP側** |
+| カテゴリ配色 | アンバー系6+青2 | 5色（色相が分かれる） | **SP側**＋既存トークンで8色に拡張 |
+| Hero の前期比ピル | （PCに無し） | `#def2de`/`#338c40` 直値 | `status/success` トークン |
+
+### 6. 途中で見つけた既存バグ（修正済み）
+`lib/salesData.ts` の `fetchSalesData` が `o.order_items` を読んでいたが、
+`get_sales_orders` RPC（`supabase/staff_role_rls.sql`）が返すキーは **`items`**。
+このため `SalesOrder.items` が常に空配列で、**人気メニューとカテゴリ別売上は
+ずっと「データなし」だった**。1語の修正で両カードが出るようになった。
+
+### 検証状況
+- PC(1092px)/SP(390px iframe)の両方で全カードを目視確認
+- 実DBには会計済み注文が1件（しかも `order_items` が0行）しか無いため、
+  **ブラウザ側で `window.fetch` を差し替えて合成データを流し込んで描画確認した**
+  （DBは一切変更していない）。実データでの再確認は営業データが溜まってからで良い
+- タブナビのアンカースクロール・scrollspy追従・末尾セクションのアクティブ化、
+  期間チップ切替、人気メニューのタブ/TOP10展開をすべて操作して確認
+- `tsc --noEmit` / `next lint`（警告0）/ `npm run build` 通過
+
+## Step3-O: テーブル・二次元コード管理（`prompts/STEP3-O_qr_management_prompt.md`）
+
+新規機能。各卓の注文用URLを二次元コードとして一覧・DL・A4印刷できる画面と、
+テーブル識別方法そのものの変更（既存画面への波及あり）。
+
+### DB適用済み（2026-07-27）
+`supabase/tables_qr.sql` は天真さんが実行済み。移行結果:
+
+- カテゴリー `A ・ テーブル` が1件作成された
+- 卓は既存の `orders` / `staff_calls` の卓番号から **A1 / A5 / A99 / A999** の4件
+  （99・999 は過去のテストデータ由来と思われる。不要なら席設定モーダルから削除可）
+- 既存注文の `table_label` バックフィルも成功（厨房が "TABLE A5" と出ている）
+
+### 用語
+**「QRコード」は株式会社デンソーウェーブの登録商標**。
+画面に出る文字列は必ず「二次元コード」。変数名・ファイル名（qrCode.ts, QrCard 等）は `qr` のままで良い。
+
+### データモデル
+- `table_categories`（code＝英大文字1文字 / name / display_order）
+- `tables`（category_id / number / **short_code** / display_order / legacy_number）
+- `orders` に `table_id`（ON DELETE SET NULL）と `table_label`（注文時点のスナップショット）
+- `staff_calls` にも `table_label`（厨房のCall Chipだけ数値のままだと現場が混乱するため）
+
+**表示は必ず `table_label`、集計・グルーピングは `table_id`。**
+
+### URL
+- 新形式 `https://<host>/?t=<short_code>`
+- 旧形式 `?table=<数値>` も `legacy_number` 経由で解決し続ける（印刷済みカード互換）
+- どちらも無ければテイクアウト、という既存判定は変えていない
+- **ラベル（?table=A1）は絶対に埋めない**。カテゴリーのコードを変えた瞬間に印刷済みカードが
+  全部無効になり、しかも画面にエラーが出ないのでお客様が読み取って初めて気づく。
+  なお**Figmaのモックは `?table=A1` になっているが、プロンプト3章の指示どおり `?t=` を採用**した
+
+### 新規ファイル
+- `supabase/tables_qr.sql`
+- `lib/tables.ts` / `lib/qrCode.ts`
+- `components/admin/tables/`（QrCodeImage / QrCard / CodePicker / SeatSettingsModal）
+- `app/admin/(protected)/tables/page.tsx` / `.../tables/print/page.tsx`
+
+### 判断した点（ユーザー報告済み）
+- **二次元コード生成は `qrcode`（MIT / 1.5.4）**。SVG出力必須という条件で選定。
+  PNG(toDataURL)とSVG(toString)を1つのAPIで出せてブラウザ単体で完結する。
+  `npm audit` の high は全部 next / eslint 由来の既存分で、qrcode 由来は無い
+- **印刷は別ルート `/admin/tables/print`**。AdminPageShell が `h-screen`＋`overflow:hidden` なので、
+  同じDOMに @media print を被せるとページ送りが効かず1ページ目しか出ない。
+  面付けは mm 指定（`@page { size: A4; margin: 0 }`）。96dpi換算のpxだと
+  ブラウザのスケーリング設定で実寸がずれて名刺トレイに合わない
+- **anon に `tables` の生SELECTは開けない**。short_code は店頭掲示なので「知っていれば引ける」のは
+  前提だが、生SELECTだと全卓を列挙できる。1件だけ返す SECURITY DEFINER の
+  `resolve_table()` 経由にした（orders_anon_lockdown.sql と同じ方針）
+- **レイアウト保存は `save_table_layout()` 1関数**。カテゴリーと卓を同時に作り直すので、
+  個別のINSERT/DELETEを並べると途中で失敗して半分だけ反映された状態が残る
+- **コード選択のポップオーバーは `position: fixed`**。モーダル本体が `overflow-y-auto` なので
+  絶対配置だと下半分が切れる。トリガーの実測位置から置いている
+
+### 既存画面への波及（5章）— 全部対応済み
+| 画面 | 対応 |
+|---|---|
+| お客様側入口 `app/page.tsx` | `?t=` を `resolve_table` で解決。`?table=N` も維持。卓名表示もラベルへ |
+| `lib/store.ts` | `tableId` / `tableLabel` を持ち、注文時に `orders` へ書く |
+| 厨房 | Order Card / Call Chip とも `table_label`。グルーピングキーも `table_id` 優先 |
+| レジ | Table Chip・会計確認とも `table_label`。卓の束ね方も `table_id` 優先（`Selection` が `n:number`→`key:string`） |
+| ダッシュボード | テーブル稼働カードが T1〜T12 固定ではなく実際のラベル・実データ件数に。`TableStat` が `{key,label}` に |
+| 履歴 `/history` | `tableLabel` を表示（無ければ数値） |
+| CSV出力 | `table_label` 列を追加 |
+
+**移行前の古いデータには必ず数値フォールバック**を入れてある（`lib/tables.ts` の `displayTableLabel`）。
+厨房・レジは営業中に開きっぱなしの画面なので、ここが空欄になると事故になる。
+
+### 検証状況（SQL適用後に実画面で全経路を確認済み）
+- 一覧画面 PC/SP。移行された A1/A5/A99/A999 が `?t=<short_code>` 付きで表示される
+- **お客様側の入口**: `?t=ttzfq8` → 「TABLE A1」、旧形式 `?table=5` → 「TABLE A5」。
+  どちらも解決できることを確認（後方互換OK）
+- **カートストア**: `?table=5` 訪問後に `tableId`(uuid) / `tableLabel`"A5" / `tableNumber`5 が
+  localStorage に入ることを確認（＝注文INSERTに正しく載る）
+- **厨房**: Order Card が "TABLE A5"（移行前の注文でもラベルが出る）
+- **レジ**: Table Chip が "TABLE A1" / "TABLE A5"
+- **ダッシュボード**: テーブル稼働カードのラベルが T5 ではなく "A5"
+- **席設定モーダル**: カテゴリーBを新規作成→保存→一覧に反映→削除→保存 まで往復。
+  このとき **既存 A の short_code が一切変わらないこと**を確認（最重要の不変条件）。
+  削除確認の文言に卓数と「過去の注文は残ります」が出ることも確認
+- **印刷**: 一覧の「選択した5件を印刷」→ 実ラベル（テイクアウト / テーブル A1〜A999）で面付け。
+  13件で2ページに分割されることも別途確認
+- `tsc --noEmit` / `next lint`（警告0）/ `npm run build` 通過
+
+> 補足: ダッシュボードの「人気メニュー」「カテゴリ別売上」は現在も「データなし」。
+> これはStep3-Nで直したマッピングのバグではなく、**唯一の会計済み注文に
+> `order_items` の行が1件も無い**ため（RPCが `items: []` を返すことを確認済み）。
+> 実際に注文が積まれれば出る。
+
+## 卓ラベルの表示形式変更（Step3-O 追補）
+
+天真さんの指摘「厨房のテーブル表示が TABLE 0 と出る」「カウンター C-1 のように
+設定した名称＋番号にしてほしい」への対応。
+
+### 原因（TABLE 0）
+移行後に**新しく追加した卓は `legacy_number` が NULL** なので、注文時に
+`orders.table_number` が 0 で入る。`table_label` が読めない経路に落ちると 0 が出る。
+ラベルを必ず出す形にして根本から潰した。あわせて、卓の解決（サーバー往復）が
+終わる前に「メニューを見る」を押せてしまう問題も塞いだ（解決するまでボタンを止める）。
+
+### 新しい書式
+- 短縮ラベル `tableShortLabel()` … **`A-1`**（コード-番号）
+  ハイフンを入れるのは "A11" が「A-1の1」か「A-11」か読み違えないため
+- フルラベル `tableFullLabel()` … **`カウンター A-1`**（カテゴリー名 ＋ 短縮ラベル）
+  → **`orders.table_label` / `staff_calls.table_label` にはこの形で保存する**
+- `shortenTableLabel(full)` … フルから短縮部分だけ取り出す（最後の空白より後ろ）
+
+### どこで何を出すか
+| 画面 | 表示 |
+|---|---|
+| 厨房 Order Card / Call Chip | フル（`TABLE` の接頭辞は廃止） |
+| レジ Table Chip / 会計確認 | フル（同上） |
+| 履歴 `/history` | フル |
+| ダッシュボードのテーブル稼働 | 棒の軸は短縮、ツールチップはフル（棒幅が28〜32pxしかない） |
+| 二次元コード管理の一覧カード | 短縮（グループ見出しに既にカテゴリー名が出ている） |
+| 席設定モーダルの卓チップ | 短縮 |
+| 印刷カード | フル（「テーブル」の接頭辞は廃止。ラベル自体が自己説明的なので） |
+| お客様側TOP | 短縮（上に "TABLE" のラベルがあり、6xlの大きな文字なので390px幅に収まらない） |
+
+### ⚠ 2本目のSQL `supabase/table_label_v2.sql` の実行が必要
+- `resolve_table()` を新書式に（`short_label` も返すようにしたので DROP→CREATE）
+- 既存スナップショットの付け替え。**卓が既に削除済みの注文は当時のラベルのまま残す**
+  （スナップショットの意味を壊さないため）
+- 未実行の間は旧ラベル（"A1"）がそのまま出るだけで、画面は壊れない
+
+### Figmaも更新済み（`use_figma`）
+- 厨房 PC/SP の Order Card ヘッダー・Call Chip、レジ PC/SP の Table Chip・
+  会計確認アラートを `TABLE n` → `カウンター A-1` 形式に
+- 二次元コード管理: カード見出しと席チップを `A1` → `A-1`、印刷カードをフルラベルに
+- **カテゴリー名を短縮**（カウンター席→カウンター 等）。フルラベルに名前が乗るので、
+  長いと厨房のカードヘッダーやレジのチップが横に伸びる
+- ついでに **URL を `?table=A1` → `?t=k3f9x2` 形式に修正**（前回報告した差分）
+
+## 卓名の2段組み表示とサイドバーの改行（Figma追随）
+
+天真さんがFigmaを直したぶんの差し替え＋サイドバーの折り返し修正。
+
+### サイドバー「テーブル/二次元コード」
+220px幅だと1行に収まらず中途半端な位置で折れていたので、**改行位置を固定**した。
+- `lib/staffRoles.ts` のラベルを `"テーブル/\n二次元コード"` に
+- `NavItem` の span に `whitespace-pre-line`、高さを `h-[44px]` → `min-h-[44px]`
+  （固定だと2行で文字がはみ出す）
+- Figmaも Nav Sidebar v2 / Nav Drawer の**マスター側**を2行に変更。
+  該当の Nav Item インスタンスだけ縦HUGにしてある
+
+### 卓名は「カテゴリー名（小さくグレー）＋卓番号（大きく黒）」の2段組み
+Figma 222:967（Order Card）/ 257:267（Table Chip）/ 222:241（Staff Call Chip）の更新に追随。
+
+| 箇所 | 表示 |
+|---|---|
+| 厨房 Order Card | `カウンター`(JP/Heading/S・text-secondary) ＋ `L-1`(EN/Data/L・text-primary) |
+| レジ Table Chip | `カウンター`(JP/Caption・text-secondary) ＋ `L-1`(EN/Price/L・text-primary) |
+| 厨房 Call Chip | 卓番号のみ（`L-1`） |
+
+`lib/tables.ts` に `splitTableLabel(full)` を追加（フルラベルを最後の空白で
+カテゴリー名と卓番号に分ける）。`shortenTableLabel` はこれの薄いラッパー。
+移行前の古いラベル（"5"）は category が空になり、卓番号だけが出る。
+
+### 「TABLE 0」の原因と対策（再掲）
+移行後に追加した卓は `legacy_number` が NULL なので `orders.table_number` が 0 で入る。
+ラベルを必ず出す形にして潰した。あわせて、卓の解決が終わる前に
+「メニューを見る」を押せてしまう問題も塞いだ（解決するまでボタンを止める）。
+
+### SQL適用状況
+`supabase/tables_qr.sql` / `supabase/table_label_v2.sql` とも**適用済み**。
+実画面で「カウンター L-1」と出ることを厨房・レジの両方で確認した。
+
 ## 次にやること
 
 `prompts/`配下の未消化プロンプトは無い。ユーザーから次の指示を受け取るか、

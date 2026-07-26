@@ -179,15 +179,20 @@
 }
 
 /*
- * EN/Data ファミリー — 受渡番号・表示順バッジ・数量など「数値そのもの」を見せる用途。
- * Price系と違い font-variant-numeric は指定しない（Figma側にも無い）。
- * 桁揃えが要る箇所は呼び出し側で tabular-nums を併用すること。
+ * EN/Data ファミリー — 受渡番号・表示順バッジ・数量・KPI数値など
+ * 「数値そのもの」を見せる用途。
+ *
+ * font-variant-numeric: tabular-nums は Price系に揃えてクラス側に持たせている。
+ * ダッシュボードのKPI・人気メニューの食数・テーブル稼働など数字が縦に並ぶ箇所が多く、
+ * 呼び出し側で都度 tabular-nums を足す運用では付け忘れが出て桁が揃わないため。
+ * FigmaのテキストスタイルはこのOpenType機能を保持できないので、コード側を正とする。
  */
 .type-en-data-xl {
   font-family: var(--font-en);
   font-weight: 600;
   font-size: 28px;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .type-en-data-l {
@@ -196,6 +201,7 @@
   font-size: 20px;
   line-height: 1.2;
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .type-en-data-m {
@@ -203,6 +209,7 @@
   font-weight: 600;
   font-size: 15px;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .type-en-data-s {
@@ -211,6 +218,7 @@
   font-size: 13px;
   line-height: 1.2;
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .type-en-data-xs {
@@ -218,6 +226,7 @@
   font-weight: 600;
   font-size: 11px;
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 .type-en-data-2xs {
@@ -225,6 +234,7 @@
   font-weight: 600;
   font-size: 9px;
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* EN/Wordmark — サイドバーの「GOOD ORDER」 */

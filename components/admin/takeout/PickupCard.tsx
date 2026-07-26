@@ -83,7 +83,7 @@ export default function PickupCard({
               >
                 {item.name}
               </p>
-              <p className="type-en-data-xs text-text-secondary shrink-0 whitespace-nowrap tabular-nums">
+              <p className="type-en-data-xs text-text-secondary shrink-0 whitespace-nowrap">
                 × {item.quantity}
               </p>
             </div>

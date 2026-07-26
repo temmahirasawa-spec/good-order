@@ -33,6 +33,7 @@ const STATUS_MAP: Record<CookingStatus, StatusBadgeState> = {
 };
 
 export default function OrderCard({
+  tableCategory,
   table,
   elapsed,
   isTakeout,
@@ -45,6 +46,9 @@ export default function OrderCard({
   onComplete,
   className = "",
 }: {
+  /** カテゴリー名（"カウンター"）。テイクアウトや移行前の注文では空 */
+  tableCategory?: string;
+  /** 卓の短縮ラベル（"C-1"）。テイクアウトは "TAKEOUT" */
   table: string;
   elapsed: string;
   isTakeout: boolean;
@@ -79,9 +83,16 @@ export default function OrderCard({
           isUrgent ? "bg-status-urgent-subtle" : isWarning ? "bg-status-warning-subtle" : "bg-surface-white"
         }`}
       >
-        <span className="flex gap-[var(--space-8)] items-center">
+        {/* カテゴリー名は小さくグレー、卓番号は大きく黒。
+            「どの席か」は番号で読み、「どのエリアか」は名前で補う並びにしている */}
+        <span className="flex gap-[var(--space-8)] items-center min-w-0">
           {isTakeout && <Icon name="bag" className="shrink-0 w-4 h-4 text-text-primary" />}
-          <span className="type-en-data-l text-text-primary">
+          {tableCategory && (
+            <span className="type-jp-heading-s text-text-secondary truncate">
+              {tableCategory}
+            </span>
+          )}
+          <span className="type-en-data-l text-text-primary shrink-0">
             {table}
           </span>
           {hasUnacknowledged && (

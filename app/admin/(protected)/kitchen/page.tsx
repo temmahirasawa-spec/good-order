@@ -26,11 +26,13 @@ import {
 import AdminPageShell from "@/components/admin/AdminPageShell";
 import TopBar from "@/components/admin/TopBar";
 import StaffCallChip from "@/components/admin/StaffCallChip";
+import { displayTableLabel, shortenTableLabel, splitTableLabel } from "@/lib/tables";
 import OrderCard, { type OrderCardItem } from "@/components/admin/kitchen/OrderCard";
 
 interface PendingCall {
   id: string;
   table_number: number;
+  table_label: string | null;
   call_type: "water" | "bill" | "other";
   call_label: string;
   status: StaffCallStatus;
@@ -89,7 +91,7 @@ export default function KitchenPage() {
     try {
       const { data: orderRows, error: orderErr } = await supabase
         .from("orders")
-        .select("id, table_number, status, order_type, created_at, updated_at")
+        .select("id, table_number, table_id, table_label, status, order_type, created_at, updated_at")
         .in("status", ["pending", "preparing"])
         .order("created_at", { ascending: true });
       if (orderErr) throw orderErr;
@@ -124,6 +126,8 @@ export default function KitchenPage() {
       const orders: OrderWithItems[] = (orderRows ?? []).map((o: any) => ({
         id: o.id,
         table_number: o.table_number ?? null,
+        table_id:     o.table_id ?? null,
+        table_label:  o.table_label ?? null,
         order_type: (o.order_type ?? "dine_in") as "dine_in" | "takeout",
         created_at: o.created_at,
         updated_at: o.updated_at,
@@ -179,7 +183,7 @@ export default function KitchenPage() {
     try {
       const { data, error } = await supabase
         .from("staff_calls")
-        .select("id, table_number, call_type, call_label, status, created_at")
+        .select("id, table_number, table_label, call_type, call_label, status, created_at")
         .in("status", ["waiting", "acknowledged"])
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -379,7 +383,7 @@ export default function KitchenPage() {
                   {pendingCalls.map((c) => (
                     <StaffCallChip
                       key={c.id}
-                      table={`TABLE ${c.table_number}`}
+                      table={shortenTableLabel(displayTableLabel(c.table_label, c.table_number))}
                       message={c.call_label}
                       elapsed={calcElapsed(c.created_at, now).label.replace("経過", "")}
                       state={c.status === "waiting" ? "waiting" : "acknowledged"}
@@ -437,7 +441,16 @@ export default function KitchenPage() {
                   return (
                     <OrderCard
                       key={group.groupKey}
-                      table={group.orderType === "takeout" ? "TAKEOUT" : `TABLE ${group.tableNumber}`}
+                      tableCategory={
+                        group.orderType === "takeout"
+                          ? undefined
+                          : splitTableLabel(displayTableLabel(group.tableLabel, group.tableNumber)).category
+                      }
+                      table={
+                        group.orderType === "takeout"
+                          ? "TAKEOUT"
+                          : splitTableLabel(displayTableLabel(group.tableLabel, group.tableNumber)).code
+                      }
                       elapsed={elapsed.label}
                       isTakeout={group.orderType === "takeout"}
                       urgency={elapsed.urgency}

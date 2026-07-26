@@ -21,6 +21,8 @@ export interface HistoryEntry {
   orderId: string;
   orderedAt: string;              // ISO
   tableNumber: number;
+  /** "A1" のような卓ラベル（Step3-O）。移行前に保存された履歴には無いので optional */
+  tableLabel?: string | null;
   orderType: "dine_in" | "takeout";
   totalAmount: number;            // 税込
   status: "pending" | "preparing" | "served" | "picked_up" | "paid";

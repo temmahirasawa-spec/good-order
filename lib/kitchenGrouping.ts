@@ -24,9 +24,11 @@ export interface KitchenOrderRound {
 }
 
 export interface KitchenTableGroup {
-  groupKey: string;             // 'table-1' or 'takeout-{order_id}'
+  groupKey: string;             // 'table-{table_id|number}' or 'takeout-{order_id}'
   orderType: "dine_in" | "takeout";
   tableNumber: number | null;
+  /** "A1" のような表示ラベル（Step3-O）。移行前の注文は null */
+  tableLabel: string | null;
   rounds: KitchenOrderRound[];
   oldestCreatedAt: string;
   hasUnacknowledged: boolean;
@@ -36,6 +38,8 @@ export interface KitchenTableGroup {
 export interface OrderWithItems {
   id: string;
   table_number: number | null;
+  table_id?: string | null;
+  table_label?: string | null;
   order_type: "dine_in" | "takeout";
   created_at: string;
   updated_at: string;
@@ -50,9 +54,11 @@ export function groupOrdersByTable(
   const groups = new Map<string, KitchenTableGroup>();
 
   for (const order of orders) {
+    /* 卓のまとめ方は table_id 優先。カテゴリーのコードを変えても同じ卓は同じ束に残る。
+       移行前の注文（table_id が無い）は従来どおり table_number でまとめる */
     const key =
       order.order_type === "dine_in"
-        ? `table-${order.table_number}`
+        ? `table-${order.table_id ?? order.table_number}`
         : `takeout-${order.id}`;
 
     if (!groups.has(key)) {
@@ -60,6 +66,7 @@ export function groupOrdersByTable(
         groupKey: key,
         orderType: order.order_type,
         tableNumber: order.table_number ?? null,
+        tableLabel: order.table_label ?? null,
         rounds: [],
         oldestCreatedAt: order.created_at,
         hasUnacknowledged: false,

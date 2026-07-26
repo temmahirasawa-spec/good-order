@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase";
 import { updateOrderStatusIfUnchanged } from "@/lib/api";
 import { formatJstHm } from "@/lib/dateFormat";
 import AdminPageShell from "@/components/admin/AdminPageShell";
+import { displayTableLabel, splitTableLabel } from "@/lib/tables";
 import TopBar from "@/components/admin/TopBar";
 import TableChip from "@/components/admin/register/TableChip";
 import BillCard from "@/components/admin/register/BillCard";
@@ -37,6 +38,9 @@ interface RegisterOrder {
   /** サーバー採番の受渡番号（supabase/pickup_no.sql）。内部照合用IDとは別物 */
   pickup_no: number | null;
   table_number: number;
+  table_id: string | null;
+  /** "A1" のような注文時点の卓ラベル（Step3-O）。移行前の注文は null */
+  table_label: string | null;
   status: OrderStatus;
   order_type: "dine_in" | "takeout";
   created_at: string;
@@ -45,9 +49,15 @@ interface RegisterOrder {
   items: RegisterOrderItem[];
 }
 
+/* 卓の束ね方は table_id 優先。移行前の注文（table_id が無い）は
+   従来どおり table_number でまとめるので、key は文字列で持つ */
 type Selection =
-  | { kind: "table"; n: number }
+  | { kind: "table"; key: string }
   | { kind: "takeout"; orderId: string };
+
+function tableKey(o: { table_id: string | null; table_number: number }): string {
+  return o.table_id ?? `n${o.table_number}`;
+}
 
 export default function RegisterPage() {
   const [orders, setOrders] = useState<RegisterOrder[]>([]);
@@ -60,7 +70,7 @@ export default function RegisterPage() {
     try {
       const { data: orderRows, error: orderErr } = await supabase
         .from("orders")
-        .select("id, pickup_no, table_number, status, order_type, created_at, updated_at, total_amount")
+        .select("id, pickup_no, table_number, table_id, table_label, status, order_type, created_at, updated_at, total_amount")
         .neq("status", "paid")
         .order("created_at", { ascending: true });
       if (orderErr) throw orderErr;
@@ -98,6 +108,8 @@ export default function RegisterPage() {
           id: o.id,
           pickup_no: o.pickup_no ?? null,
           table_number: o.table_number,
+          table_id:     o.table_id ?? null,
+          table_label:  o.table_label ?? null,
           status: o.status as OrderStatus,
           order_type: (o.order_type ?? "dine_in") as "dine_in" | "takeout",
           created_at: o.created_at,
@@ -125,13 +137,21 @@ export default function RegisterPage() {
     };
   }, [loadOrders]);
 
-  // テーブル番号一覧（店内 = order_type dine_in のみ）
-  const tableNumbers = useMemo(() => {
-    const set = new Set<number>();
+  // 卓一覧（店内 = order_type dine_in のみ）。ラベル順で並べる
+  const tableBills = useMemo(() => {
+    const map = new Map<string, { key: string; full: string; category: string; code: string }>();
     orders
       .filter((o) => o.order_type === "dine_in")
-      .forEach((o) => set.add(o.table_number));
-    return Array.from(set).sort((a, b) => a - b);
+      .forEach((o) => {
+        const key = tableKey(o);
+        if (!map.has(key)) {
+          const full = displayTableLabel(o.table_label, o.table_number);
+          map.set(key, { key, full, ...splitTableLabel(full) });
+        }
+      });
+    return Array.from(map.values()).sort((a, b) =>
+      a.full.localeCompare(b.full, "ja", { numeric: true })
+    );
   }, [orders]);
 
   // テイクアウト注文（個別）
@@ -142,17 +162,17 @@ export default function RegisterPage() {
 
   // テーブルごとに「全注文 served か」を判定
   const allServedByTable = useMemo(() => {
-    const map: Record<number, boolean> = {};
-    tableNumbers.forEach((n) => {
+    const map: Record<string, boolean> = {};
+    tableBills.forEach(({ key }) => {
       const tableOrders = orders.filter(
-        (o) => o.order_type === "dine_in" && o.table_number === n
+        (o) => o.order_type === "dine_in" && tableKey(o) === key
       );
-      map[n] =
+      map[key] =
         tableOrders.length > 0 &&
         tableOrders.every((o) => o.status === "served");
     });
     return map;
-  }, [orders, tableNumbers]);
+  }, [orders, tableBills]);
 
   // 選択中の注文を集計
   const selectedData = useMemo(() => {
@@ -161,7 +181,7 @@ export default function RegisterPage() {
     let targetOrders: RegisterOrder[] = [];
     if (selected.kind === "table") {
       targetOrders = orders.filter(
-        (o) => o.order_type === "dine_in" && o.table_number === selected.n
+        (o) => o.order_type === "dine_in" && tableKey(o) === selected.key
       );
     } else {
       const t = orders.find((o) => o.id === selected.orderId);
@@ -184,7 +204,10 @@ export default function RegisterPage() {
 
     return {
       selection: selected,
-      tableNumber: selected.kind === "table" ? selected.n : null,
+      tableLabel:
+        selected.kind === "table"
+          ? displayTableLabel(targetOrders[0].table_label, targetOrders[0].table_number)
+          : null,
       orderCount: targetOrders.length,
       checkInLabel: formatJstHm(earliestCreatedAt),
       orderRefs: targetOrders.map((o) => ({ id: o.id, updatedAt: o.updated_at })),
@@ -202,12 +225,12 @@ export default function RegisterPage() {
   // 選択中が消えたら選択解除
   useEffect(() => {
     if (!selected) return;
-    if (selected.kind === "table" && !tableNumbers.includes(selected.n)) {
+    if (selected.kind === "table" && !tableBills.some((t) => t.key === selected.key)) {
       setSelected(null);
     } else if (selected.kind === "takeout" && !takeoutOrders.find((o) => o.id === selected.orderId)) {
       setSelected(null);
     }
-  }, [tableNumbers, takeoutOrders, selected]);
+  }, [tableBills, takeoutOrders, selected]);
 
   const handleCloseOut = async () => {
     if (!selectedData) return;
@@ -234,7 +257,7 @@ export default function RegisterPage() {
     }
   };
 
-  const totalBills = tableNumbers.length + takeoutOrders.length;
+  const totalBills = tableBills.length + takeoutOrders.length;
 
   return (
     <AdminPageShell>
@@ -248,13 +271,14 @@ export default function RegisterPage() {
             strip={
               totalBills > 0 ? (
                 <>
-                  {tableNumbers.map((n) => (
+                  {tableBills.map((t) => (
                     <TableChip
-                      key={`t-${n}`}
-                      label={`TABLE ${n}`}
-                      selected={selected?.kind === "table" && selected.n === n}
-                      showServedDot={allServedByTable[n]}
-                      onClick={() => setSelected({ kind: "table", n })}
+                      key={`t-${t.key}`}
+                      category={t.category || undefined}
+                      label={t.code}
+                      selected={selected?.kind === "table" && selected.key === t.key}
+                      showServedDot={allServedByTable[t.key]}
+                      onClick={() => setSelected({ kind: "table", key: t.key })}
                     />
                   ))}
                   {takeoutOrders.map((o) => (
@@ -329,7 +353,7 @@ export default function RegisterPage() {
             open={confirmOpen}
             table={
               selectedData?.selection.kind === "table"
-                ? `TABLE ${selectedData.tableNumber}`
+                ? String(selectedData.tableLabel)
                 : `🛍 ${PICKUP_NO_LABEL} ${(selectedData?.pickupNos ?? []).map((n) => formatPickupNo(n)).join(" / ")}`
             }
             amount={selectedData?.total ?? 0}

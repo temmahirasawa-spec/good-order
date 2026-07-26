@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "./supabase";
+import { shortenTableLabel } from "./tables";
 
 /* ────────────── 型 ────────────── */
 
@@ -18,6 +19,10 @@ export interface SalesOrderItem {
 export interface SalesOrder {
   id: string;
   table_number: number;
+  /** tables.id（Step3-O）。集計・絞り込みはこちらで行う。移行前の注文は null */
+  table_id: string | null;
+  /** "A1" のような注文時点の卓ラベル。**表示は必ずこちら** */
+  table_label: string | null;
   total_amount: number;      // 税込み合計
   order_type: "dine_in" | "takeout";
   created_at: string;        // ISO (UTC)
@@ -72,7 +77,12 @@ export interface CategoryRanking {
 }
 
 export interface TableStat {
-  table_number: number;
+  /** グルーピングのキー。table_id があればそれ、無ければ "n5" のような番号由来のキー */
+  key: string;
+  /** フルラベル（"カウンター C-1" / 移行前は "5"）。ツールチップ用 */
+  label: string;
+  /** 短縮ラベル（"C-1"）。棒グラフの軸のように幅が無い場所用 */
+  shortLabel: string;
   uses: number;
   revenue: number;
 }
@@ -141,11 +151,16 @@ export async function fetchSalesData(
   return ((data ?? []) as any[]).map((o) => ({
     id: o.id,
     table_number: o.table_number ?? 0,
+    table_id:     o.table_id ?? null,
+    table_label:  o.table_label ?? null,
     total_amount: o.total_amount ?? 0,
     order_type: (o.order_type ?? "dine_in") as "dine_in" | "takeout",
     created_at: o.created_at,
+    /* get_sales_orders（supabase/staff_role_rls.sql）が返すキーは `items`。
+       ここは長らく `order_items` を読んでいて常に空配列になっており、
+       人気メニュー・カテゴリ別売上が恒常的に「データなし」になっていた（Step3-Nで発見・修正）。 */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    items: (o.order_items ?? []).map((it: any) => ({
+    items: (o.items ?? []).map((it: any) => ({
       quantity:      it.quantity ?? 0,
       unit_price:    it.unit_price ?? 0,
       menu_item_name: it.menu_items?.name ?? "(不明な商品)",
@@ -278,19 +293,24 @@ export function calcCategoryRanking(orders: SalesOrder[]): CategoryRanking[] {
 }
 
 export function calcTableStats(orders: SalesOrder[]): TableStat[] {
-  const map = new Map<number, TableStat>();
+  const map = new Map<string, TableStat>();
   for (const o of orders) {
     if (o.order_type === "takeout") continue; // テイクアウトは含めない
-    const t = o.table_number;
-    const prev = map.get(t);
+    // 卓の同一性は table_id で判定する（カテゴリーのコードを変えても束が割れない）。
+    // 移行前の注文は table_id が無いので番号由来のキーにフォールバックする
+    const key = o.table_id ?? `n${o.table_number}`;
+    const label = o.table_label || String(o.table_number);
+    const prev = map.get(key);
     if (prev) {
       prev.uses    += 1;
       prev.revenue += o.total_amount;
     } else {
-      map.set(t, { table_number: t, uses: 1, revenue: o.total_amount });
+      map.set(key, { key, label, shortLabel: shortenTableLabel(label), uses: 1, revenue: o.total_amount });
     }
   }
-  return Array.from(map.values()).sort((a, b) => a.table_number - b.table_number);
+  return Array.from(map.values()).sort((a, b) =>
+    a.label.localeCompare(b.label, "ja", { numeric: true })
+  );
 }
 
 export function calcPeakHour(orders: SalesOrder[]): string {
@@ -388,12 +408,12 @@ export function calcDineInVsTakeout(orders: SalesOrder[]): DineInVsTakeout {
 
 /* ── CSV 出力 ── */
 export function toCsv(orders: SalesOrder[]): string {
-  const header = ["id", "date_jst", "time_jst", "table_number", "order_type", "total_amount"];
+  const header = ["id", "date_jst", "time_jst", "table_label", "table_number", "order_type", "total_amount"];
   const rows = orders.map((o) => {
     const d = jstDate(o.created_at);
     const date = jstYmd(o.created_at);
     const time = `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
-    return [o.id, date, time, o.table_number, o.order_type, o.total_amount];
+    return [o.id, date, time, o.table_label ?? "", o.table_number, o.order_type, o.total_amount];
   });
   return [header, ...rows].map((r) => r.join(",")).join("\n");
 }

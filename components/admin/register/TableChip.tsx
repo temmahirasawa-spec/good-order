@@ -6,11 +6,15 @@
  * ServedDotは全品提供済みの卓のみ表示。
  */
 export default function TableChip({
+  category,
   label,
   selected,
   showServedDot,
   onClick,
 }: {
+  /** カテゴリー名（"カウンター"）。テイクアウトのチップでは省略する */
+  category?: string;
+  /** 卓の短縮ラベル（"C-1"）。テイクアウトは "🛍 01" のような文字列 */
   label: string;
   selected: boolean;
   showServedDot?: boolean;
@@ -27,9 +31,9 @@ export default function TableChip({
       }`}
     >
       {showServedDot && <span className="shrink-0 w-[6px] h-[6px] rounded-full bg-status-success" />}
-      <span className="font-en font-semibold text-[14px] leading-[1.2] text-text-primary">
-        {label}
-      </span>
+      {/* カテゴリー名は小さくグレー、卓番号は大きく黒（Order Cardのヘッダーと同じ組み方） */}
+      {category && <span className="type-jp-caption text-text-secondary">{category}</span>}
+      <span className="type-en-price-l text-text-primary">{label}</span>
     </button>
   );
 }

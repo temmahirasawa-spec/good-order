@@ -289,7 +289,10 @@ function OrderCard({
           )}
           <p className="text-sm font-semibold text-gray-800">{formatDate(entry.orderedAt)}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">
-            {entry.orderType === "takeout" ? "🛍 テイクアウト" : `🪑 TABLE ${entry.tableNumber}`}
+            {entry.orderType === "takeout"
+              ? "🛍 テイクアウト"
+              /* 移行前の履歴には tableLabel が無いので元の数値にフォールバックする */
+              : `🪑 ${entry.tableLabel ?? entry.tableNumber}`}
           </p>
         </div>
         {(() => {

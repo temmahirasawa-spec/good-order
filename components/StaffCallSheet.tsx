@@ -26,6 +26,7 @@ interface Props {
 
 export default function StaffCallSheet({ open, onClose }: Props) {
   const tableNumber = useCartStore((s) => s.tableNumber);
+  const tableLabel  = useCartStore((s) => s.tableLabel);
 
   const [mounted,  setMounted]  = useState(false);
   const [visible,  setVisible]  = useState(false);
@@ -71,6 +72,8 @@ export default function StaffCallSheet({ open, onClose }: Props) {
       const { error } = await supabase.from("staff_calls").insert({
         store_id: STORE_ID,
         table_number: tableNumber ?? 0,
+        // 厨房のCall Chipに "A1" と出すためのラベル（Step3-O）
+        table_label: tableLabel ?? null,
         call_type: opt.type,
         call_label: opt.label,
       });

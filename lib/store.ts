@@ -41,6 +41,8 @@ async function saveOrderToDb(
   orderId: string,
   items: { item: MenuItem; quantity: number }[],
   tableNumber: number | null,
+  tableId: string | null,
+  tableLabel: string | null,
   orderType: "dine_in" | "takeout",
   totalAmount: number
 ): Promise<boolean> {
@@ -52,6 +54,10 @@ async function saveOrderToDb(
           id: orderId,
           store_id: STORE_ID,
           table_number: orderType === "takeout" ? 0 : (tableNumber ?? 0),
+          // table_id は集計・絞り込み用、table_label は注文時点のラベルのスナップショット。
+          // 卓を消したりカテゴリーのコードを変えても、過去の伝票の卓名は変わらない
+          table_id:    orderType === "takeout" ? null : tableId,
+          table_label: orderType === "takeout" ? null : tableLabel,
           status: "pending",
           order_type: orderType,
           total_amount: totalAmount,
@@ -94,6 +100,10 @@ export type PlaceOrderResult =
 interface CartStore {
   items: CartItem[];
   tableNumber: number | null;
+  /** tables.id。移行前の ?table=N で入ってきて解決できなかった場合は null */
+  tableId: string | null;
+  /** "A1" のような表示ラベル。注文時にスナップショットとして orders に書く */
+  tableLabel: string | null;
   orderType: "dine_in" | "takeout";
   isTakeoutMode: boolean;
   orderHistory: CartItem[][];
@@ -102,6 +112,7 @@ interface CartStore {
   lastOrderId: string | null;
 
   setTable: (n: number) => void;
+  setTableRef: (id: string | null, label: string | null) => void;
   setOrderType: (type: "dine_in" | "takeout") => void;
   setTakeoutMode: (flag: boolean) => void;
   addItem: (item: MenuItem, qty?: number) => void;
@@ -120,6 +131,8 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       tableNumber: null,
+      tableId: null,
+      tableLabel: null,
       orderType: "dine_in",
       isTakeoutMode: false,
       orderHistory: [],
@@ -127,6 +140,7 @@ export const useCartStore = create<CartStore>()(
       lastOrderId: null,
 
       setTable: (n) => set({ tableNumber: n }),
+      setTableRef: (id, label) => set({ tableId: id, tableLabel: label }),
       setOrderType: (type) => set({ orderType: type }),
       setTakeoutMode: (flag) => set({ isTakeoutMode: flag }),
 
@@ -187,6 +201,8 @@ export const useCartStore = create<CartStore>()(
         if (!accepting) return { ok: false, reason: "closed" };
 
         const tableNumber = get().tableNumber;
+        const tableId     = get().tableId;
+        const tableLabel  = get().tableLabel;
         const orderType   = get().orderType;
 
         const subtotal = current.reduce((s, i) => s + i.item.price * i.quantity, 0);
@@ -199,6 +215,7 @@ export const useCartStore = create<CartStore>()(
           orderId,
           orderedAt: new Date().toISOString(),
           tableNumber: orderType === "takeout" ? 0 : (tableNumber ?? 0),
+          tableLabel:  orderType === "takeout" ? null : tableLabel,
           orderType,
           totalAmount,
           status: "pending",
@@ -213,7 +230,7 @@ export const useCartStore = create<CartStore>()(
         appendHistory(entry);
 
         // DB は fire-and-forget 的に呼ぶ（失敗しても履歴は残る）
-        void saveOrderToDb(orderId, current, tableNumber, orderType, totalAmount);
+        void saveOrderToDb(orderId, current, tableNumber, tableId, tableLabel, orderType, totalAmount);
 
         set({
           orderHistory: [...get().orderHistory, current],
@@ -236,6 +253,8 @@ export const useCartStore = create<CartStore>()(
       partialize: (state) => ({
         items: state.items,
         tableNumber: state.tableNumber,
+        tableId: state.tableId,
+        tableLabel: state.tableLabel,
         orderType: state.orderType,
         isTakeoutMode: state.isTakeoutMode,
         orderHistory: state.orderHistory,
