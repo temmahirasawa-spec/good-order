@@ -14,10 +14,13 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 客側（`/order`, `/order/menu`, `/order/[category]`, `/order/item/[id]`, `/cart`, `/complete`）は
 リデザイン完了済み。現在はスタッフ側（`/admin/*`）のリデザインを進行中。
 
-**重要: このリポジトリは最初のコミット（`6cd946f Initial commit from Create Next App`）以降、
-一度もcommitされていない。** ここまでのリデザイン作業（客側・スタッフ側とも）は全て
-working tree上の未コミット変更として存在する。ユーザーから明示的に指示されない限りcommitしない
-（既存ルール通り）。
+**Git状況（2026-07-26 更新）**: ここまでのリデザイン作業は全て
+`main` に **13コミット**に分けてcommit済み（`d910a6f`〜`3f31c96`）。working treeはクリーン。
+**ただしリモートリポジトリが未設定のため、まだpushできていない。**
+GitHubにリポジトリを作るのは天真さんの担当（public/privateの判断があるため）。
+作成後に `git remote add origin <URL>` → `git push -u origin main` で送れる状態。
+
+ユーザーから明示的に指示されない限りcommitしない運用は継続（既存ルール通り）。
 
 ## 直近までの進捗
 
