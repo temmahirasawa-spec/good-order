@@ -3,7 +3,7 @@
 /**
  * カテゴリ一覧ページ（Step3-H、Figma: Category Listing 173:612）
  * TOPページ「もっと見る」・Menuページのカテゴリカードの遷移先。
- * ヘッダーはTOPページと同じOrderHeader（☰→/order/menu）→ Filter Bar →
+ * ヘッダーは Header / Close（×右上）→ Filter Bar →
  * カテゴリタイトル（EN/JP） → 商品グリッド（全件・display_order順） → Bottom View Cart Bar。
  * 既存コンポーネントの組み合わせで構成する。
  */
@@ -87,7 +87,7 @@ export default function CategoryListingPage() {
   return (
     <div className="mx-auto max-w-md min-h-screen bg-accent-subtle flex flex-col gap-[var(--space-20)]">
       <div className="flex flex-col">
-        <OrderHeader />
+        <OrderHeader variant="close" />
         <FilterBar
           chips={FILTER_CHIPS}
           selectedIds={[]}

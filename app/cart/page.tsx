@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderIconButton from "@/components/ui/HeaderIconButton";
-import { BackButton } from "@/components/ui/Buttons";
+import { AddToCartButton, BackButton } from "@/components/ui/Buttons";
 import CartItemRow from "@/components/ui/CartItemRow";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
@@ -182,16 +182,13 @@ export default function CartPage() {
               : "お会計はスタッフまでお声がけください"}
           </p>
 
-          <button
-            type="button"
+          {/* 商品詳細・カルーセルと同じボタンコンポーネントを使い回す。
+              個別にスタイルを書くと高さが潰れる等の同種のズレが再発するため */}
+          <AddToCartButton
+            label={confirming ? "送信中…" : "注文を確定する"}
             onClick={handleOrder}
             disabled={confirming}
-            className={`btn-confirm confirm-btn w-full tracking-wide disabled:opacity-100 !rounded-[var(--radius-full)] ${
-              confirming ? "confirming" : ""
-            }`}
-          >
-            {confirming ? "送信中…" : "注文を確定する"}
-          </button>
+          />
         </footer>
       )}
 

@@ -2,7 +2,8 @@
 
 /**
  * 新デザインのヘッダー（Figma: Header / Open 338:2267・Header / Close 176:1509）
- * 高さ68px。左に Header Icon Button（絶対配置 x16 y12）、ロゴは常に画面中央。
+ * 高さ68px。**ボタンは常に右上に1つだけ**（絶対配置 x326 y10）、ロゴは常に画面中央。
+ * ☰でも×でも位置を変えないことで、画面が変わってもボタンの場所を探さなくて済む。
  *
  * - variant="open"（デフォルト）: 左ボタン=☰、タップで /order/menu（Menuページ）へ
  * - variant="close": 左ボタン=×、タップで前の画面に戻る（履歴が無ければ /order へ）
@@ -36,7 +37,7 @@ export default function OrderHeader({
           icon={isClose ? "close" : "menu"}
           onClick={handleClick}
           label={isClose ? "メニューを閉じる" : "メニューを開く"}
-          className="absolute left-[16px] top-[12px]"
+          className="absolute right-[16px] top-[10px]"
         />
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Image

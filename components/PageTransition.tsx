@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 /**
@@ -16,6 +16,11 @@ import { usePathname } from "next/navigation";
  * バックグラウンドタブ等でアニメーションが進まないケースに備えて
  * 一定時間後に getAnimations().finish() で強制完了させる保険を入れている。
  * keyframes は app/globals.css の .page-fade-in / .page-slide-up を参照。
+ *
+ * フルモーダル（商品詳細）を開くときは、**アニメーションが始まる前に**
+ * ページ先頭へスクロールを戻す。TOPをスクロールした状態から商品をタップすると
+ * 前の画面のスクロール位置が残り、詳細が途中から表示されてしまうため。
+ * useEffect（描画後）だと一瞬途中位置が見えるので useLayoutEffect で行う。
  */
 export default function PageTransition({
   children,
@@ -27,6 +32,13 @@ export default function PageTransition({
 
   const isCustomerRoute =
     !!pathname && !pathname.startsWith("/admin") && !pathname.startsWith("/api");
+
+  const isModalRoute = !!pathname && pathname.startsWith("/order/item/");
+
+  useLayoutEffect(() => {
+    if (!isModalRoute) return;
+    window.scrollTo(0, 0);
+  }, [pathname, isModalRoute]);
 
   useEffect(() => {
     if (!isCustomerRoute) return;
@@ -45,8 +57,6 @@ export default function PageTransition({
   if (!isCustomerRoute) {
     return <>{children}</>;
   }
-
-  const isModalRoute = pathname.startsWith("/order/item/");
 
   return (
     // key=pathname で遷移ごとに再マウントし、入場アニメーションを再生する

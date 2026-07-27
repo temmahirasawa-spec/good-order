@@ -1,15 +1,19 @@
 "use client";
 
 /**
- * メニューカード（Figma: Menu Card 49:21 / Menu Card Wide 52:251）
- * - MenuCard: 幅171 = (390 − 16×2 − ガター16) ÷ 2。画像は正方形 171×171
+ * メニューカード（Figma: Menu Card 49:21 / Menu Card Wide 52:251 / Menu Card M 594:7910）
+ * - MenuCard: 幅171 = (390 − 16×2 − ガター16) ÷ 2。画像は正方形 171×171。グリッド用
  * - MenuCardWide: 横スライド用 幅300。画像は 4:3（300×225）
+ * - MenuCardM: カテゴリカルーセル用 幅200。画像は正方形 200×200。
+ *   下部が「ステッパー＋カートに入れる」の2要素なので専用の小型部品を使う
  * - バッジ: 燕尾ノッチ型リボン 48×64（accent-deep 地 + 王冠 + item.tag）
  */
 import type { MenuItem } from "@/lib/menu";
 import { Icon } from "@/components/Icon";
 import CategoryTag from "@/components/ui/CategoryTag";
 import QuantityStepper from "@/components/ui/QuantityStepper";
+import QuantityStepperS from "@/components/ui/QuantityStepperS";
+import { AddToCartButtonS } from "@/components/ui/Buttons";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 
@@ -130,6 +134,58 @@ export function MenuCard(props: MenuCardProps) {
         {...props}
         nameClassName="type-jp-heading-s min-h-[44px]"
       />
+    </div>
+  );
+}
+
+/**
+ * カルーセル用（幅200）。
+ * 下部は「数量ステッパー＋カートに入れる」の並び。カートのボックスアイコンは入れない
+ * （カードごとに置くと画面内で何度も繰り返され、TOPのフローティングカートと役割が重複する）。
+ */
+export function MenuCardM({
+  item,
+  quantity,
+  onIncrement,
+  onDecrement,
+  onAddToCart,
+  onClick,
+  imageLoading,
+  className = "",
+}: MenuCardProps & {
+  /** 「カートに入れる」。押した数量ぶんを一度に入れる */
+  onAddToCart: () => void;
+}) {
+  const categories = useMenuDataStore((s) => s.categories);
+  const label = SUBCATEGORY_LABEL[item.subcategory] ?? item.subcategory;
+  const color = resolveTagColor(categories, item.subcategory);
+  return (
+    <div className={`flex flex-col gap-[var(--space-8)] items-start w-[200px] shrink-0 ${className}`}>
+      <CardImage
+        item={item}
+        onClick={onClick}
+        imageClassName="w-[200px] h-[200px]"
+        imageLoading={imageLoading}
+      />
+      <CategoryTag label={label} color={color} />
+      <p
+        className={`type-jp-heading-s text-text-primary w-full line-clamp-2 min-h-[44px] ${onClick ? "cursor-pointer" : ""}`}
+        onClick={onClick}
+      >
+        {item.name}
+      </p>
+      <p className="type-en-price-m text-text-primary whitespace-nowrap">
+        ¥{item.price.toLocaleString()}
+      </p>
+      <div className="flex gap-[var(--space-8)] items-center w-full">
+        <QuantityStepperS
+          count={quantity}
+          min={1}
+          onIncrement={onIncrement}
+          onDecrement={onDecrement}
+        />
+        <AddToCartButtonS onClick={onAddToCart} className="flex-1 min-w-0" />
+      </div>
     </div>
   );
 }

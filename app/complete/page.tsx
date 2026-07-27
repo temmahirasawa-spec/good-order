@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OrderHeader from "@/components/ui/OrderHeader";
 import ChefSmileIllustration from "@/components/ChefSmileIllustration";
+import { AddToCartButton } from "@/components/ui/Buttons";
 import { useCartStore } from "@/lib/store";
 import { fetchOrderStatuses } from "@/lib/api";
 import { loadHistory, updateHistoryPickupNo } from "@/lib/history";
@@ -155,14 +156,9 @@ export default function CompletePage() {
       </main>
 
       {/* ── 下部バー（固定） ── */}
-      <footer className="shrink-0 bg-surface-white h-[96px] flex items-center justify-center px-[var(--space-24)] py-[var(--space-20)]">
-        <button
-          type="button"
-          onClick={handleAddMore}
-          className="flex-1 h-full rounded-[var(--radius-full)] bg-accent-primary active:bg-accent-pressed type-jp-body-bold text-text-primary"
-        >
-          追加で注文する
-        </button>
+      <footer className="shrink-0 bg-surface-white flex items-center justify-center px-[var(--space-24)] py-[var(--space-20)]">
+        {/* カート・商品詳細と同じボタンコンポーネント（52px）に統一 */}
+        <AddToCartButton label="追加で注文する" onClick={handleAddMore} />
       </footer>
     </div>
   );

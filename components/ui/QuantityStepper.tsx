@@ -9,16 +9,19 @@
 
 export default function QuantityStepper({
   count,
+  min = 0,
   onIncrement,
   onDecrement,
   className = "",
 }: {
   count: number;
+  /** これ以下にはできない下限。「カートに入れる」と組で使う場合は1（0個追加は意味がないため） */
+  min?: number;
   onIncrement: () => void;
   onDecrement: () => void;
   className?: string;
 }) {
-  const empty = count === 0;
+  const empty = count <= min;
   return (
     <div className={`flex gap-[var(--space-16)] items-center justify-center ${className}`}>
       {/* − */}

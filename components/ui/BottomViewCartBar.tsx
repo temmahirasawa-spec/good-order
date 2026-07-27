@@ -10,13 +10,16 @@ import { useRouter } from "next/navigation";
 import { AddToCartButton } from "@/components/ui/Buttons";
 import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
+import { useHydrated } from "@/hooks/useHydrated";
 
 export default function BottomViewCartBar() {
   const router = useRouter();
   const totalItems = useCartStore((s) => s.totalItems());
   const activeOverlay = useUiStore((s) => s.activeOverlay);
+  const hydrated = useHydrated();
 
-  if (totalItems === 0) return null;
+  // 個数はlocalStorage由来なので、ハイドレーション完了までは出さない（不一致対策）
+  if (!hydrated || totalItems === 0) return null;
   if (activeOverlay) return null;
 
   return (

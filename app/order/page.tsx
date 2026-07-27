@@ -3,23 +3,25 @@
 /**
  * TOPページ（Step3-C、Figma: TOP 32:4）
  * Header → TabNav（scrollspy）→ FilterBar → ヒーロー動画 →
- * Best Seller（MenuCardWide カルーセル）→ Menu Section ×11（2×2 MenuCard + SeeMore）
+ * Best Seller（MenuCardWide カルーセル）→ Menu Section ×11（MenuCardM カルーセル＋ドット）
  *
- * Figma 実測（32:4 metadata）:
- * - 各セクション: pt-40 / 見出し(eyebrow=jp-label, EN=en-display-xl, JP=jp-caption-bold, gap4, px-16)
- *   / 16 / コンテンツ（グリッド gap16・カルーセル）/ 24 / SeeMoreButton / pb-40
+ * カテゴリごとの表示は「2×2グリッド4件＋もっと見る」から
+ * **そのカテゴリの全商品を横スワイプで見るカルーセル**に変更した。
+ * 件数制限が無くなったので SeeMoreButton はこのページから外している
+ * （カテゴリ一覧ページ /order/[category] 自体はMenuページから引き続き辿れる）。
+ *
+ * カートへの導線は右下のフローティングカートボタン1つに集約している
+ * （下部の「カートを見る」バーは遷移先が同じで冗長だったため廃止）。
  */
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import OrderHeader from "@/components/ui/OrderHeader";
-import FloatingStaffCall from "@/components/FloatingStaffCall";
-import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
+import FloatingCartButton from "@/components/ui/FloatingCartButton";
 import { TabNav } from "@/components/ui/Tab";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Video16x9 } from "@/components/ui/VideoBlock";
-import { MenuCard, MenuCardWide } from "@/components/ui/MenuCard";
-import { MenuCarouselWide } from "@/components/ui/MenuCarousel";
-import SeeMoreButton from "@/components/ui/SeeMoreButton";
+import { MenuCardM, MenuCardWide } from "@/components/ui/MenuCard";
+import { MenuCarouselM, MenuCarouselWide } from "@/components/ui/MenuCarousel";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { useCartStore } from "@/lib/store";
 import { useOrderPageData } from "@/hooks/useOrderPageData";
@@ -179,6 +181,23 @@ function OrderContent() {
   const sectionItems = (slug: string): MenuItem[] =>
     categorySections.find((s) => s.category.slug === slug)?.items ?? [];
 
+  /* ── カルーセルカードのステッパーは「何個入れるか」の下書き ──
+     カートの現在数量を直接いじる従来のグリッドと違い、
+     ステッパーで数を決めて「カートに入れる」で確定する（商品詳細の下部バーと同じ操作感）。
+     0個追加は意味がないので下限は1。 */
+  const [draftQty, setDraftQty] = useState<Record<string, number>>({});
+  const draftOf = (id: string) => draftQty[id] ?? 1;
+  const bumpDraft = (id: string, delta: number) =>
+    setDraftQty((d) => ({ ...d, [id]: Math.max(1, (d[id] ?? 1) + delta) }));
+
+  const carouselCardHandlers = (item: MenuItem) => ({
+    quantity: draftOf(item.id),
+    onIncrement: () => bumpDraft(item.id, 1),
+    onDecrement: () => bumpDraft(item.id, -1),
+    onAddToCart: () => addItem(item, draftOf(item.id)),
+    onClick: () => router.push(`/order/item/${item.id}`),
+  });
+
   /* ── モードバナー（テイクアウト混入時、既存挙動を踏襲） ── */
   const showMixBanner = orderType === "dine_in" && isTakeoutMode;
 
@@ -252,23 +271,17 @@ function OrderContent() {
                 >
                   <SectionHeading eyebrow={copy.eyebrow} en={copy.en} jp={copy.jp} />
                   {items.length > 0 && (
-                    <div className="grid grid-cols-2 justify-items-center gap-y-[16px] px-[var(--space-16)] mt-[16px]">
+                    <MenuCarouselM count={items.length} className="mt-[16px]">
                       {items.map((item) => (
-                        <MenuCard
+                        <MenuCardM
                           key={item.id}
                           item={item}
-                          {...cardHandlers(item)}
+                          {...carouselCardHandlers(item)}
                           imageLoading="lazy"
                         />
                       ))}
-                    </div>
+                    </MenuCarouselM>
                   )}
-                  <div className="px-[var(--space-16)] mt-[24px]">
-                    <SeeMoreButton
-                      label={`${copy.jp}をもっと見る`}
-                      href={`/order/${slug}`}
-                    />
-                  </div>
                 </section>
               );
             })}
@@ -279,9 +292,8 @@ function OrderContent() {
       {/* ── 絞り込みプレースホルダー ── */}
       <FilterPlaceholderSheet open={filterOpen} onClose={() => setFilterOpen(false)} />
 
-      {/* ── フローティング ── */}
-      <FloatingStaffCall />
-      <BottomViewCartBar />
+      {/* ── フローティング（カートへの導線はこれ1つ） ── */}
+      <FloatingCartButton />
     </div>
   );
 }

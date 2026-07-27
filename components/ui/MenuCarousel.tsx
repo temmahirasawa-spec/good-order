@@ -10,7 +10,8 @@
  * スクロールできる余地が無い場合（画像1枚等）は自動で無効。
  * ユーザーがタップ/ドラッグ/ホイール操作した時点で自動スクロールは恒久的に停止する。
  */
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import CarouselDots from "@/components/ui/CarouselDots";
 
 /* かなりゆっくり: 1秒あたり30px（300px幅カード1枚分に約10秒） */
 const AUTO_SCROLL_SPEED_PX_PER_SEC = 30;
@@ -101,4 +102,71 @@ export function MenuCarouselWide(props: { children: ReactNode; className?: strin
 
 export function RecommendCarousel(props: { children: ReactNode; className?: string }) {
   return <ScrollRow {...props} autoScroll />;
+}
+
+/* Menu Card M（200）＋ カード間12。1枚目 x=16、2枚目 x=228 なので
+   画面幅390に対して2枚目の右が38pxはみ出す。この「見切れ」が
+   スライドできることの手がかりなので、scroll-snap 等で潰さないこと。 */
+const CARD_M_WIDTH = 200;
+const CARD_M_GAP = 12;
+
+/**
+ * カテゴリごとの横スワイプカルーセル（Menu Card M 用）＋ ドットページネーション。
+ * ドットはスクロール量から現在地を割り出す（IntersectionObserverだとカードが
+ * 常に2枚見えている状態で「どちらがアクティブか」を決めきれないため）。
+ */
+export function MenuCarouselM({
+  count,
+  children,
+  className = "",
+}: {
+  /** ドットの数＝カード枚数 */
+  count: number;
+  children: ReactNode;
+  className?: string;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+
+  const update = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const step = CARD_M_WIDTH + CARD_M_GAP;
+    const max = Math.max(0, count - 1);
+    setActive(Math.min(max, Math.max(0, Math.round(el.scrollLeft / step))));
+  }, [count]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => { frame = 0; update(); });
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    update();
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [update]);
+
+  return (
+    <div className={className}>
+      <div
+        ref={scrollRef}
+        className="overflow-x-auto overflow-y-hidden"
+        style={{ scrollbarWidth: "none" }}
+      >
+        <div
+          className="flex w-max"
+          style={{ padding: "0 var(--space-16)", gap: `${CARD_M_GAP}px` }}
+        >
+          {children}
+        </div>
+      </div>
+      <CarouselDots total={count} active={active} className="mt-[var(--space-12)]" />
+    </div>
+  );
 }

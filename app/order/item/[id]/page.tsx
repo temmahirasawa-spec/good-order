@@ -1,10 +1,15 @@
 "use client";
 
 /**
- * 商品詳細ページ（Step3-D、Figma: Product Detail 80:894）
- * KV（260px・左上にメニューボタン → /order/menu）→ Intro（タグ/タイトル/説明）→
+ * 商品詳細ページ（Step3-D、Figma: Product Detail 80:894 / Bottom Detail Bar 110:542）
+ * KV（260px・右上に×を浮かせる）→ Intro（タグ/タイトル/説明）→
  * Sub Image（300×300、2枚目の画像がある場合のみ）→ Video 9:16（動画がある場合のみ）→
- * Recommended（同サブカテゴリの関連おすすめ）→ Bottom Detail Bar（× + カートに入れる）
+ * Recommended（同サブカテゴリの関連おすすめ）→ Bottom Detail Bar
+ *
+ * ヘッダーのメニューボタン（☰）は廃止した。×で閉じて元の画面に戻れれば足りるし、
+ * フルモーダルの中にメニューを置くと階層が分かりにくくなるため。
+ * 下部バーは白地＋上辺罫線に変え、左にカートアイコン（バッジ付き）を置いた。
+ * 「カートに入れる」を押すたびにバッジが増えることが、カートに入った主要なフィードバックになる。
  *
  * Sub Image / 縦動画の専用カラムは menu_items に存在しないため、
  * media（media_order）配列の2枚目画像・動画を「あれば表示、なければ非表示」で扱う。
@@ -12,11 +17,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import HeaderIconButton from "@/components/ui/HeaderIconButton";
+import CartIconButton from "@/components/ui/CartIconButton";
 import CategoryTag from "@/components/ui/CategoryTag";
+import QuantityStepper from "@/components/ui/QuantityStepper";
 import RecommendCard from "@/components/ui/RecommendCard";
 import { RecommendCarousel } from "@/components/ui/MenuCarousel";
 import { Video9x16 } from "@/components/ui/VideoBlock";
-import { AddToCartButton, BackButton } from "@/components/ui/Buttons";
+import { AddToCartButton } from "@/components/ui/Buttons";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { useCartStore } from "@/lib/store";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
@@ -39,8 +46,11 @@ export default function ItemDetailPage() {
   const stopRealtime  = useMenuDataStore((s) => s.stopRealtime);
 
   const addItem = useCartStore((s) => s.addItem);
+  const totalItems = useCartStore((s) => s.totalItems());
 
   const [closing, setClosing] = useState(false);
+  /* ステッパーは「何個入れるか」の下書き。0個追加は意味がないので下限は1 */
+  const [draftQty, setDraftQty] = useState(1);
 
   // 共有キャッシュを流用（Step3-A の方針どおり、個別フェッチはしない）
   useEffect(() => {
@@ -115,10 +125,12 @@ export default function ItemDetailPage() {
             className="absolute inset-0 w-full h-full object-cover"
           />
         )}
+        {/* ボタンは常に右上に1つだけ、という全画面共通のルールに合わせる */}
         <HeaderIconButton
-          icon="menu"
-          onClick={() => router.push("/order/menu")}
-          className="absolute left-[16px] top-[12px]"
+          icon="close"
+          onClick={handleClose}
+          label="閉じる"
+          className="absolute right-[16px] top-[12px]"
         />
       </div>
 
@@ -185,17 +197,29 @@ export default function ItemDetailPage() {
         )}
       </main>
 
-      {/* ── Bottom Detail Bar（透明追従バー: 戻る + カートに入れる） ── */}
+      {/* ── Bottom Detail Bar（Figma 110:542）──
+          左端にカートアイコン（バッジ付き）、右側にステッパーと「カートに入れる」。
+          白地＋上辺罫線にしたのは、透明だと本文と地続きに見えて操作対象だと気づきにくいため。 */}
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 flex gap-[var(--space-12)] items-center pt-[var(--space-8)] px-[var(--space-16)]"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 flex gap-[var(--space-12)] items-center bg-surface-white border-t border-border-divider pt-[var(--space-12)] px-[var(--space-16)]"
         style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}
       >
-        <BackButton icon="close" onClick={handleClose} />
-        <AddToCartButton
-          label="カートに入れる"
-          onClick={() => addItem(item, 1)}
-          className="flex-1"
-        />
+        <CartIconButton count={totalItems} onClick={() => router.push("/cart")} />
+        <div className="flex flex-1 gap-[var(--space-8)] items-center justify-end min-w-0">
+          <QuantityStepper
+            count={draftQty}
+            min={1}
+            onIncrement={() => setDraftQty((q) => q + 1)}
+            onDecrement={() => setDraftQty((q) => Math.max(1, q - 1))}
+          />
+          {/* 幅は AddToCartButton 側が w-full なのでラッパーで持つ */}
+          <div className="w-[154px] shrink-0">
+            <AddToCartButton
+              label="カートに入れる"
+              onClick={() => addItem(item, draftQty)}
+            />
+          </div>
+        </div>
       </div>
 
     </div>
