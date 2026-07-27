@@ -117,16 +117,17 @@ function OrderContent() {
   const addItem        = useCartStore((s) => s.addItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
 
-  const { loading, bestSellerItems, categorySections } = useOrderPageData();
+  const { loading, bestSellerItems, bestSellerEnabled, categorySections } = useOrderPageData();
 
   const [activeSection, setActiveSection] = useState<string>(BEST_SELLER.id);
   const [filterOpen, setFilterOpen] = useState(false);
   const visibleSectionsRef = useRef<Set<string>>(new Set());
 
-  /* ── scrollspy: ビューポート上部の帯に入っているセクションのうち最上位を active に ── */
+  /* ── scrollspy: ビューポート上部の帯に入っているセクションのうち最上位を active に ──
+     Best Seller がOFFのときはセクション自体が無いので監視対象からも外す ── */
   useEffect(() => {
     if (loading) return;
-    const ids = [BEST_SELLER.id, ...SECTION_ORDER];
+    const ids = [...(bestSellerEnabled ? [BEST_SELLER.id] : []), ...SECTION_ORDER];
     const els = ids
       .map((id) => document.getElementById(`section-${id}`))
       .filter((el): el is HTMLElement => el !== null);
@@ -147,7 +148,7 @@ function OrderContent() {
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [loading]);
+  }, [loading, bestSellerEnabled]);
 
   const handleTabSelect = (id: string) => {
     const el = document.getElementById(`section-${id}`);
@@ -213,7 +214,11 @@ function OrderContent() {
 
       {/* ── ジャンプナビ（sticky・scrollspy） ── */}
       <div className="sticky top-[68px] z-30">
-        <TabNav tabs={TABS} activeId={activeSection} onSelect={handleTabSelect} />
+        <TabNav
+          tabs={bestSellerEnabled ? TABS : TABS.filter((t) => t.id !== BEST_SELLER.id)}
+          activeId={activeSection}
+          onSelect={handleTabSelect}
+        />
       </div>
 
       {/* ── 絞り込みバー（見た目のみ。タップでプレースホルダーを開く） ── */}
@@ -232,7 +237,9 @@ function OrderContent() {
             {/* ── ヒーロー動画（16:9・タップ再生） ── */}
             <Video16x9 media={HERO_MEDIA} />
 
-            {/* ── Best Seller（カテゴリ横断・横カルーセル） ── */}
+            {/* ── Best Seller（カテゴリ横断・横カルーセル）──
+                管理画面の設定でOFFにされたら、見出しごと描画しない（空の枠を残さない） ── */}
+            {bestSellerEnabled && bestSellerItems.length > 0 && (
             <section
               id={`section-${BEST_SELLER.id}`}
               style={{ scrollMarginTop: SCROLL_OFFSET }}
@@ -257,6 +264,7 @@ function OrderContent() {
                 </MenuCarouselWide>
               </div>
             </section>
+            )}
 
             {/* ── Menu Section ×11（フード7 → ドリンク4） ── */}
             {SECTION_ORDER.map((slug) => {

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { fetchRecentOrderItemCounts, type ApiCategory } from "@/lib/api";
+import { fetchBestSellerSetting, type BestSellerSetting } from "@/lib/bestSellers";
 import {
   pickFoodCategories,
   pickDrinkCategories,
@@ -30,8 +31,10 @@ export interface UseOrderPageDataResult {
   drinkCats: ApiCategory[];
   heroItems: MenuItem[];
   topItems: MenuItem[];
-  /** Best Seller セクション用：カテゴリ横断の全体ランキング上位8件 */
+  /** Best Seller セクション用の商品。店舗が手動指定していればその順、無ければ自動算出 */
   bestSellerItems: MenuItem[];
+  /** false のときは Best Seller セクションごと描画しない（見出しも出さない） */
+  bestSellerEnabled: boolean;
   /** フード7・ドリンク4の全11サブカテゴリを display_order 順（food→drink）に並べた人気アイテム */
   categorySections: CategorySection[];
   selectedItem: MenuItem | null;
@@ -104,10 +107,39 @@ export function useOrderPageData(): UseOrderPageDataResult {
 
   const heroItems = useMemo(() => computeHeroItems(allItems), [allItems]);
 
-  const bestSellerItems = useMemo(
-    () => computeBestSellerItems(allItems, orderCounts, BEST_SELLER_LIMIT),
-    [allItems, orderCounts]
-  );
+  /* ── ベストセラー設定（店舗が手動で指定した並び）──
+     読めなかった場合は null のままにして、従来どおりの自動算出にフォールバックする。
+     設定の取得に失敗しただけで枠が消えるのは困るため。 */
+  const [bestSellerSetting, setBestSellerSetting] = useState<BestSellerSetting | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await fetchBestSellerSetting();
+        if (!cancelled) setBestSellerSetting(s);
+      } catch (err) {
+        console.error("[BestSeller] setting fetch failed:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const bestSellerEnabled = bestSellerSetting?.enabled ?? true;
+
+  /* 表示ON かつ 登録あり → 指定された順。
+     表示ON かつ 登録0件 → 従来の自動算出にフォールバック
+     （設定はしたが中身が空、という状態で枠が消えると分かりにくいため）。
+     表示OFF → 呼び出し側がセクションごと描画しない。 */
+  const bestSellerItems = useMemo(() => {
+    const ids = bestSellerSetting?.itemIds ?? [];
+    if (ids.length > 0) {
+      const byId = new Map(allItems.map((i) => [i.id, i]));
+      // 非公開・削除済みの商品は落とす（指定順は保つ）
+      const picked = ids.map((id) => byId.get(id)).filter((i): i is MenuItem => !!i);
+      if (picked.length > 0) return picked;
+    }
+    return computeBestSellerItems(allItems, orderCounts, BEST_SELLER_LIMIT);
+  }, [bestSellerSetting, allItems, orderCounts]);
 
   const foodCats = useMemo(() => pickFoodCategories(categories), [categories]);
   const drinkCats = useMemo(() => pickDrinkCategories(categories), [categories]);
@@ -140,6 +172,7 @@ export function useOrderPageData(): UseOrderPageDataResult {
     heroItems,
     topItems,
     bestSellerItems,
+    bestSellerEnabled,
     categorySections,
     selectedItem,
     setSelectedItem,

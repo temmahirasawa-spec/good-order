@@ -1,12 +1,19 @@
 "use client";
 
 /**
- * 管理画面の一覧（メニュー管理・カテゴリ管理）の ⠿ ドラッグ並び替え。
+ * 管理画面の一覧（メニュー管理・カテゴリ管理・ベストセラー設定）の並び替え。
  *
+ * - PCは ⠿ ドラッグ、**SPは▲▼ボタン**（moveToTarget）。スマホのドラッグ&ドロップは
+ *   長押しでコンテキストメニューが出る／ハンドルが小さすぎて掴めないため実用に耐えない。
  * - 並び順の真実は既存の display_order 列（1..N の連番。supabase/list_reorder.sql
  *   のマイグレーションで詰め直し済み）。
- * - drop 時にまずローカルを楽観的に更新し、そのあと変更のあった行だけを
+ * - まずローカルを楽観的に更新し、そのあと変更のあった行だけを
  *   1リクエスト（RPC）で永続化する。失敗したときだけ元の配列へロールバックする。
+ *
+ * カテゴリーで絞り込んで並び替えるときは、呼び出し側が「表示中の隣の行」を
+ * targetId として渡す。commit は**全件配列**の位置で計算するので、
+ * 「掴んだ行をドロップ先のグローバル位置へ移す」形になり、
+ * 他カテゴリーの相対順序は保たれる。
  */
 import { useCallback, useRef, useState } from "react";
 
@@ -56,9 +63,9 @@ export function useDragReorder<T extends ReorderableRow>({
   }, []);
 
   const commit = useCallback(
-    async (targetId: string) => {
+    async (sourceId: string, targetId: string) => {
       const current = itemsRef.current;
-      const from = current.findIndex((i) => i.id === dragId);
+      const from = current.findIndex((i) => i.id === sourceId);
       const to = current.findIndex((i) => i.id === targetId);
       if (from < 0 || to < 0 || from === to) return;
 
@@ -85,7 +92,16 @@ export function useDragReorder<T extends ReorderableRow>({
         alert("並び替えの保存に失敗しました。元の順序に戻します。");
       }
     },
-    [dragId, persist, setItems]
+    [persist, setItems]
+  );
+
+  /** ▲▼ボタン用。表示中の隣の行を targetId として渡す */
+  const moveToTarget = useCallback(
+    (sourceId: string, targetId: string) => {
+      if (disabled) return;
+      void commit(sourceId, targetId);
+    },
+    [commit, disabled]
   );
 
   const bindingsFor = useCallback(
@@ -111,11 +127,11 @@ export function useDragReorder<T extends ReorderableRow>({
           setDragOverId((curr) => (curr === id ? null : curr));
         },
         onDrop: (e: React.DragEvent) => {
-          if (disabled) return;
+          if (disabled || dragId === null) return;
           e.preventDefault();
-          const target = id;
+          const source = dragId;
           clear();
-          void commit(target);
+          void commit(source, id);
         },
       },
       dragging: dragId === id,
@@ -124,5 +140,5 @@ export function useDragReorder<T extends ReorderableRow>({
     [clear, commit, disabled, dragId, dragOverId]
   );
 
-  return { bindingsFor, dragging: dragId !== null };
+  return { bindingsFor, moveToTarget, dragging: dragId !== null };
 }

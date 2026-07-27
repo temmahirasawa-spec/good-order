@@ -138,10 +138,19 @@ export default function AdminCategoriesPage() {
     },
     []
   );
-  const { bindingsFor } = useDragReorder<ApiCategory>({
+  const { bindingsFor, moveToTarget } = useDragReorder<ApiCategory>({
     items: categories,
     setItems: setCategories,
     persist: persistOrder,
+  });
+
+  /* SPは▲▼で並び替える（スマホのドラッグは長押しメニューが出て実用に耐えないため）。
+     カテゴリ管理は一覧が常に全件なので、メニュー管理と違って常時並び替え可能でよい */
+  const moveBindings = (index: number) => ({
+    up:   () => { if (index > 0) moveToTarget(categories[index].id, categories[index - 1].id); },
+    down: () => { if (index < categories.length - 1) moveToTarget(categories[index].id, categories[index + 1].id); },
+    isFirst: index === 0,
+    isLast: index === categories.length - 1,
   });
 
   /* ── 画像アップロード ── */
@@ -282,7 +291,7 @@ export default function AdminCategoriesPage() {
               ⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります
             </p>
             <p className="lg:hidden px-[var(--space-16)] pt-[var(--space-20)] pb-[var(--space-12)] type-jp-caption text-text-secondary">
-              ⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります
+              ▲▼ で並び替えると、メニュー画面での表示順が変わります
             </p>
 
             {/* ── カテゴリ一覧（Figma: List Scroll 309:323 — PCは左右24・上8） ── */}
@@ -298,7 +307,7 @@ export default function AdminCategoriesPage() {
                   カテゴリがまだありません
                 </div>
               ) : (
-                categories.map((cat) => (
+                categories.map((cat, idx) => (
                   <CategoryRow
                     key={cat.id}
                     name={cat.name}
@@ -308,6 +317,7 @@ export default function AdminCategoriesPage() {
                     displayOrder={cat.display_order}
                     onEdit={() => openEdit(cat)}
                     reorder={bindingsFor(cat.id)}
+                    move={moveBindings(idx)}
                   />
                 ))
               )}

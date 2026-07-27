@@ -8,7 +8,7 @@ import type { TagColor } from "@/components/ui/CategoryTag";
 
 export const DRINK_SLUGS = ["coffee", "tea", "soft", "alcohol"] as const;
 
-const STORE_ID = "10000000-0000-0000-0000-000000000001";
+export const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
 /* ── menu_items 取得時の共通カラム定義 ── */
 export const MENU_ITEM_COLUMNS =

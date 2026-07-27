@@ -5,16 +5,18 @@
  * grip・サムネイル・商品名（1行省略）・カテゴリ名・価格は共通。右端のみ
  * PC=公開トグル／SP=編集ボタンで切り替える（Figmaの2バリアントを1コンポーネントに統合）。
  *
- * grip（⠿）をドラッグすると表示順を並び替えられる（display_order を永続化。
+ * 並び替えは **PC=⠿ドラッグ / SP=▲▼ボタン**（display_order を永続化。
  * hooks/useDragReorder.ts + supabase/list_reorder.sql）。
- * カテゴリーフィルター適用中は一覧が部分集合になり順序を正しく計算できないため、
- * 呼び出し元が reorder を渡さないことで並び替えを無効化する。
+ * スマホのドラッグは長押しでコンテキストメニューが出て実用に耐えないため分けている。
+ * 並び替えできるのは**カテゴリー/テイクアウトで絞り込んでいるとき**だけ。
+ * 「すべて」表示では呼び出し元が reorder/move を渡さないことで無効化する。
  *
  * FigmaのPC版行には編集ボタンが無いため、行全体クリックで編集パネルを開く
  * （SPは明示的な編集ボタンも併存。トグルはクリック伝播を止めて誤操作を防ぐ）。
  */
 import Image from "next/image";
 import { Icon } from "@/components/Icon";
+import ReorderButtons from "@/components/admin/ReorderButtons";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import type { ReorderRowBindings } from "@/hooks/useDragReorder";
 
@@ -29,6 +31,7 @@ export default function AdminMenuRow({
   onEdit,
   dimmed,
   reorder,
+  move,
 }: {
   name: string;
   categoryLabel: string;
@@ -39,8 +42,10 @@ export default function AdminMenuRow({
   onToggleAvailable: () => void;
   onEdit: () => void;
   dimmed?: boolean;
-  /** ⠿ ドラッグ並び替えのバインディング。未指定なら並び替え不可 */
+  /** ⠿ ドラッグ並び替えのバインディング（PCのみ）。未指定なら並び替え不可 */
   reorder?: ReorderRowBindings;
+  /** SPの▲▼並び替え。未指定なら並び替え不可 */
+  move?: { up: () => void; down: () => void; isFirst: boolean; isLast: boolean };
 }) {
   return (
     <div
@@ -50,16 +55,28 @@ export default function AdminMenuRow({
         reorder?.dragOver ? "border-b-accent-primary" : "border-b-border-divider"
       } ${reorder?.dragging ? "opacity-40" : dimmed ? "opacity-50" : ""}`}
     >
-      <span
-        {...(reorder?.handle ?? {})}
-        onClick={(e) => e.stopPropagation()}
-        aria-label={reorder ? "ドラッグして並び替え" : undefined}
-        className={`shrink-0 flex items-center ${
-          reorder ? "cursor-grab active:cursor-grabbing" : "opacity-40"
-        }`}
-      >
-        <Icon name="grip" className="w-4 h-4 text-text-tertiary" />
-      </span>
+      {/* PCは⠿ドラッグ、SPは▲▼。並び替え不可のときはどちらも出さない */}
+      {reorder && (
+        <span
+          {...reorder.handle}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="ドラッグして並び替え"
+          className="hidden lg:flex shrink-0 items-center cursor-grab active:cursor-grabbing"
+        >
+          <Icon name="grip" className="w-4 h-4 text-text-tertiary" />
+        </span>
+      )}
+      {move && (
+        <div className="lg:hidden" onClick={(e) => e.stopPropagation()}>
+          <ReorderButtons
+            label={name}
+            onMoveUp={move.up}
+            onMoveDown={move.down}
+            disableUp={move.isFirst}
+            disableDown={move.isLast}
+          />
+        </div>
+      )}
 
       <div className="relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 size-[48px]">
         {thumbnailUrl && (

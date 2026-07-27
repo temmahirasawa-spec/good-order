@@ -5,7 +5,7 @@
  */
 
 export type IconName =
-  | "crown" | "sliders" | "chevron-down" | "cart" | "arrow-left"
+  | "crown" | "sliders" | "chevron-down" | "chevron-up" | "cart" | "arrow-left"
   | "menu" | "close" | "return" | "bell" | "bag" | "map-pin"
   | "clock" | "phone" | "water-drop" | "card" | "trash"
   | "dashboard" | "flame" | "receipt" | "list" | "bowl"
@@ -23,6 +23,9 @@ const paths: Record<IconName, JSX.Element> = {
       <circle cx="12" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" fill="white" />
       <circle cx="5" cy="11" r="3" stroke="currentColor" strokeWidth="1.5" fill="white" />
     </>
+  ),
+  "chevron-up": (
+    <path d="M3 11L8 5L13 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
   ),
   "chevron-down": (
     <path d="M3 5L8 11L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />

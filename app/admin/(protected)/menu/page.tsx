@@ -9,9 +9,8 @@
  * Figmaとの既知の差分（ユーザー確認済み事項含む）:
  * - カテゴリーフィルタータブは新Figmaに存在しないが、既存の実運用機能のため維持し
  *   見た目だけ新トークンに合わせた。
- * - ⠿ グリップのドラッグで表示順（display_order）を永続化する。
- *   カテゴリーフィルター適用中は一覧が部分集合になり順序を正しく計算できないため
- *   無効化している。
+ * - 表示順（display_order）の並び替えは PC=⠿ドラッグ / SP=▲▼ボタン。
+ *   **カテゴリー・テイクアウトで絞り込んでいるときだけ**行える（「すべて」ではUIごと非表示）。
  * - 削除機能はFigmaに配置が無いため、編集パネルのヘッダーに削除アイコンとして
  *   配置した（新規作成時は非表示）。
  */
@@ -39,6 +38,12 @@ import AdminMenuRow from "@/components/admin/menu/AdminMenuRow";
 import TagSelectField from "@/components/admin/menu/TagSelectField";
 import MediaUploaderField from "@/components/admin/menu/MediaUploaderField";
 import MenuPreviewCard from "@/components/admin/menu/MenuPreviewCard";
+import BestSellerModal, { type BestSellerCandidate } from "@/components/admin/menu/BestSellerModal";
+import {
+  fetchBestSellerSetting,
+  saveBestSellerSetting,
+  type BestSellerSetting,
+} from "@/lib/bestSellers";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import { Icon } from "@/components/Icon";
@@ -110,6 +115,8 @@ export default function AdminMenuPage() {
     before: ImageInfo;
     after: ImageInfo;
   } | null>(null);
+  const [bestSellerOpen, setBestSellerOpen] = useState(false);
+  const [bestSeller, setBestSeller] = useState<BestSellerSetting | null>(null);
 
   /* ── データ取得 ── */
   const loadAll = async () => {
@@ -161,13 +168,14 @@ export default function AdminMenuPage() {
         ? items.filter((i) => i.is_takeout)
         : items.filter((i) => i.category_id === categories.find((c) => c.slug === filterSlug)?.id);
 
-  /* ── ⠿ ドラッグ並び替え（display_order を1リクエストで永続化）──
-     カテゴリーフィルター適用中は、絞り込んだ集合が「カテゴリー内の一部」でしかなく、
-     並べ替えた結果が全体順序のどこに落ちるか操作者に見えないため無効化している。
-     テイクアウトだけは例外で許可する: 絞り込んだ集合が /order/takeout に出る
-     全商品そのものなので、その中の並びと全体順序が食い違わない。
-     ここを塞ぐとテイクアウト商品の並び順を永久に変えられなくなる。 */
-  const reorderEnabled = filterSlug === "all" || filterSlug === TAKEOUT_FILTER;
+  /* ── 並び替え（display_order を1リクエストで永続化。PC=⠿ドラッグ / SP=▲▼）──
+     **絞り込み中だけ**並び替えられる。トップページはカテゴリーごとに横並びで出るので、
+     店舗側が調整したいのは「そのカテゴリーの中での並び」であって全商品の通し順ではない。
+     「すべて」で許すと80品の中から目的の2品を隣接させる操作になり非現実的なので、
+     UIごと隠している（display_order はグローバルな単一列のまま。
+     絞り込み中の並び替えは「掴んだ行をドロップ先のグローバル位置へ移す」だけなので
+     他カテゴリーの相対順序は保たれる）。 */
+  const reorderEnabled = filterSlug !== "all";
   const persistOrder = useCallback(
     async (changed: { id: string; display_order: number }[]) => {
       const { error } = await supabase.rpc("reorder_menu_items", { p_items: changed });
@@ -175,12 +183,24 @@ export default function AdminMenuPage() {
     },
     []
   );
-  const { bindingsFor } = useDragReorder<AdminMenuItem>({
+  const { bindingsFor, moveToTarget } = useDragReorder<AdminMenuItem>({
     items,
     setItems,
     persist: persistOrder,
     disabled: !reorderEnabled,
   });
+
+  /* SPの▲▼は「表示中の隣の行」と入れ替える。全件配列の隣ではないので
+     絞り込み中でも見たままの順序で動く */
+  const moveBindings = (index: number) => {
+    if (!reorderEnabled) return undefined;
+    return {
+      up:   () => { if (index > 0) moveToTarget(displayed[index].id, displayed[index - 1].id); },
+      down: () => { if (index < displayed.length - 1) moveToTarget(displayed[index].id, displayed[index + 1].id); },
+      isFirst: index === 0,
+      isLast: index === displayed.length - 1,
+    };
+  };
 
   /* ── パネルを開く ──
      初期値は「いま見ているフィルター」に合わせる。
@@ -434,7 +454,28 @@ export default function AdminMenuPage() {
     }
   };
 
+  /* ── ベストセラー設定 ──
+     二次元コード管理の「席カテゴリの設定」と同じく、Top Barのボタンからモーダルで開く */
+  const openBestSeller = async () => {
+    setBestSellerOpen(true);
+    try {
+      setBestSeller(await fetchBestSellerSetting());
+    } catch (e) {
+      console.error("[menu] best seller fetch failed:", e);
+      // 読めなくてもモーダルは開けておく（空の状態から設定し直せる）
+      setBestSeller({ enabled: true, itemIds: [] });
+    }
+  };
+
   const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? "—";
+
+  const bestSellerCandidates: BestSellerCandidate[] = items.map((i) => ({
+    id: i.id,
+    name: i.name,
+    categoryId: i.category_id ?? null,
+    categoryName: i.is_takeout ? "テイクアウト" : catName(i.category_id ?? ""),
+    thumbnailUrl: i.image_url,
+  }));
   const selectedCategory = categories.find((c) => c.id === form.category_id);
   const previewImageUrl = form.media.find((m) => m.type === "image")?.url ?? null;
 
@@ -446,6 +487,19 @@ export default function AdminMenuPage() {
             title="メニュー管理"
             onMenuClick={openDrawer}
             action={
+              <div className="flex gap-[var(--space-8)] items-center shrink-0">
+              {/* SPは幅が無いので👑アイコンのみの丸ボタン */}
+              <button
+                type="button"
+                onClick={() => void openBestSeller()}
+                aria-label="ベストセラーの設定"
+                className="bg-bg-tertiary rounded-[var(--radius-full)] shrink-0 flex gap-[var(--space-8)] items-center justify-center size-[44px] lg:size-auto lg:px-[var(--space-16)] lg:py-[10px]"
+              >
+                <Icon name="crown" className="w-4 h-4 text-text-primary shrink-0" />
+                <span className="hidden lg:inline font-jp font-bold text-[14px] leading-[1.6] tracking-[0.14px] text-text-primary whitespace-nowrap">
+                  ベストセラーの設定
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={openCreate}
@@ -458,6 +512,7 @@ export default function AdminMenuPage() {
                   ＋ 新規追加
                 </span>
               </button>
+              </div>
             }
           />
 
@@ -465,19 +520,20 @@ export default function AdminMenuPage() {
             {/* ── ヒント文言（PC/SPでFigma記載の文言が異なる）
                 main が flex-col + overflow-y-auto のため、shrink-0 を付けないと
                 下の一覧（flex-1）に押し潰されて高さが欠ける ── */}
-            <p className="hidden lg:block shrink-0 px-[var(--space-24)] py-[var(--space-4)] type-jp-caption text-text-tertiary">
-              {filterSlug === TAKEOUT_FILTER
-                ? "⠿ をドラッグして並び替えると、テイクアウト画面での表示順が変わります"
-                : reorderEnabled
-                  ? "⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります"
-                  : "カテゴリーで絞り込み中は並び替えできません（「すべて」に戻すと並び替えできます）"}
-            </p>
+            {/* 「すべて」表示中は並び替えできないので、ヒント自体を出さない */}
+            {reorderEnabled && (
+              <p className="hidden lg:block shrink-0 px-[var(--space-24)] py-[var(--space-4)] type-jp-caption text-text-tertiary">
+                {filterSlug === TAKEOUT_FILTER
+                  ? "⠿ をドラッグして並び替えると、テイクアウト画面での表示順が変わります"
+                  : "⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります"}
+              </p>
+            )}
             <p className="lg:hidden shrink-0 px-[var(--space-16)] pt-[var(--space-20)] pb-[var(--space-12)] type-jp-caption text-text-secondary">
-              {filterSlug === TAKEOUT_FILTER
-                ? "⠿ をドラッグして並び替えると、テイクアウト画面での表示順が変わります。編集ボタンから表示・非表示の切り替えができます。"
-                : reorderEnabled
-                  ? "⠿ をドラッグして並び替えると、メニュー画面での表示順が変わります。編集ボタンから表示・非表示の切り替えができます。"
-                  : "カテゴリーで絞り込み中は並び替えできません（「すべて」に戻すと並び替えできます）。編集ボタンから表示・非表示の切り替えができます。"}
+              {!reorderEnabled
+                ? "編集ボタンから表示・非表示の切り替えができます。"
+                : filterSlug === TAKEOUT_FILTER
+                  ? "▲▼ で並び替えると、テイクアウト画面での表示順が変わります。編集ボタンから表示・非表示の切り替えができます。"
+                  : "▲▼ で並び替えると、メニュー画面での表示順が変わります。編集ボタンから表示・非表示の切り替えができます。"}
             </p>
 
             {/* ── フィルター行（すべて → テイクアウト → 各カテゴリー）
@@ -540,7 +596,7 @@ export default function AdminMenuPage() {
                   このカテゴリーにメニューはありません
                 </div>
               ) : (
-                displayed.map((item) => (
+                displayed.map((item, idx) => (
                   <AdminMenuRow
                     key={item.id}
                     name={item.name}
@@ -553,11 +609,24 @@ export default function AdminMenuPage() {
                     onEdit={() => openEdit(item)}
                     dimmed={!item.is_available}
                     reorder={reorderEnabled ? bindingsFor(item.id) : undefined}
+                    move={moveBindings(idx)}
                   />
                 ))
               )}
             </div>
           </main>
+
+          <BestSellerModal
+            open={bestSellerOpen}
+            setting={bestSeller}
+            candidates={bestSellerCandidates}
+            categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+            onClose={() => setBestSellerOpen(false)}
+            onSave={async (next) => {
+              await saveBestSellerSetting(next);
+              setBestSeller(next);
+            }}
+          />
 
           {/* ── 編集/追加パネル（PC: 右420pxスライド＋プレビュー／SP: フルスクリーン） ── */}
           {panelOpen && (

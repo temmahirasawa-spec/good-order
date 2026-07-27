@@ -5,13 +5,15 @@
  * grip・サムネイル・タグ色ドット・カテゴリ名/スラッグは共通。右端のみ
  * PC=表示順バッジ／SP=編集ボタンで切り替える（Admin Menu Row と同じ統合方針）。
  *
- * grip（⠿）をドラッグすると表示順を並び替えられる（display_order を永続化。
+ * 並び替えは **PC=⠿ドラッグ / SP=▲▼ボタン**（display_order を永続化。
  * hooks/useDragReorder.ts + supabase/list_reorder.sql）。
+ * カテゴリ管理は一覧が常に全件なので、こちらは常時並び替え可能でよい。
  *
  * FigmaのPC版行には編集ボタンが無いため、行全体クリックで編集パネルを開く。
  */
 import Image from "next/image";
 import { Icon } from "@/components/Icon";
+import ReorderButtons from "@/components/admin/ReorderButtons";
 import { TAG_BG, type TagColor } from "@/components/ui/CategoryTag";
 import type { ReorderRowBindings } from "@/hooks/useDragReorder";
 
@@ -23,6 +25,7 @@ export default function CategoryRow({
   displayOrder,
   onEdit,
   reorder,
+  move,
 }: {
   name: string;
   slug: string;
@@ -30,8 +33,10 @@ export default function CategoryRow({
   tagColor: TagColor;
   displayOrder: number;
   onEdit: () => void;
-  /** ⠿ ドラッグ並び替えのバインディング。未指定なら並び替え不可 */
+  /** ⠿ ドラッグ並び替えのバインディング（PCのみ）。未指定なら並び替え不可 */
   reorder?: ReorderRowBindings;
+  /** SPの▲▼並び替え。未指定なら並び替え不可 */
+  move?: { up: () => void; down: () => void; isFirst: boolean; isLast: boolean };
 }) {
   return (
     <div
@@ -41,14 +46,27 @@ export default function CategoryRow({
         reorder?.dragOver ? "border-b-accent-primary" : "border-b-border-divider"
       } ${reorder?.dragging ? "opacity-40" : ""}`}
     >
-      <span
-        {...(reorder?.handle ?? {})}
-        onClick={(e) => e.stopPropagation()}
-        aria-label={reorder ? "ドラッグして並び替え" : undefined}
-        className={`shrink-0 flex items-center ${reorder ? "cursor-grab active:cursor-grabbing" : ""}`}
-      >
-        <Icon name="grip" className="w-4 h-4 text-text-tertiary" />
-      </span>
+      {reorder && (
+        <span
+          {...reorder.handle}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="ドラッグして並び替え"
+          className="hidden lg:flex shrink-0 items-center cursor-grab active:cursor-grabbing"
+        >
+          <Icon name="grip" className="w-4 h-4 text-text-tertiary" />
+        </span>
+      )}
+      {move && (
+        <div className="lg:hidden" onClick={(e) => e.stopPropagation()}>
+          <ReorderButtons
+            label={name}
+            onMoveUp={move.up}
+            onMoveDown={move.down}
+            disableUp={move.isFirst}
+            disableDown={move.isLast}
+          />
+        </div>
+      )}
 
       <div className="relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 size-[40px]">
         {thumbnailUrl && (
