@@ -913,6 +913,21 @@ Next の App Router は遷移が完了するまで戻り先ページをマウン
   （＝今回の主目的。旧方式の「背景色しか出ない」割り切りは解消）
 - `tsc --noEmit` / `next lint`（警告0）/ `npm run build` 通過
 
+## デプロイ手順（2026-07-29 更新: Git連携を有効化）
+
+それまでは Vercel と GitHub が繋がっておらず、push しても本番は変わらなかった。
+毎回ローカルから `npx vercel --prod` を叩いて上げていた（＝手元の作業ツリーの
+中身がそのまま本番になるので、コミットし忘れたファイルでも動いてしまう危険があった）。
+
+`vercel git connect https://github.com/temmahirasawa-spec/good-order.git` で接続済み。
+**以降は `main` への push だけで本番が更新される。**
+
+- 環境変数は Vercel 側に登録済みのものが使われる（`.env.local` は `.gitignore` 対象で
+  リポジトリには入っていない）
+- そのため **ビルドに要るファイルは必ずコミットする**こと。
+  手動 `vercel --prod` と違い、Git連携ビルドはリポジトリの中身だけで走る
+- 手動で上げたいときは従来どおり `npx vercel --prod` も使える
+
 ## 次にやること
 
 `prompts/`配下の未消化プロンプトは無い。ユーザーから次の指示を受け取るか、
