@@ -858,6 +858,61 @@ SPで▲▼が出て先頭の▲・最終の▼が無効になること、
 > 残: SP実機での長押しコンテキストメニュー確認（ドラッグをやめたので出ないはずだが、
 > 実機タッチでの確認は未実施。`select-none` / `touch-manipulation` は入れてある）
 
+## 商品詳細を「一覧に重ねるオーバーレイ」に変更（ルート遷移をやめた）
+
+天真さんの指摘2点 —「開閉を左右スライドに」「TOPのスクロール位置を保持」— への対応。
+**この2つは同じ原因（詳細が別ルートで、開くと一覧がアンマウントされること）から
+来ている**ので、原因ごと外した。
+
+### なぜルート遷移をやめたか
+一度は `/order/item/[id]` のまま左右スライド＋`router.back()` で作ったが、
+Next の App Router は遷移が完了するまで戻り先ページをマウントしないため、
+**閉じるアニメ中に詳細が退いた領域には背景色しか出ない**という割り切りが残った。
+天真さんの「アプリではありえない挙動なので妥協になります。同一ページ内の
+オーバーレイで管理画面に影響が出たりがないのであれば、実装したいです」を受けて、
+詳細を一覧の上に重ねる方式へ作り替えた。
+
+### 構成
+- `lib/itemOverlay.ts` — URLは `?item=<商品ID>`。`window.history.pushState` /
+  `replaceState` を直接叩く（**Next 14.1+ はネイティブHistory APIと
+  `useSearchParams` が同期する**ので、同一ルートのクエリ変更でRSC往復が起きない）。
+  `pushedByApp` フラグで「アプリが履歴を積んで開いたか／直リンクか」を覚える
+- `components/order/ItemDetailOverlay.tsx` — `fixed inset-0 z-50` の全画面。
+  中身は旧詳細ページとまったく同じ（KV・Intro・Sub Image・縦動画・Recommended・
+  Bottom Detail Bar）
+- `app/order/layout.tsx` — オーバーレイを**1つだけ**マウント。TOP／カテゴリ一覧／
+  テイクアウトのどこから開いても同じインスタンスが使われる
+- `app/order/item/[id]/page.tsx` — `redirect('/order?item=<id>')` だけの
+  サーバーコンポーネントに縮小（外部共有URL・古いブックマーク救済用）
+- `components/PageTransition.tsx` — 詳細の特別扱いを全削除。お客様画面の
+  `page-fade-in` のみに戻した。`body.page-sliding` も不要になったので撤去
+
+### 実装上の注意（踏んだ順）
+- **下部バーは `position: fixed` にできない**。スライド中は祖先に transform が
+  乗るので fixed がビューポート基準でなくなる。オーバーレイ内 flex の末尾に
+  `shrink-0` で置いている
+- 背面の一覧に慣性スクロールが伝わらないよう、開いている間は
+  `document.body.style.overflow = "hidden"`＋本文側に `overscroll-contain`
+- 閉じる時は退場アニメ（260ms）を待ってから `history.back()`。
+  **直リンクで開かれた場合は戻り先がアプリ外**なので、その時だけ
+  `replaceState` でパラメータを落とす
+- 開いている間は `useUiStore.setOverlay("modal")` でカートFABを隠す（既存ルール）
+- **管理画面への影響なし** — 変更したのは `app/order/**` と
+  `components/order/` ＋ `PageTransition`（`/admin`・`/api` は素通り）だけ
+
+### 検証状況
+実測で確認済み:
+- TOPを scrollY 3500 までスクロール → 商品タップ → `/order?item=…` になり
+  オーバーレイ表示、**一覧はマウントされたまま `window.scrollY` は 3500 のまま**
+- ×で閉じる → `/order` に戻り scrollY 3500／`body.overflow` も復帰
+- **ブラウザの戻るボタン**でも同じく閉じる（scrollY 3500 維持）
+- カテゴリ一覧 `/order/pancake` からも同様（`/order/pancake?item=…` → 閉じて 700 維持）
+- 旧URL `/order/item/<id>` 直叩き → `/order?item=<id>` にリダイレクトして
+  オーバーレイが開き、×で履歴を戻さずパラメータだけ落ちる
+- アニメを一時的に3秒へ引き伸ばして目視 → **スライド中も背面に一覧が見えている**
+  （＝今回の主目的。旧方式の「背景色しか出ない」割り切りは解消）
+- `tsc --noEmit` / `next lint`（警告0）/ `npm run build` 通過
+
 ## 次にやること
 
 `prompts/`配下の未消化プロンプトは無い。ユーザーから次の指示を受け取るか、

@@ -8,13 +8,14 @@
  * 既存コンポーネントの組み合わせで構成する。
  */
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import OrderHeader from "@/components/ui/OrderHeader";
 import { FilterBar } from "@/components/ui/FilterBar";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { MenuCard } from "@/components/ui/MenuCard";
 import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
 import { useCartStore } from "@/lib/store";
+import { openItemDetail } from "@/lib/itemOverlay";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, SUBCATEGORY_EN_LABEL } from "@/lib/categoryLabels";
 import type { MenuItem, Subcategory } from "@/lib/menu";
@@ -42,7 +43,6 @@ function GridSkeleton() {
 
 export default function CategoryListingPage() {
   const { category } = useParams<{ category: string }>();
-  const router = useRouter();
 
   const allMenuItems  = useMenuDataStore((s) => s.menuItems);
   const storeLoading  = useMenuDataStore((s) => s.loading);
@@ -81,7 +81,7 @@ export default function CategoryListingPage() {
     quantity: qtyOf(item.id),
     onIncrement: () => addItem(item, 1),
     onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
-    onClick: () => router.push(`/order/item/${item.id}`),
+    onClick: () => openItemDetail(item.id),
   });
 
   return (

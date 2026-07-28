@@ -14,7 +14,6 @@
  * （下部の「カートを見る」バーは遷移先が同じで冗長だったため廃止）。
  */
 import { useEffect, useRef, useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
 import OrderHeader from "@/components/ui/OrderHeader";
 import FloatingCartButton from "@/components/ui/FloatingCartButton";
 import { TabNav } from "@/components/ui/Tab";
@@ -24,6 +23,7 @@ import { MenuCardM, MenuCardWide } from "@/components/ui/MenuCard";
 import { MenuCarouselM, MenuCarouselWide } from "@/components/ui/MenuCarousel";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { useCartStore } from "@/lib/store";
+import { openItemDetail } from "@/lib/itemOverlay";
 import { useOrderPageData } from "@/hooks/useOrderPageData";
 import type { MenuItem, MediaItem } from "@/lib/menu";
 
@@ -110,7 +110,6 @@ function TopSkeleton() {
 }
 
 function OrderContent() {
-  const router = useRouter();
   const orderType     = useCartStore((s) => s.orderType);
   const isTakeoutMode = useCartStore((s) => s.isTakeoutMode);
   const cartItems      = useCartStore((s) => s.items);
@@ -176,7 +175,7 @@ function OrderContent() {
     quantity: qtyOf(item.id),
     onIncrement: () => addItem(item, 1),
     onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
-    onClick: () => router.push(`/order/item/${item.id}`),
+    onClick: () => openItemDetail(item.id),
   });
 
   const sectionItems = (slug: string): MenuItem[] =>
@@ -196,7 +195,7 @@ function OrderContent() {
     onIncrement: () => bumpDraft(item.id, 1),
     onDecrement: () => bumpDraft(item.id, -1),
     onAddToCart: () => addItem(item, draftOf(item.id)),
-    onClick: () => router.push(`/order/item/${item.id}`),
+    onClick: () => openItemDetail(item.id),
   });
 
   /* ── モードバナー（テイクアウト混入時、既存挙動を踏襲） ── */

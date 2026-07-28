@@ -153,23 +153,33 @@ body {
   animation: page-fade-in 220ms var(--ease-breath);
 }
 
-@keyframes page-slide-up {
-  from { transform: translateY(100vh); }
-  to   { transform: translateY(0); }
+/* ── 商品詳細オーバーレイの出入り（左右スライド）──
+   components/order/ItemDetailOverlay.tsx が使う。
+   ページ遷移ではなく一覧の上に重ねるので、スライドの下にはずっと一覧が見えている。
+   開くときは右→左、閉じるときは左→右。 */
+@keyframes page-slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
-.page-slide-up {
-  animation: page-slide-up 380ms var(--ease-breath);
+.page-slide-in-right {
+  animation: page-slide-in-right 300ms var(--ease-breath);
+  will-change: transform;
 }
 
-/* 商品詳細ページの×ボタン: 下へスライドアウトしてから遷移する
-   （app/order/item/[id]/page.tsx の CLOSE_ANIM_MS と時間を合わせること） */
-@keyframes page-slide-down {
-  from { transform: translateY(0); }
-  to   { transform: translateY(100vh); }
+/* 閉じるとき（app/order/item/[id]/page.tsx の CLOSE_ANIM_MS と時間を合わせること）。
+   forwards を付けるのは、遷移が終わるまで画面外に留めておきたいため。
+   この要素は直後にアンマウントされるので transform 残留の心配はない。 */
+@keyframes page-slide-out-right {
+  from { transform: translateX(0); }
+  to   { transform: translateX(100%); }
 }
-.page-slide-down {
-  animation: page-slide-down 320ms var(--ease-breath) forwards;
+.page-slide-out-right {
+  animation: page-slide-out-right 260ms var(--ease-breath) forwards;
+  will-change: transform;
 }
+
+/* オーバーレイは position:fixed なので、画面外へ出しても
+   ドキュメントの幅は増えない（横スクロールバー対策は不要）。 */
 
 /* ============================================================
    厨房画面（テーブルグルーピング + 3 段階アイテム）
