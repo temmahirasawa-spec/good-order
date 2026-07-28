@@ -113,8 +113,11 @@ function OverlayContent() {
   const hasVideo = (item?.media ?? []).some((m) => m.type === "video");
 
   return (
+    /* 高さは inset-0（＝レイアウトビューポート）ではなく h-viewport（dvh）で取る。
+       モバイルのアドレスバーが引っ込むと表示領域だけが広がるので、inset-0 のままだと
+       下部バーの下に隙間が空いて背面の一覧が透けて見えてしまう。 */
     <div
-      className={`fixed inset-0 z-50 flex justify-center ${
+      className={`fixed left-0 right-0 top-0 h-viewport z-50 flex justify-center ${
         closing ? "page-slide-out-right pointer-events-none" : "page-slide-in-right"
       }`}
       role="dialog"

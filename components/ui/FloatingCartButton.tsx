@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * TOPページ右下のフローティングカートボタン。
+ * TOPページ左下のフローティングカートボタン。
  *
  * 以前ここに置いていたスタッフ呼び出しのベルは廃止した（Menuページの
  * 「スタッフを呼ぶ」とドロワーから引き続き使えるので機能は失われない）。
@@ -24,8 +24,11 @@ export default function FloatingCartButton() {
   if (activeOverlay) return null;
 
   return (
+    /* safe-bottom（padding-bottom: env(...)）と bottom の calc で
+       セーフエリアを二重に足していたため、ホームインジケータのある端末では
+       ボタンが余分に浮き上がり、下に透明な余白ができていた。bottom 側に一本化する。 */
     <div
-      className="fixed right-[16px] z-50 safe-bottom"
+      className="fixed left-[16px] z-50"
       style={{ bottom: "calc(24px + env(safe-area-inset-bottom, 0px))" }}
     >
       <CartIconButton count={totalItems} onClick={() => router.push("/cart")} />

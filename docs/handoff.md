@@ -913,6 +913,49 @@ Next の App Router は遷移が完了するまで戻り先ページをマウン
   （＝今回の主目的。旧方式の「背景色しか出ない」割り切りは解消）
 - `tsc --noEmit` / `next lint`（警告0）/ `npm run build` 通過
 
+## オーバーレイ後の微修正3点（下部バーの隙間 / マーキー / カートFAB）
+
+### 1. 下部バーの下に透明な隙間ができる
+オーバーレイを `fixed inset-0` で組んでいたのが原因。`inset-0` が基準にするのは
+**レイアウトビューポート**で、モバイルSafari/Chromeでアドレスバーが引っ込んで
+表示領域が広がっても追従しない。広がった分だけ下に隙間が空き、背面の一覧が透ける。
+
+`.h-viewport { height: 100vh; height: 100dvh; }`（globals.css）を追加し、
+オーバーレイを `fixed left-0 right-0 top-0 h-viewport` に変更。
+dvh は現在の表示領域に追従するのでズレない。`100vh` を先に書いて未対応ブラウザの
+フォールバックにしている（後勝ちで dvh が採用される）。
+
+> デスクトップのエミュレート環境では隙間が出ないので気づけない。
+> **この手の「実機だけで出る下部の隙間」は、まず dvh を疑うこと。**
+
+### 2. RECOMMENDED が自動で流れない
+2つ原因があった（`components/ui/MenuCarousel.tsx`）。
+
+- **位置を `el.scrollLeft` から読み戻して足し込んでいた**。30px/秒だと1フレーム
+  約0.5px で、これがブラウザ側の丸めに飲まれると位置が永久に進まない
+  （**iOS Safari は `scrollLeft` を整数に丸める**）。現在位置を JS 側の変数で
+  持ち、DOMには書くだけにした
+- **`pointerdown` で恒久停止していた**。詳細を縦スクロールしようとした指が
+  たまたまカルーセルに乗っただけで二度と動かなくなる。
+  触っている間だけ止めて、離してから2秒で再開する方式に変更
+
+### 3. TOPのカートFABを右下→左下へ
+`components/ui/FloatingCartButton.tsx` を `right-[16px]` → `left-[16px]`。
+
+あわせて**セーフエリアの二重計上**を修正。`safe-bottom`（padding-bottom: env(...)）と
+`bottom: calc(24px + env(...))` の両方が付いていたため、ホームインジケータのある
+端末ではボタンが余分に浮き、下に透明な余白ができていた。`bottom` 側に一本化。
+
+### 検証状況
+- 下部バー: `gapBelowBar = 0`（dialog高さ = innerHeight）を実測
+- FAB: 左16px / 下24px / wrapperのpadding-bottom 0 を実測
+- `tsc --noEmit` / `next lint`（警告0）/ `npm run build` 通過
+
+> **マーキーの動作は自動化ブラウザでは検証できない**。操作対象のタブが
+> バックグラウンド扱い（`document.visibilityState === "hidden"`）だと
+> Chromeが `requestAnimationFrame` を止めるため、`scrollLeft` は常に0のまま。
+> コードレビューでの確認にとどめ、実際に流れるかは実機で見てもらうこと。
+
 ## デプロイ手順（2026-07-29 更新: Git連携を有効化）
 
 それまでは Vercel と GitHub が繋がっておらず、push しても本番は変わらなかった。

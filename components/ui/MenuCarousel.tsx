@@ -8,13 +8,15 @@
  *
  * RecommendCarousel のみ、ゆっくり自動横スクロール（左→右、端で反転して往復）する。
  * スクロールできる余地が無い場合（画像1枚等）は自動で無効。
- * ユーザーがタップ/ドラッグ/ホイール操作した時点で自動スクロールは恒久的に停止する。
+ * ユーザーが触っている間は止まり、指を離してしばらくすると再開する。
  */
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import CarouselDots from "@/components/ui/CarouselDots";
 
 /* かなりゆっくり: 1秒あたり30px（300px幅カード1枚分に約10秒） */
 const AUTO_SCROLL_SPEED_PX_PER_SEC = 30;
+/* 操作をやめてから自動スクロールが再開するまでの待ち時間 */
+const AUTO_SCROLL_RESUME_MS = 2000;
 
 function ScrollRow({
   children,
@@ -36,14 +38,26 @@ function ScrollRow({
     let stopped = false;
     let lastTime: number | null = null;
     let rafId = 0;
+    /* 現在位置は自前で持つ。el.scrollLeft を読み戻して足し込むと、
+       1フレームあたりの移動量（30px/秒 ≒ 0.5px）がブラウザ側の丸めに
+       飲まれてしまい、位置が永久に進まないことがある（iOS Safari は整数丸め）。 */
+    let pos = el.scrollLeft;
+    /* 触っている間は止める。恒久停止にすると、詳細を縦スクロールしようとした指が
+       たまたまカルーセルに乗っただけで二度と動かなくなるので、離してから再開する。 */
+    let resumeAt = 0;
 
-    const stop = () => {
-      stopped = true;
-      el.removeEventListener("pointerdown", stop);
-      el.removeEventListener("wheel", stop);
+    const pause = () => {
+      resumeAt = performance.now() + AUTO_SCROLL_RESUME_MS;
     };
-    el.addEventListener("pointerdown", stop, { passive: true });
-    el.addEventListener("wheel", stop, { passive: true });
+    const PAUSE_EVENTS = [
+      "pointerdown",
+      "pointerup",
+      "wheel",
+      "touchstart",
+      "touchmove",
+      "touchend",
+    ] as const;
+    PAUSE_EVENTS.forEach((t) => el.addEventListener(t, pause, { passive: true }));
 
     const tick = (time: number) => {
       if (stopped) return;
@@ -54,15 +68,20 @@ function ScrollRow({
       // スクロールできる余地が無ければ何もしない（画像1枚のみ等で自動的に無効化）
       const max = el.scrollWidth - el.clientWidth;
       if (max > 1) {
-        let next = el.scrollLeft + direction * AUTO_SCROLL_SPEED_PX_PER_SEC * deltaSec;
-        if (next >= max) {
-          next = max;
-          direction = -1;
-        } else if (next <= 0) {
-          next = 0;
-          direction = 1;
+        if (time < resumeAt) {
+          // 停止中はユーザーが動かした位置に追従しておく（再開時に飛ばないように）
+          pos = el.scrollLeft;
+        } else {
+          pos += direction * AUTO_SCROLL_SPEED_PX_PER_SEC * deltaSec;
+          if (pos >= max) {
+            pos = max;
+            direction = -1;
+          } else if (pos <= 0) {
+            pos = 0;
+            direction = 1;
+          }
+          el.scrollLeft = pos;
         }
-        el.scrollLeft = next;
       }
       rafId = requestAnimationFrame(tick);
     };
@@ -71,8 +90,7 @@ function ScrollRow({
     return () => {
       stopped = true;
       cancelAnimationFrame(rafId);
-      el.removeEventListener("pointerdown", stop);
-      el.removeEventListener("wheel", stop);
+      PAUSE_EVENTS.forEach((t) => el.removeEventListener(t, pause));
     };
   }, [autoScroll]);
 
