@@ -66,8 +66,10 @@ function CardImage({
   const cover = item.media?.[0];
   const src = (cover?.type === "image" ? cover.url : undefined) ?? item.image;
   return (
+    /* menu-card はホバー時の影とズームの起点。カード全体ではなく画像ブロックに
+       掛けているのは、カード本体には背景が無く、影だけが浮いて見えてしまうため */
     <div
-      className={`relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 ${imageClassName} ${onClick ? "cursor-pointer" : ""}`}
+      className={`menu-card relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 ${imageClassName} ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
     >
       {src && (
@@ -76,7 +78,7 @@ function CardImage({
           src={src}
           alt={item.name}
           loading={imageLoading}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="menu-card__img absolute inset-0 w-full h-full object-cover"
         />
       )}
       {item.tag && <RibbonBadge label={item.tag} />}

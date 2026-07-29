@@ -20,25 +20,20 @@ export default function Header({ mode = "home", title, titleNode, onBack }: Head
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  /* ── C-1: カートアイコンのピョコン + バッジ数字のポップ ── */
+  /* ── カートに入った合図はバッジの跳ねだけに集約する ──
+     以前はアイコン自体も回転しながら弾んでいたが、跳ねる動きが複数あると
+     画面が落ち着かない。伝える仕事はバッジ一つに持たせる。 */
   const cartIconRef = useRef<HTMLButtonElement>(null);
   const badgeRef    = useRef<HTMLSpanElement>(null);
   const prevTotalRef = useRef(total);
   useEffect(() => {
     if (total > prevTotalRef.current) {
-      const icon = cartIconRef.current;
-      if (icon) {
-        icon.classList.remove("cart-bump");
-        void icon.offsetWidth;
-        icon.classList.add("cart-bump");
-        window.setTimeout(() => icon.classList.remove("cart-bump"), 640);
-      }
       const badge = badgeRef.current;
       if (badge) {
+        /* 連打に対応するため、付け直す前に一度リセットする */
         badge.classList.remove("badge-pop");
-        void badge.offsetWidth;
+        void badge.offsetWidth; // reflow を強制して再生し直す
         badge.classList.add("badge-pop");
-        window.setTimeout(() => badge.classList.remove("badge-pop"), 200);
       }
     }
     prevTotalRef.current = total;

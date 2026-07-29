@@ -50,8 +50,8 @@ export default function CartIconButton({
       type="button"
       onClick={onClick}
       aria-label={hydrated && count > 0 ? `カートを見る（${count}点）` : "カートを見る"}
-      className={`relative flex items-center justify-center rounded-full bg-surface-white border border-border w-[48px] h-[48px] shrink-0 active:scale-95 transition-transform ${className}`}
-      style={{ boxShadow: "var(--shadow-card)" }}
+      /* プレス・ホバーは共通の土台（globals.css の button / .btn-icon）に任せる */
+      className={`btn-icon relative flex items-center justify-center rounded-full bg-surface-white border border-border w-[48px] h-[48px] shrink-0 shadow-[var(--shadow-card)] ${className}`}
     >
       <Icon name="cart" className="w-[22px] h-[22px] text-text-primary" />
       {/* localStorage 由来の個数なので、ハイドレーション完了までバッジを出さない

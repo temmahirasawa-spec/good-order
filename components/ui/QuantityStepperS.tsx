@@ -7,6 +7,7 @@
  * カルーセル用の Menu Card M（幅200）に「ステッパー＋カートに入れる」を
  * 並べるための専用サイズ。通常の Quantity Stepper（124×36）だと2要素が入らない。
  */
+import RollingNumber from "@/components/ui/RollingNumber";
 
 export default function QuantityStepperS({
   count,
@@ -41,9 +42,12 @@ export default function QuantityStepperS({
         />
       </button>
 
-      <span className="type-en-data-m text-text-primary text-center w-[16px]">
-        {count}
-      </span>
+      <RollingNumber
+        value={count}
+        width={16}
+        height={18}
+        className="type-en-data-m text-text-primary"
+      />
 
       <button
         type="button"

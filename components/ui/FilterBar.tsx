@@ -21,7 +21,8 @@ export function FilterChip({
     <button
       type="button"
       onClick={onClick}
-      className={`flex gap-[var(--space-4)] h-[var(--size-control-sm)] items-center px-[var(--space-16)] rounded-full shrink-0 ${
+      /* is-active のときはホバーで色を変えない（選択中は状態が確定しているため） */
+      className={`chip ${selected ? "is-active" : ""} flex gap-[var(--space-4)] h-[var(--size-control-sm)] items-center px-[var(--space-16)] rounded-full shrink-0 ${
         selected
           ? "bg-accent-primary"
           : "bg-surface-white border border-border"

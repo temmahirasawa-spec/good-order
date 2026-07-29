@@ -90,6 +90,22 @@
   --t-base:    220ms;
   --t-slow:    380ms;
   --transition-base: all var(--t-base) var(--ease-breath);
+
+  /* ── タップの手触り（prompts/motion-spec-prompt.md）──────────
+     数値を直書きせず、必ずこのトークン経由で参照すること。 */
+  --motion-press:   80ms;   /* 押し込み */
+  --motion-release: 160ms;  /* 指を離したあとの戻り */
+  --motion-state:   200ms;  /* ホバー・色・影の切り替え */
+  --motion-roll:    180ms;  /* 数字の入れ替え */
+  --motion-pop:     340ms;  /* カートバッジの跳ね */
+
+  --ease-out: cubic-bezier(.2, 0, 0, 1);  /* 標準。減速して止まる */
+  --ease-in:  cubic-bezier(.4, 0, 1, 1);  /* 退場 */
+  /* 行き過ぎて戻る。**使ってよいのはカートバッジだけ**。
+     跳ねる動きが画面のあちこちにあると全体が落ち着かなくなる */
+  --ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+
+  --press-scale: .96;
 }
 
 /* OS のモーション軽減設定に追随 */
@@ -491,37 +507,101 @@ body {
   justify-content: center;
 }
 
-/* E-1, E-2: ボタン / カードのタップ感 */
-button, .btn {
-  transition: transform var(--t-instant) var(--ease-snap),
-              box-shadow var(--t-quick) var(--ease-breath);
+/* ── プレス: 押せるものすべての共通土台 ──────────────────────
+   押し込み80ms・戻り160msと非対称にしている。同じ速さだと機械的で、
+   戻りを遅くすると弾力が出る。
+   動かすのは transform と opacity だけ。width/top/margin を触ると
+   レイアウト再計算が走り、連打時にカクつく。
+   `<a>` やカードなど button 以外の要素には .pressable を付けて使う。 */
+button,
+.btn,
+.pressable {
+  transition:
+    transform var(--motion-release) var(--ease-out),
+    box-shadow var(--motion-state) var(--ease-out),
+    background-color var(--motion-state) var(--ease-out),
+    border-color var(--motion-state) var(--ease-out);
+  /* iOSの灰色の矩形を消す（自前のプレス表現と二重になるため） */
+  -webkit-tap-highlight-color: transparent;
+  /* タップ後の300ms待ちを消す。**これが無いとどれだけアニメを詰めても遅く感じる** */
+  touch-action: manipulation;
 }
-button:active, .btn:active {
-  transform: scale(0.97);
+button:active,
+.btn:active,
+.pressable:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--motion-press);
 }
+/* 無効な要素は押し込まない。押せたように見えて何も起きないのが一番の不信感になる */
+button:disabled:active,
+[aria-disabled="true"]:active,
+.pressable.is-disabled:active {
+  transform: none;
+}
+
 .card:active {
   transform: scale(0.98);
-  transition: transform 80ms ease-out;
+  transition: transform var(--motion-press) var(--ease-out);
 }
 
-/* C-1: カートアイコンのピョコン */
-@keyframes cart-bump {
-  0%   { transform: scale(1)    rotate(0deg); }
-  20%  { transform: scale(1.25) rotate(-8deg); }
-  40%  { transform: scale(0.95) rotate(6deg); }
-  60%  { transform: scale(1.1)  rotate(-3deg); }
-  80%  { transform: scale(0.98) rotate(1deg); }
-  100% { transform: scale(1)    rotate(0deg); }
-}
-.cart-bump { animation: cart-bump 600ms var(--ease-out-soft); }
+/* ── ホバー（PCのみ）───────────────────────────────────────
+   **必ず (hover: hover) and (pointer: fine) で囲うこと。**
+   これが無いと、スマホでタップした要素にホバー状態が貼り付いたまま残る。 */
+@media (hover: hover) and (pointer: fine) {
+  .btn-pill:not(:disabled):not([aria-disabled="true"]):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgb(0 0 0 / .12);
+  }
+  .btn-pill:active { transform: scale(var(--press-scale)) translateY(0); }
 
-/* カートバッジ数字のポップ */
+  .btn-icon:not(:disabled):hover { background: var(--color-bg-tertiary); }
+  /* もともと bg-tertiary の円ボタン（モーダルの×）は、同じ色をかけても変化が出ない */
+  .btn-icon-soft:not(:disabled):hover { background: #E4E4E4; }
+
+  .chip:hover:not(.is-active) { background: #E4E4E4; }
+
+  .menu-card:hover { box-shadow: 0 8px 24px rgb(0 0 0 / .10); }
+  .menu-card:hover .menu-card__img { transform: scale(1.04); }
+}
+/* 面積が大きいものはゆっくり動かすと自然に見える（小さい要素は速く） */
+.menu-card__img { transition: transform 420ms var(--ease-out); }
+
+/* ── カートに入った瞬間 ────────────────────────────────────
+   伝える仕事はバッジ一つに集約する（トーストも、飛んでいく画像も出さない）。
+   連打時は付け直す前にクラスを外して reflow を挟むこと。 */
 @keyframes badge-pop {
   0%   { transform: scale(1); }
-  50%  { transform: scale(1.4); }
+  38%  { transform: scale(1.32); }
   100% { transform: scale(1); }
 }
-.badge-pop { animation: badge-pop 180ms ease-out; }
+.badge-pop { animation: badge-pop var(--motion-pop) var(--ease-pop); }
+
+/* ── 数量の切り替わり（components/ui/RollingNumber.tsx）──────
+   今の数字が下へ抜けると同時に、次の数字が上から入る。
+   2つが**同じ向き**に動くので、切り替わりの瞬間にすれ違って重ならない。 */
+.count {
+  position: relative;
+  display: block;
+  overflow: hidden;   /* 抜けていく数字を隠す。これが無いと箱の外にはみ出す */
+  font-variant-numeric: tabular-nums;
+}
+.count > span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.count .is-leaving  { animation: roll-out var(--motion-roll) var(--ease-out) forwards; }
+.count .is-entering { animation: roll-in  var(--motion-roll) var(--ease-out) forwards; }
+
+@keyframes roll-out {
+  from { transform: translateY(0);     opacity: 1; }
+  to   { transform: translateY(100%);  opacity: 0; }
+}
+@keyframes roll-in {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
 
 /* C-3: ゴールドの波紋 */
 @keyframes ripple-glow {

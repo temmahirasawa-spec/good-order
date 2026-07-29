@@ -26,7 +26,7 @@ export default function RecommendCard({
   const color = resolveTagColor(categories, item.subcategory);
   return (
     <div
-      className={`bg-surface-white border border-text-primary flex flex-col items-start overflow-hidden w-[300px] shrink-0 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      className={`menu-card ${onClick ? "pressable cursor-pointer" : ""} bg-surface-white border border-text-primary flex flex-col items-start overflow-hidden w-[300px] shrink-0 ${className}`}
       onClick={onClick}
     >
       <div className="relative bg-bg-tertiary w-[300px] h-[225px] shrink-0">
@@ -35,7 +35,7 @@ export default function RecommendCard({
           <img
             src={src}
             alt={item.name}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="menu-card__img absolute inset-0 w-full h-full object-cover"
           />
         )}
       </div>

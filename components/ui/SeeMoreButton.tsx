@@ -17,8 +17,9 @@ export default function SeeMoreButton({
   href: string;
   className?: string;
 }) {
+  /* <a>/<Link> なので、button 前提の共通プレスが効かない。pressable を明示する */
   const base =
-    "flex h-[var(--size-control-lg)] items-center justify-center rounded-full border-[1.5px] border-accent-primary bg-transparent w-full";
+    "pressable btn-pill flex h-[var(--size-control-lg)] items-center justify-center rounded-full border-[1.5px] border-accent-primary bg-transparent w-full";
   const text = (
     <span className="type-jp-body-bold text-text-primary whitespace-nowrap">
       {label}

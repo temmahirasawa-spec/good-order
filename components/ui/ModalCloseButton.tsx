@@ -19,7 +19,7 @@ export default function ModalCloseButton({
       type="button"
       onClick={onClick}
       aria-label="閉じる"
-      className={`flex items-center justify-center rounded-full bg-bg-tertiary w-[48px] h-[48px] shrink-0 ${className}`}
+      className={`btn-icon-soft flex items-center justify-center rounded-full bg-bg-tertiary w-[48px] h-[48px] shrink-0 ${className}`}
     >
       <Icon name="close" className="w-4 h-4 text-text-primary" />
     </button>

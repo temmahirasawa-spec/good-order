@@ -5,7 +5,10 @@
  * Empty = 数量0でマイナス非活性（border-default / text-disabled）、
  * Active = 1以上で黒枠に自動切り替え。ボタン径 36px、要素間 gap 16px。
  * カート画面でも共用する前提。
+ *
+ * 数字は RollingNumber で入れ替える（下へ抜けて上から入る）。
  */
+import RollingNumber from "@/components/ui/RollingNumber";
 
 export default function QuantityStepper({
   count,
@@ -41,9 +44,12 @@ export default function QuantityStepper({
         />
       </button>
 
-      <span className="font-en font-bold text-[16px] text-text-primary text-center w-[20px] tabular-nums">
-        {count}
-      </span>
+      <RollingNumber
+        value={count}
+        width={20}
+        height={24}
+        className="font-en font-bold text-[16px] text-text-primary"
+      />
 
       {/* ＋ */}
       <button

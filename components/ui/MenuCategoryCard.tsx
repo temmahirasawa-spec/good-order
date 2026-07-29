@@ -28,14 +28,14 @@ export default function MenuCategoryCard({
   const sizeClass = size === "small" ? "w-[114px] shrink-0" : "w-full";
   const body = (
     <span
-      className={`relative flex flex-col h-[80px] items-center justify-center overflow-hidden rounded-[var(--radius-sm)] bg-bg-tertiary ${sizeClass} ${className}`}
+      className={`menu-card relative flex flex-col h-[80px] items-center justify-center overflow-hidden rounded-[var(--radius-sm)] bg-bg-tertiary ${sizeClass} ${className}`}
     >
       {category.image_url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={category.image_url}
           alt={category.name}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="menu-card__img absolute inset-0 w-full h-full object-cover"
         />
       )}
       <span className="absolute inset-0 bg-black/25" />
@@ -49,7 +49,8 @@ export default function MenuCategoryCard({
   );
   if (href) {
     return (
-      <Link href={href} onClick={onClick} className={`block ${sizeClass}`}>
+      /* Link は <a> なので、button 前提の共通プレスが効かない */
+      <Link href={href} onClick={onClick} className={`pressable block ${sizeClass}`}>
         {body}
       </Link>
     );

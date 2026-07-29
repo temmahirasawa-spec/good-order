@@ -24,8 +24,7 @@ export default function HeaderIconButton({
       type="button"
       onClick={onClick}
       aria-label={label ?? (icon === "menu" ? "メニューを開く" : "メニューを閉じる")}
-      className={`flex items-center justify-center rounded-full bg-surface-white border border-border w-[48px] h-[48px] shrink-0 ${className}`}
-      style={{ boxShadow: "var(--shadow-card)" }}
+      className={`btn-icon flex items-center justify-center rounded-full bg-surface-white border border-border w-[48px] h-[48px] shrink-0 shadow-[var(--shadow-card)] ${className}`}
     >
       <Icon name={icon} className="w-4 h-4 text-text-primary" />
     </button>

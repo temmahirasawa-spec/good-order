@@ -34,7 +34,7 @@ export default function ReorderButtons({
   className?: string;
 }) {
   const base =
-    "flex items-center justify-center w-[34px] h-[26px] bg-bg-tertiary border border-border touch-manipulation select-none";
+    "btn-icon-soft flex items-center justify-center w-[34px] h-[26px] bg-bg-tertiary border border-border touch-manipulation select-none";
   return (
     <div className={`flex flex-col gap-[2px] shrink-0 select-none ${className}`}>
       <button
