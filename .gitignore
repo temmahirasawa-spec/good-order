@@ -45,3 +45,7 @@ next-env.d.ts
 
 # Claude Code の個人設定（hooks を書く settings.json は共有するが、こちらは各自の環境依存）
 .claude/settings.local.json
+
+# Claude Code hooks が使う一時ファイル（検証待ちフラグ・試行回数）
+.claude/.needs-check
+.claude/.check-attempts
