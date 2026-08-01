@@ -24,6 +24,19 @@
   --color-accent-deep:    #996B00; /* white text on this = 4.7:1 (AA) */
   --color-accent-subtle:  #FFFCF7; /* selection bg / tint */
 
+  /* ── 業態テンプレート: Izakaya（鳥貴族想定）──────────────────────────
+   * Figma: Color コレクションのモード "Izakaya (鳥貴族)"（YORKYS / Demo (Green) に続く3つ目）。
+   * 差し替えるのは下記6行だけで、text / border / bg / tag / status / spacing /
+   * radius は共通のまま。管理画面のテンプレ切替はこのモード切替に対応する。
+   *   --color-accent-primary: #C4302A;  白文字 5.52:1 (AA)
+   *   --color-accent-pressed: #A32620;
+   *   --color-accent-deep:    #8C1F1A;  白地の赤文字 9.03:1 (AAA)
+   *   --color-accent-subtle:  #FCF2F0;  カート投入済みの行の地
+   *   --color-accent-on-ink:  #EF6A5A;  墨地 5.70:1 (AA)。#C4302A は墨で 3.15:1 しか出ない
+   *   --color-bg-warm:        #F7F2EA;  生成りのページ地
+   * 見出しは Shippori Mincho B1（Figma: JP/Mincho/Display / Heading / Label）。
+   * 本文は Noto Sans JP のまま変更しない。 */
+
   /* COLOR — Text */
   --color-text-primary:   #1A1A1A;
   --color-text-secondary: #646464;
@@ -46,6 +59,12 @@
   /* COLOR — Surface */
   --color-surface-white: #FFFFFF;
   --color-surface-ink:   #1A1A1A;
+  /* 墨面（surface-ink）を「額縁」として使うテンプレート用。居酒屋テンプレで追加。
+   * ヘッダー/タブ/下部バーを墨で組むと、accent-primary が墨の上で 4.5:1 を割る
+   * ことがあるため、墨専用のアクセント（accent-on-ink）を別に持つ。 */
+  --color-surface-ink-soft: #2A2A2A;               /* 墨面の一段明るい面（浮きボタン等） */
+  --color-border-on-ink:    rgba(255,255,255,.16); /* 墨面の上のヘアライン */
+  --color-accent-on-ink:    #FAC03D;               /* 墨面の上のアクセント。YORKYS は黄のまま可（墨に対し 10.5:1） */
 
   /* COLOR — Status（スタッフ管理画面: 厨房Order Card・Staff Call Chip・Status Badge等） */
   --color-status-urgent-subtle:  #FCE8E8;

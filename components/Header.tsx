@@ -46,7 +46,7 @@ export default function Header({ mode = "home", title, titleNode, onBack }: Head
         {/* ── 左：ロゴ or 戻る ── */}
         {mode === "home" ? (
           <Image
-            src="/images/logo/logoSmallBlack.png"
+            src="/images/logo/logoSmallBlack.webp"
             alt="YORKYS BRUNCH"
             width={96}
             height={28}

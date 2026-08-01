@@ -63,7 +63,7 @@ const TABS = [
 
 /* ── ヒーロー動画（既存アセット。差し替えは この配列を変更するだけ） ── */
 const HERO_MEDIA: MediaItem[] = [
-  { type: "image", url: "/images/pancake/p1.png" },
+  { type: "image", url: "/images/pancake/p1.webp" },
   { type: "video", url: "/images/hero/background.mp4" },
 ];
 

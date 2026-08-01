@@ -246,6 +246,10 @@ export interface ConditionalUpdateResult {
   ok: boolean;
   /** true の場合、他端末が先に更新済み（0件更新）だったことを示す */
   conflict: boolean;
+  /** 更新後の updated_at。**次に同じ行を更新するときはこの値を渡すこと。**
+   * 呼び出し側が保持している古い値のまま2回目を投げると、必ず自分自身と
+   * 競合してしまう（同一端末での連続操作が通らなくなる）。conflict時は undefined。 */
+  updatedAt?: string;
 }
 
 /* ── 1. 同時操作の競合検知 ──
@@ -267,7 +271,7 @@ export async function updateOrderItemCookingStatusIfUnchanged(
     .select("id, updated_at");
   if (error) throw error;
   const ok = (data?.length ?? 0) > 0;
-  return { ok, conflict: !ok };
+  return { ok, conflict: !ok, updatedAt: data?.[0]?.updated_at };
 }
 
 export async function updateOrderStatusIfUnchanged(
@@ -283,7 +287,7 @@ export async function updateOrderStatusIfUnchanged(
     .select("id, updated_at");
   if (error) throw error;
   const ok = (data?.length ?? 0) > 0;
-  return { ok, conflict: !ok };
+  return { ok, conflict: !ok, updatedAt: data?.[0]?.updated_at };
 }
 
 /* ── お客様側から自分の注文の状態・受渡番号を引く ──

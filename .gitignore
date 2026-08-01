@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 作業中に保存したターミナルログ（プロジェクトの成果物ではない）
 ターミナルで保存した出力.txt
+
+# Claude Code の個人設定（hooks を書く settings.json は共有するが、こちらは各自の環境依存）
+.claude/settings.local.json

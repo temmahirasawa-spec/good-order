@@ -39,15 +39,15 @@ export interface MenuItem {
 
 // ─── 実店舗写真（public/images/ 配下）────────────────────────
 const LOCAL = {
-  p1:  "/images/pancake/p1.png",   // プレーン（バター・メープル）
-  p2:  "/images/pancake/p2.png",   // フルーツ&フルーツ
-  p3:  "/images/pancake/p3.png",   // チョコ＆バナナ（アイスクリーム）
-  p4:  "/images/pancake/p4.png",   // チョコマシュマロ（ダークソース）
-  p5:  "/images/pancake/p5.png",   // マスカルポーネ＆エスプレッソ
-  ft1: "/images/pancake/ft1.png",  // フレンチトースト
-  c1:  "/images/cafe/c1.png",      // ブレンドコーヒー
-  c2:  "/images/cafe/c2.png",      // カフェラテ（ラテアート）
-  c3:  "/images/cafe/c3.png",      // カプチーノ（花柄ラテアート）
+  p1:  "/images/pancake/p1.webp",   // プレーン（バター・メープル）
+  p2:  "/images/pancake/p2.webp",   // フルーツ&フルーツ
+  p3:  "/images/pancake/p3.webp",   // チョコ＆バナナ（アイスクリーム）
+  p4:  "/images/pancake/p4.webp",   // チョコマシュマロ（ダークソース）
+  p5:  "/images/pancake/p5.webp",   // マスカルポーネ＆エスプレッソ
+  ft1: "/images/pancake/ft1.webp",  // フレンチトースト
+  c1:  "/images/cafe/c1.webp",      // ブレンドコーヒー
+  c2:  "/images/cafe/c2.webp",      // カフェラテ（ラテアート）
+  c3:  "/images/cafe/c3.webp",      // カプチーノ（花柄ラテアート）
 };
 
 // ─── Unsplash プレースホルダー────────────────────────────────

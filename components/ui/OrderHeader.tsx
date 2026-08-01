@@ -41,7 +41,7 @@ export default function OrderHeader({
         />
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Image
-            src="/images/logo/logoSmallBlack.png"
+            src="/images/logo/logoSmallBlack.webp"
             alt="YORKYS BRUNCH"
             width={109}
             height={38}

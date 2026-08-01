@@ -562,6 +562,18 @@ button:disabled:active,
 
   .menu-card:hover { box-shadow: 0 8px 24px rgb(0 0 0 / .10); }
   .menu-card:hover .menu-card__img { transform: scale(1.04); }
+
+  /* 横スクロール領域の中でホバー影が切れるのを防ぐ。
+     overflow-x: auto を使う以上 overflow-y だけ visible にはできない（仕様で
+     auto に強制される）ので、**クリップ範囲そのものを下へ広げる**。
+     overflow のクリップは padding box なので、padding-bottom が影の逃げ場になる。
+     同じ量の負のマージンで打ち消すため、レイアウトは1pxも動かない。
+     12px = カード下端の .btn-pill のホバー影（0 4px 14px）が下にはみ出す量。
+     ホバーしない端末では影自体が出ないので、この指定ごと不要。 */
+  .carousel-hover-room {
+    padding-bottom: 12px;
+    margin-bottom: -12px;
+  }
 }
 /* 面積が大きいものはゆっくり動かすと自然に見える（小さい要素は速く） */
 .menu-card__img { transition: transform 420ms var(--ease-out); }

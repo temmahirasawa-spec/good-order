@@ -49,8 +49,12 @@ export default function KitchenPage() {
   const isFirstLoadRef = useRef(true);
   const audioCtxRef    = useRef<AudioContext | null>(null);
   // 楽観更新でローカルに反映した変更を、ポーリング結果が上書きしないように保持する
-  // key: orderItemId → 反映を期待しているステータス
-  const pendingItemUpdates = useRef<Map<string, CookingStatus>>(new Map());
+  // key: orderItemId → 反映を期待しているステータスと、更新が通ったあとの updated_at
+  // （updated_at も持たないと、ポーリングが追いつく前の2回目のクリックが
+  //   古い基準値を投げてしまい、自分自身と競合してしまう）
+  const pendingItemUpdates = useRef<
+    Map<string, { status: CookingStatus; updatedAt?: string }>
+  >(new Map());
 
   /* ── 音 ── */
   const playBeep = useCallback(() => {
@@ -153,12 +157,15 @@ export default function KitchenPage() {
             r.items.forEach((i) => {
               const want = pending.get(i.orderItemId);
               if (!want) return;
-              if (i.cookingStatus === want) {
+              if (i.cookingStatus === want.status) {
                 // DB が追いついた → pending から外す
                 consume.push(i.orderItemId);
               } else {
-                // まだ古い値が返ってきた → 上書きして整合性維持
-                i.cookingStatus = want;
+                // まだ古い値が返ってきた → 上書きして整合性維持。
+                // 楽観ロックの基準値（updated_at）も更新後の値に差し替えないと、
+                // この状態でもう一度押したときに古い値を投げて競合になる
+                i.cookingStatus = want.status;
+                if (want.updatedAt) i.updatedAt = want.updatedAt;
               }
             });
           });
@@ -335,13 +342,13 @@ export default function KitchenPage() {
     const newStatus = next[item.cookingStatus];
 
     // 楽観更新 + ポーリングからの巻き戻り防止
-    pendingItemUpdates.current.set(item.orderItemId, newStatus);
+    pendingItemUpdates.current.set(item.orderItemId, { status: newStatus });
     setGroups((prev) => updateItemInGroups(prev, item.orderItemId, newStatus));
 
     try {
       // 取得時の updated_at が一致する場合のみ更新（同時操作の競合検知）。
       // 0件更新＝他端末が先に更新済み。RLS不備等の無音失敗もここに含まれる。
-      const { conflict } = await updateOrderItemCookingStatusIfUnchanged(
+      const { conflict, updatedAt } = await updateOrderItemCookingStatusIfUnchanged(
         item.orderItemId,
         newStatus,
         item.updatedAt
@@ -354,10 +361,22 @@ export default function KitchenPage() {
         await loadOrders();
         return;
       }
+      // 更新が通ったら、DBが返した新しい updated_at をローカルへ書き戻す。
+      // order_items には BEFORE UPDATE トリガー（trg_order_items_set_updated_at）が
+      // 効いていて、更新のたびに値が変わる。書き戻さないと、ポーリング（3秒）が
+      // 来る前の2回目のクリックが古い基準値を投げ、自分の直前の更新と競合する。
+      // 応答を待つ間にさらに押されていた場合は、そちらの楽観更新を巻き戻さない
+      // （まだ飛んでいる後続のリクエストが正しい値で決着させる）。
+      if (pendingItemUpdates.current.get(item.orderItemId)?.status === newStatus) {
+        pendingItemUpdates.current.set(item.orderItemId, { status: newStatus, updatedAt });
+        setGroups((prev) =>
+          updateItemInGroups(prev, item.orderItemId, newStatus, updatedAt)
+        );
+      }
       // 次の loadOrders で同じ値が返ってきたら自動で pending から外れる。
       // 念のためタイムアウトでも掃除しておく（ポーリング間隔より長め）。
       window.setTimeout(() => {
-        if (pendingItemUpdates.current.get(item.orderItemId) === newStatus) {
+        if (pendingItemUpdates.current.get(item.orderItemId)?.status === newStatus) {
           pendingItemUpdates.current.delete(item.orderItemId);
         }
       }, 10_000);
@@ -480,14 +499,18 @@ export default function KitchenPage() {
 function updateItemInGroups(
   prev: KitchenTableGroup[],
   orderItemId: string,
-  newStatus: CookingStatus
+  newStatus: CookingStatus,
+  /** 更新が通ったときだけ渡す。楽観ロックの基準値をDBの最新に合わせるため */
+  newUpdatedAt?: string
 ): KitchenTableGroup[] {
   return prev.map((g) => ({
     ...g,
     rounds: g.rounds.map((r) => ({
       ...r,
       items: r.items.map((i) =>
-        i.orderItemId === orderItemId ? { ...i, cookingStatus: newStatus } : i
+        i.orderItemId === orderItemId
+          ? { ...i, cookingStatus: newStatus, updatedAt: newUpdatedAt ?? i.updatedAt }
+          : i
       ),
     })),
     allItemsDone: g.rounds.every((r) =>

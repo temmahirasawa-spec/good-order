@@ -92,13 +92,13 @@ const sampleCat: ApiCategory = {
   slug: "pancake",
   name: "パンケーキ",
   caption: null,
-  image_url: "/images/pancake/p1.png",
+  image_url: "/images/pancake/p1.webp",
   display_order: 1,
   tag_color: "yellow",
 };
 
 const sampleVideo = [
-  { type: "image" as const, url: "/images/pancake/p1.png" },
+  { type: "image" as const, url: "/images/pancake/p1.webp" },
   { type: "video" as const, url: "/images/hero/background.mp4" },
 ];
 
@@ -154,7 +154,7 @@ function AdminMenuRowDemo() {
       name="スフレパンケーキ プレーン"
       categoryLabel="パンケーキ"
       price={980}
-      thumbnailUrl="/images/pancake/p1.png"
+      thumbnailUrl="/images/pancake/p1.webp"
       available={available}
       toggling={false}
       onToggleAvailable={() => setAvailable((v) => !v)}
@@ -561,7 +561,7 @@ export default function UiGalleryPage() {
           tag="人気"
           categoryLabel={sampleCat.name}
           categoryColor={sampleCat.tag_color}
-          imageUrl="/images/pancake/p1.png"
+          imageUrl="/images/pancake/p1.webp"
         />
       </Section>
 
@@ -571,7 +571,7 @@ export default function UiGalleryPage() {
           <CategoryRow
             name="パンケーキ"
             slug="pancake"
-            thumbnailUrl="/images/pancake/p1.png"
+            thumbnailUrl="/images/pancake/p1.webp"
             tagColor="yellow"
             displayOrder={1}
             onEdit={() => {}}

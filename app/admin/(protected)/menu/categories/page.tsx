@@ -19,7 +19,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchCategories, type ApiCategory } from "@/lib/api";
-import { uploadMenuImage, deleteMenuImage, extractStoragePath } from "@/lib/storage";
+import {
+  uploadMenuImage,
+  deleteMenuImage,
+  deleteUploadedMedia,
+  extractStoragePath,
+} from "@/lib/storage";
+import { compressImage } from "@/lib/imageCompression";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { type TagColor } from "@/components/ui/CategoryTag";
 import AdminPageShell from "@/components/admin/AdminPageShell";
@@ -85,6 +91,10 @@ export default function AdminCategoriesPage() {
   const [deleting,     setDeleting]     = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  /* このパネルで新しく上げた画像。保存されなければどこからも参照されないので、
+     閉じるときに Storage から消す（放っておくと孤児オブジェクトが溜まる）。
+     保存済みの旧画像を消すのは handleSubmit 側（deleteReplacedCategoryImage）。 */
+  const sessionUpload = useRef<string | null>(null);
 
   /* ── データ取得 ── */
   const load = async () => {
@@ -109,6 +119,7 @@ export default function AdminCategoriesPage() {
   /* ── パネルを開く ── */
   const openCreate = () => {
     setEditItem(null);
+    sessionUpload.current = null;
     setForm(EMPTY_FORM);
     setPreview(null);
     setPanelOpen(true);
@@ -116,6 +127,7 @@ export default function AdminCategoriesPage() {
 
   const openEdit = (cat: ApiCategory) => {
     setEditItem(cat);
+    sessionUpload.current = null;
     setForm({
       name:          cat.name,
       slug:          cat.slug,
@@ -128,7 +140,22 @@ export default function AdminCategoriesPage() {
     setPanelOpen(true);
   };
 
-  const closePanel = () => { setPanelOpen(false); setEditItem(null); };
+  /* 保存せずに閉じる（×・キャンセル・背景クリック）。
+     このパネルで上げた画像はDBがまだ知らないので Storage から消す。 */
+  const cancelPanel = () => {
+    const orphan = sessionUpload.current;
+    sessionUpload.current = null;
+    setPanelOpen(false);
+    setEditItem(null);
+    if (orphan) void deleteUploadedMedia([{ type: "image", url: orphan }]);
+  };
+
+  /* 保存・削除が済んだあとに閉じる。上げた画像は本採用なので消さない */
+  const closePanel = () => {
+    sessionUpload.current = null;
+    setPanelOpen(false);
+    setEditItem(null);
+  };
 
   /* ── ⠿ ドラッグ並び替え（display_order を1リクエストで永続化） ── */
   const persistOrder = useCallback(
@@ -160,9 +187,20 @@ export default function AdminCategoriesPage() {
     setPreview(URL.createObjectURL(file));
     setImgUploading(true);
     try {
-      const ext  = file.name.split(".").pop() ?? "jpg";
+      // カテゴリ画像は客側の一覧トップに並ぶので、確認を挟まず常に WebP へ落とす。
+      // （商品画像と違って装飾用途で、原寸を残す理由がない）
+      // 変換に失敗しても登録自体は通したいので、その場合は元ファイルを使う。
+      const upload = await compressImage(file).then((r) => r.file).catch(() => file);
+      const ext  = upload.name.split(".").pop() ?? "jpg";
       const path = `categories/${Date.now()}.${ext}`;
-      const url  = await uploadMenuImage(file, path);
+      const url  = await uploadMenuImage(upload, path);
+      // 同じパネル内で選び直した場合、1枚前のアップロードは即座に孤児になる。
+      // 保存を待つ理由が無いのでここで消す（DBはまだどちらも参照していない）
+      const superseded = sessionUpload.current;
+      sessionUpload.current = url;
+      if (superseded && superseded !== url) {
+        void deleteUploadedMedia([{ type: "image", url: superseded }]);
+      }
       setForm((f) => ({ ...f, image_url: url }));
     } catch (err) {
       alert("画像のアップロードに失敗しました: " + String(err));
@@ -251,7 +289,8 @@ export default function AdminCategoriesPage() {
         .eq("id", deleteTarget.category.id);
       if (error) throw error;
       setDeleteTarget(null);
-      closePanel();
+      // カテゴリごと消えるので、このパネルで上げた画像は確実に孤児になる
+      cancelPanel();
       await load();
     } catch (err) {
       alert("削除に失敗しました: " + String(err));
@@ -327,7 +366,7 @@ export default function AdminCategoriesPage() {
           {/* ── 編集/追加パネル（PC: 右420pxスライド／SP: フルスクリーン） ── */}
           {panelOpen && (
             <div className="fixed inset-0 z-50 flex justify-end">
-              <div className="absolute inset-0 bg-black/40 hidden lg:block" onClick={closePanel} />
+              <div className="absolute inset-0 bg-black/40 hidden lg:block" onClick={cancelPanel} />
               <div
                 className="relative bg-surface-white flex flex-col w-full h-full lg:w-[420px] overflow-hidden"
                 style={{ boxShadow: "var(--shadow-float)" }}
@@ -348,7 +387,7 @@ export default function AdminCategoriesPage() {
                         <Icon name="trash" className="w-4 h-4 text-status-urgent" />
                       </button>
                     )}
-                    <ModalCloseButton onClick={closePanel} />
+                    <ModalCloseButton onClick={cancelPanel} />
                   </div>
                 </div>
 
@@ -467,7 +506,7 @@ export default function AdminCategoriesPage() {
                 <div className="border-t border-border-divider flex gap-[var(--space-12)] px-[var(--space-20)] lg:px-[var(--space-24)] py-[var(--space-16)] shrink-0">
                   <button
                     type="button"
-                    onClick={closePanel}
+                    onClick={cancelPanel}
                     className="flex-1 h-[48px] border border-border rounded-[var(--radius-full)] font-jp font-bold text-[15px] leading-[1.45] tracking-[0.01em] text-text-secondary"
                   >
                     キャンセル

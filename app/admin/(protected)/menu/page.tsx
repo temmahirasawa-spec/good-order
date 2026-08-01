@@ -14,22 +14,17 @@
  * - 削除機能はFigmaに配置が無いため、編集パネルのヘッダーに削除アイコンとして
  *   配置した（新規作成時は非表示）。
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { fetchCategories, type ApiCategory, type ApiMenuItem, type ApiMediaItem } from "@/lib/api";
-import {
-  uploadMenuImage,
-  uploadMenuVideo,
-  deleteMenuImage,
-  deleteMenuVideo,
-  extractStoragePath,
-  extractVideoStoragePath,
-} from "@/lib/storage";
+import { uploadMenuImage, uploadMenuVideo, deleteUploadedMedia } from "@/lib/storage";
 import {
   inspectImage,
   compressImage,
   formatBytes,
+  COMPRESS_MAX_EDGE,
+  COMPRESS_MAX_BYTES,
   type ImageInfo,
 } from "@/lib/imageCompression";
 import AdminPageShell from "@/components/admin/AdminPageShell";
@@ -117,6 +112,17 @@ export default function AdminMenuPage() {
   } | null>(null);
   const [bestSellerOpen, setBestSellerOpen] = useState(false);
   const [bestSeller, setBestSeller] = useState<BestSellerSetting | null>(null);
+
+  /* ── Storage との整合を取るための持ち物（パネル1回ぶん） ──
+     ファイルは選んだ瞬間にアップロードするので、Storage と DB のどちらが先に
+     動くかで壊れ方が変わる。**DBを正として、Storageは後から追従させる**:
+     - このパネルで新しく上げたぶん（＝まだどこからも参照されていない）
+       → 保存せず閉じたら消す。残すと孤児になる
+     - もともと保存されていたぶんを外した場合
+       → 保存が通ってから消す。先に消すとキャンセルしたときに
+         DBの参照だけが残って画像が壊れる */
+  const sessionUploads   = useRef<MediaItem[]>([]);
+  const pendingDeletions = useRef<MediaItem[]>([]);
 
   /* ── データ取得 ── */
   const loadAll = async () => {
@@ -208,8 +214,15 @@ export default function AdminMenuPage() {
      テイクアウトフィルター＋＜新規追加＞が入口になる。そこで作った商品が
      追加直後にリストから消える（＝is_takeout が false のまま保存される）のを防ぐため、
      テイクアウトフィルター中はトグルONかつカテゴリーなしを既定にする。 */
+  /* パネルを開くたびに前回の持ち越しを捨てる（開き直しで二重に消さないため） */
+  const resetStorageBookkeeping = () => {
+    sessionUploads.current   = [];
+    pendingDeletions.current = [];
+  };
+
   const openCreate = () => {
     setEditItem(null);
+    resetStorageBookkeeping();
     const isTakeoutFilter = filterSlug === TAKEOUT_FILTER;
     setForm({
       ...EMPTY_FORM,
@@ -223,6 +236,7 @@ export default function AdminMenuPage() {
 
   const openEdit = (item: AdminMenuItem) => {
     setEditItem(item);
+    resetStorageBookkeeping();
     setForm({
       category_id:     item.category_id ?? "",
       name:            item.name,
@@ -237,7 +251,23 @@ export default function AdminMenuPage() {
     setPanelOpen(true);
   };
 
-  const closePanel = () => { setPanelOpen(false); setEditItem(null); };
+  /* 保存せずに閉じる（×・キャンセル・背景クリック）。
+     このパネルで上げたぶんはどこからも参照されないので Storage から消す。
+     外したつもりの既存メディアは**消さない**（DBの参照が残ったままなので）。 */
+  const cancelPanel = () => {
+    const orphans = sessionUploads.current;
+    resetStorageBookkeeping();
+    setPanelOpen(false);
+    setEditItem(null);
+    if (orphans.length > 0) void deleteUploadedMedia(orphans);
+  };
+
+  /* 保存・削除が済んだあとに閉じる。上げたぶんは本採用なので消さない */
+  const closePanel = () => {
+    resetStorageBookkeeping();
+    setPanelOpen(false);
+    setEditItem(null);
+  };
 
   /* ── メディア操作 ── */
   const imageCount = form.media.filter((m) => m.type === "image").length;
@@ -252,6 +282,7 @@ export default function AdminMenuPage() {
       const ext  = file.name.split(".").pop() ?? "jpg";
       const path = `menu/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const url  = await uploadMenuImage(file, path);
+      sessionUploads.current.push({ type: "image", url });
       setForm((f) => ({ ...f, media: [...f.media, { type: "image", url }] }));
       if (info.before && info.after) {
         setCompressToast({ before: info.before, after: info.after });
@@ -300,11 +331,23 @@ export default function AdminMenuPage() {
     }
   };
 
+  /* 「そのまま」= 縮めたくない、という意思表示。寸法は保ったまま WebP には
+     変換しておく（元が PNG だと数MBのまま客側の一覧に載ってしまうため）。
+     変換自体に失敗したら元ファイルをそのまま上げてアップロードは通す。 */
   const declineCompression = async () => {
     if (!compressPrompt) return;
     const { file } = compressPrompt;
     setCompressPrompt(null);
-    await uploadAndAppendImage(file, {});
+    setImgUploading(true);
+    try {
+      const result = await compressImage(file, { resize: false });
+      await uploadAndAppendImage(result.file, {
+        before: result.before,
+        after:  result.after,
+      });
+    } catch {
+      await uploadAndAppendImage(file, {});
+    }
   };
 
   const handleAddVideoFile = async (file: File) => {
@@ -320,6 +363,7 @@ export default function AdminMenuPage() {
     try {
       const path = `menu/${Date.now()}-${file.name}`;
       const url  = await uploadMenuVideo(file, path);
+      sessionUploads.current.push({ type: "video", url });
       setForm((f) => ({ ...f, media: [...f.media, { type: "video", url }] }));
     } catch (err) {
       alert("動画のアップロードに失敗しました: " + String(err));
@@ -338,26 +382,21 @@ export default function AdminMenuPage() {
     }
   };
 
-  const handleRemoveMedia = async (idx: number) => {
+  const handleRemoveMedia = (idx: number) => {
     const target = form.media[idx];
     setForm((f) => ({ ...f, media: f.media.filter((_, i) => i !== idx) }));
-    if (target?.type === "video") {
-      // 動画は Storage からも削除を試みる（best-effort）
-      try {
-        const path = extractVideoStoragePath(target.url);
-        await deleteMenuVideo(path);
-      } catch (err) {
-        console.warn("[admin/menu] video storage delete failed:", err);
-      }
-    } else if (target?.type === "image") {
-      // 画像も同様に Storage からの削除を試みる（best-effort）
-      try {
-        const path = extractStoragePath(target.url);
-        await deleteMenuImage(path);
-      } catch (err) {
-        console.warn("[admin/menu] image storage delete failed:", err);
-      }
+    if (!target) return;
+
+    const uploadedHere = sessionUploads.current.findIndex((m) => m.url === target.url);
+    if (uploadedHere !== -1) {
+      // このパネルで上げたぶん。DBはまだ知らないので、その場で消してよい
+      sessionUploads.current.splice(uploadedHere, 1);
+      void deleteUploadedMedia([target]);
+      return;
     }
+    // もともと保存されていたぶん。ここで消すと、キャンセルされたときに
+    // DBの参照だけが残って画像が壊れる。保存が通ってから消す
+    pendingDeletions.current.push(target);
   };
 
   const moveMedia = (from: number, to: number) => {
@@ -413,7 +452,13 @@ export default function AdminMenuPage() {
         });
         if (error) throw error;
       }
+
+      // DBが新しいメディア一覧を指したので、外されたぶんを Storage から消す。
+      // 保存より前にやるとキャンセル時に参照だけが残るため、必ずこの順番で。
+      // 失敗しても保存は成功しているので、ユーザー操作はブロックしない。
+      const removed = pendingDeletions.current;
       closePanel();
+      if (removed.length > 0) void deleteUploadedMedia(removed);
       await loadAll();
     } catch (err) {
       alert("保存に失敗しました: " + String(err));
@@ -430,7 +475,11 @@ export default function AdminMenuPage() {
       const { error } = await supabase.from("menu_items").delete().eq("id", deleteId);
       if (error) throw error;
       setDeleteId(null);
+      // 商品ごと消えるので、このパネルで上げたぶんは確実に孤児になる。
+      // （もともと保存されていた画像の掃除は別件。ここでは触らない）
+      const orphans = sessionUploads.current;
       closePanel();
+      if (orphans.length > 0) void deleteUploadedMedia(orphans);
       await loadAll();
     } catch (err) {
       alert("削除に失敗しました: " + String(err));
@@ -631,7 +680,7 @@ export default function AdminMenuPage() {
           {/* ── 編集/追加パネル（PC: 右420pxスライド＋プレビュー／SP: フルスクリーン） ── */}
           {panelOpen && (
             <div className="fixed inset-0 z-50 flex justify-end">
-              <div className="absolute inset-0 bg-black/40 hidden lg:block" onClick={closePanel} />
+              <div className="absolute inset-0 bg-black/40 hidden lg:block" onClick={cancelPanel} />
               <div
                 className="relative bg-surface-white flex flex-col w-full h-full lg:w-[420px] overflow-hidden"
                 style={{ boxShadow: "var(--shadow-float)" }}
@@ -652,7 +701,7 @@ export default function AdminMenuPage() {
                         <Icon name="trash" className="w-4 h-4 text-status-urgent" />
                       </button>
                     )}
-                    <ModalCloseButton onClick={closePanel} />
+                    <ModalCloseButton onClick={cancelPanel} />
                   </div>
                 </div>
 
@@ -816,7 +865,7 @@ export default function AdminMenuPage() {
                 <div className="border-t border-border-divider flex gap-[var(--space-12)] px-[var(--space-20)] lg:px-[var(--space-24)] py-[var(--space-16)] shrink-0">
                   <button
                     type="button"
-                    onClick={closePanel}
+                    onClick={cancelPanel}
                     className="flex-1 h-[48px] border border-border rounded-[var(--radius-full)] font-jp font-bold text-[15px] leading-[1.45] tracking-[0.01em] text-text-secondary"
                   >
                     キャンセル
@@ -850,7 +899,7 @@ export default function AdminMenuPage() {
                   <p className="type-jp-caption text-text-tertiary">
                     現在: {compressPrompt.info.width}×{compressPrompt.info.height}px ・ {formatBytes(compressPrompt.info.size)}
                     <br />
-                    目安: 1200×800px 以内 ・ 100 KB 以内
+                    目安: 長辺 {COMPRESS_MAX_EDGE}px 以内 ・ {formatBytes(COMPRESS_MAX_BYTES)} 以内（WebP）
                   </p>
                 </div>
                 <div className="flex gap-[var(--space-12)]">

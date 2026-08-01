@@ -5,24 +5,15 @@ import { useUiStore } from "@/lib/uiStore";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import InfoRow from "@/components/ui/InfoRow";
 import SeeMoreButton from "@/components/ui/SeeMoreButton";
+/* 店舗情報の実体は lib/siteConfig.ts に集約している。
+   同じ住所・営業時間が構造化データ（JSON-LD）と meta description にも出るため、
+   ここで別に持つと必ずどれかが古くなる。 */
+import { STORE } from "@/lib/siteConfig";
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
-
-/* ── 店舗情報（Figma: Store Info — Half Modal 191:31 の記載値） ── */
-const STORE = {
-  name: "YORKYS BRUNCH 夙川店",
-  address: "兵庫県西宮市霞町5-44 ビンテージ夙川2F",
-  hours: "11:00 - 21:00（L.O. 20:30）",
-  holiday: "不定休",
-  phone: "0798-42-8289",
-  heroImage: "/images/pancake/p1.png",
-  mapUrl:
-    "https://www.google.com/maps/search/?api=1&query=" +
-    encodeURIComponent("YORKYS BRUNCH 夙川店"),
-};
 
 export default function StoreInfoModal({ open, onClose }: Props) {
   const [mounted, setMounted] = useState(false);

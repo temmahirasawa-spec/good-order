@@ -1043,23 +1043,224 @@ dvh は現在の表示領域に追従するのでズレない。`100vh` を先�
   手動 `vercel --prod` と違い、Git連携ビルドはリポジトリの中身だけで走る
 - 手動で上げたいときは従来どおり `npx vercel --prod` も使える
 
+## 積み残しの解消（2026-07-29）
+
+「次にやること」に溜めていた3件を片付けた。
+
+### 1. 厨房で同じ品目を連続クリックすると2回目が競合になる → 修正
+
+原因は**自分の更新で変わった `updated_at` をローカルに書き戻していなかったこと**。
+`order_items` には BEFORE UPDATE トリガー（`trg_order_items_set_updated_at`）が
+効いていて、更新のたびに `updated_at` が変わる。ところが画面が持っている値は
+取得時のままなので、3秒のポーリングが来る前にもう一度押すと、**他端末ではなく
+自分の直前の更新と競合**して0件更新になっていた。
+
+- `updateOrderItemCookingStatusIfUnchanged` / `updateOrderStatusIfUnchanged`
+  （`lib/api.ts`）が、更新後の `updated_at` を返すようにした
+  （`.select("id, updated_at")` は元からあり、`RETURNING` はトリガー適用後の値を返す）
+- 厨房側は成功時にその値を state に書き戻す。`updateItemInGroups` に
+  `newUpdatedAt` 引数を足した
+- ポーリングの巻き戻り防止に使っている `pendingItemUpdates` も
+  `status` だけでなく `updatedAt` を持つようにした。DBがまだ追いつかず
+  ローカル値で上書きするときに、基準値まで古いままだと同じ競合が再発するため
+- 応答待ちの間にさらに押されていた場合は、後着の楽観更新を巻き戻さないよう
+  「pending がまだ自分のものか」を確認してから書き戻す
+
+> 連打そのものを直列化はしていない。**応答が返る前**に押した2発目は
+> 従来どおり競合→再取得で吸収される（表示は正しい状態に収束する）。
+
+### 2. 保存せずキャンセルするとStorageに孤児オブジェクトが残る → 修正
+
+編集パネルは**ファイルを選んだ瞬間にアップロードして即プレビュー**する作りなので、
+保存せず閉じられるとオブジェクトだけが残る。方針を
+**「DBを正として、Storageは後から追従させる」**に統一した（`lib/storage.ts` に
+`deleteUploadedMedia()` を新設。失敗は警告ログのみでユーザー操作をブロックしない）。
+
+| 操作 | Storage の扱い |
+|---|---|
+| このパネルで上げたぶん＋キャンセル | その場で削除（DBはまだ参照していない） |
+| このパネルで上げたぶん＋保存 | 残す（本採用） |
+| 既存メディアを外す＋保存 | **保存が通ってから**削除 |
+| 既存メディアを外す＋キャンセル | 削除しない |
+
+- `closePanel()` を「保存後に閉じる」用に残し、×・キャンセル・背景クリックは
+  新しい `cancelPanel()` に振り替えた（メニュー管理・カテゴリ管理の両方）
+- **あわせて既存の別バグも直した。** メニュー管理の `handleRemoveMedia` は
+  既存メディアも**その場でStorageから消していた**ため、外したあとキャンセルすると
+  DBの参照だけが残って画像が壊れていた。保存成功後に消す方式へ変更
+- カテゴリ管理は、同じパネル内で画像を選び直したときに1枚前を即削除する
+  （どちらもDBは未参照なので保存を待つ理由が無い）
+
+### 3. Color Swatch Picker のFigma差分 → 実装が正しいことを確認済み
+
+`get_screenshot`（`306:1535`）で再確認した。**Figmaコンポーネントの実描画は
+黒い外枠のみで、チェックは無い**（選択中のスウォッチを4倍に拡大して確認）。
+説明文だけが古い。現在の実装（外枠のみ）で一致しているので変更不要。
+
+### 4. カルーセル内でホバー影が切れる（設計仕様 §8）→ 修正
+
+`overflow-x: auto` を使う以上 `overflow-y` だけ `visible` にはできない（仕様で
+auto に強制される）ので、**クリップ範囲そのものを下へ広げた**。
+overflow のクリップは padding box なので、`padding-bottom` が影の逃げ場になる。
+
+`.carousel-hover-room`（globals.css / ホバー可能端末のみ）で
+`padding-bottom: 12px` + `margin-bottom: -12px`。**打ち消し合うのでレイアウトは
+1pxも動かない**。12px の根拠は `.btn-pill` のホバー影 `0 4px 14px` が
+下に約11pxはみ出すこと。
+
+### 未適用だったSQLは2本とも適用済みだった
+実DBに問い合わせて確認した（`docs/handoff.md` の旧「⚠実行が必要」は解消）。
+- `best_sellers.sql`: `best_sellers` テーブルに行があり、`stores.best_seller_enabled` も存在
+- `table_label_v2.sql`: `resolve_table(p_legacy_number:=1)` が
+  `{label:"テーブル A-1", short_label:"A-1"}` を返す（＝新書式・`short_label` 付き）
+
+### 検証状況
+- **厨房**: 実画面で同じ品目を **900ms間隔で4連打**（＝ポーリング3秒より短い、
+  従来なら必ず競合した条件）。4回とも状態が正しく1段ずつ進み、
+  `console.warn` の競合検出は**0件**。検証後に元の「未調理」へ戻した（0/3品）
+- **Storage**: 管理画面で32pxのテスト画像を実際にアップロード → キャンセル →
+  Storage の list API（CDNを経由しないので実体が分かる）で**消えていること**を確認。
+  既存画像を control として同時に引き、そちらは残ることも確認
+- **カルーセル**: `padding-bottom:12px` / `margin-bottom:-12px` を実測。
+  「カートに入れる」の下端がカード下端と**完全に一致**していた（＝以前は影が
+  全部切れていた）こと、クリップ範囲が12px下がったこと、ドットの位置が
+  カード下端から12pxのまま変わらないことを実測
+- `tsc --noEmit` / `next lint`（警告0）/ `npm run build` 通過
+
+> **既存メディアを外してキャンセルしたとき消えないこと**は、実データを壊す
+> リスクがあるので実画面では試していない（コードレビューのみ）。
+
+## 公開準備②: SEO / favicon / OGP / Search Console（2026-07-29）
+
+公開準備の2本目。1本目（メディア圧縮）の続き。
+
+### インデックス方針（この設計の前提）
+
+**検索に載せるのは TOP（`/`）だけ。** 注文フロー・カート・履歴・管理画面はすべて noindex。
+
+- `/` は卓パラメータが無いとテイクアウト注文の入口になるので、検索から直接来ても
+  注文が成立する = 単体で完結している唯一のページ
+- `/order`・`/cart`・`/complete`・`/history` はカート状態や二次元コードを前提にした
+  画面で、検索から来ても意味を成さない
+- 将来メニュー一覧をSEOに使いたくなったら `app/order/layout.tsx` の `robots` を
+  外すだけでよい
+
+`robots.txt` でクロールを止めるのは `/admin`・`/api/`・`/dev/` の3つだけ。
+**注文フローは robots.txt では止めていない**（robots.txt で弾くとページ内の noindex を
+読んでもらえず、逆に「URLだけ」インデックスされることがあるため。クロールは許可して
+`<meta name="robots" content="noindex">` で除外するのが正しい）。
+
+### 追加・変更したファイル
+
+| ファイル | 役割 |
+|---|---|
+| `lib/siteConfig.ts` | **新規**。公開URL・店舗情報・JSON-LD の唯一の置き場所 |
+| `app/layout.tsx` | metadataBase / title template / OGP / Twitter Card / manifest / appleWebApp / Search Console 確認タグ |
+| `app/robots.ts` | `/robots.txt` を生成 |
+| `app/sitemap.ts` | `/sitemap.xml` を生成（TOPの1件のみ） |
+| `app/manifest.ts` | `/manifest.webmanifest` を生成 |
+| `app/page.tsx` | **server component になった**。JSON-LD を出すだけ |
+| `components/top/TopScreen.tsx` | **新規**（旧 `app/page.tsx` の中身をそのまま移動） |
+| `app/{order,cart,complete,history,admin,dev}/layout.tsx` | 各セグメントの title と noindex |
+| `components/StoreInfoModal.tsx` | 店舗情報を `lib/siteConfig.ts` から引くように |
+| `app/favicon.ico` `app/icon.png` `app/apple-icon.png` | ブランドアイコン（後述） |
+| `app/opengraph-image.jpg` + `.alt.txt` | OGP画像 1200×630（37KB） |
+| `public/icons/*` | manifest 用 192 / 512 / maskable |
+
+**`app/page.tsx` を server component に分けた理由**: JSON-LD をクライアントの
+JSバンドルに載せないため。画面本体は hooks を使うので client のまま
+`components/top/TopScreen.tsx` に移し、`app/page.tsx` は構造化データを出すためだけの
+薄いラッパーになっている。
+
+### 公開URLの決まり方（独自ドメインを当てるときはここだけ）
+
+`lib/siteConfig.ts` の `siteUrl` が canonical・OGP・sitemap・robots の絶対URLすべての
+出どころ。優先順位は:
+
+1. `NEXT_PUBLIC_SITE_URL`（Vercelの環境変数に入れる。**独自ドメインを当てたらこれだけ**）
+2. `NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL`（Vercelが自動で入れる本番URL。
+   プレビュー環境でも本番URLを指すので canonical としては正しい）
+3. `https://yorkys-orderly.vercel.app`（既定値）
+
+### アイコンの作り方（作り直すとき用）
+
+素材は `public/images/logo/logoSmallBlack.webp`（1000×348 の横組みロゴ）。
+たまごマークのバウンディングボックスを生ピクセルで実測して `crop=191:229:0:17`。
+これを `#FDF8F2`（テーマカラーと同じクリーム）の正方形に載せている。
+マークの高さ比率は 512/192/180 が 62%、maskable が 45%（中央80%が安全域のため）、
+16/32/48 は 76〜80%（小サイズは余白を詰めないと潰れて見える）。
+
+`favicon.ico` は 16/32/48 の PNG を ICO コンテナに連結して自作した
+（ImageMagick が無いため。ICO は Vista 以降 PNG をそのまま格納できる）。
+**旧 `favicon.ico` は create-next-app の既定アイコンのままだった**（25,931バイト）。
+
+OGP画像は LPのヒーロー動画の1フレーム目（`background-poster.webp`）を
+`gblur=sigma=3` + 黒55%で沈めて、白ロゴを中央に置いたもの。中央配置なのは
+LINEなどが正方形にトリミングしてもロゴが切れないようにするため。
+
+### 検証済み（ローカル本番ビルドで実測）
+
+- `/robots.txt` `/sitemap.xml` `/manifest.webmanifest` が期待どおりの中身で 200
+- `/favicon.ico`(3.4KB) `/icon.png` `/apple-icon.png` `/opengraph-image.jpg` が 200
+- `robots` メタ: `/`=index,follow ／ order・cart・complete・history=noindex,nofollow ／
+  admin・dev=noindex,nofollow,nocache
+- `<title>` がテンプレート（`%s｜YORKYS BRUNCH 夙川店`）で全ページ出ている
+- JSON-LD が TOP のHTMLに入っていること、JSONとしてパースできることを確認
+- TOP画面の見た目が分割後も変わっていないことをブラウザで確認
+- `tsc --noEmit` / `npm run build` 通過
+
+### ⚠ ユーザー側の作業が必要なもの
+
+1. **Google Search Console の登録**（コードだけでは終わらない）
+   - <https://search.google.com/search-console> で URLプレフィックス型のプロパティとして
+     `https://yorkys-orderly.vercel.app/`（独自ドメインならそちら）を追加
+   - 所有権の確認は「HTMLタグ」方式が楽。表示される
+     `<meta name="google-site-verification" content="XXXX">` の **XXXX の部分だけ**を
+     Vercel の環境変数 `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` に入れて再デプロイ
+     → Search Console 側で「確認」を押す
+   - 確認後、サイトマップに `sitemap.xml` を送信
+   - 独自ドメインを当てるなら、**先にドメインを決めてから登録する**のが手戻りがない
+2. **`NEXT_PUBLIC_SITE_URL`** — 独自ドメインを当てたら Vercel の環境変数に設定
+3. **OGPの見え方の最終確認** — 本番デプロイ後に実際にLINEやXへURLを貼って確認
+   （ローカルURLでは各社のクローラーが取得できないため未検証）
+
+### 判断が要る／未対応で残していること
+
+- `keywords` に入れた **「ヨーキーズブランチ」** はこちらの推定表記。正式なカナ表記が
+  あれば `app/layout.tsx` の `keywords` を直すこと
+- **公式サイトがある場合**、そちらにも同じ店舗の構造化データがあるはず。本来は
+  `sameAs` で公式サイトを指すか、`@id` を揃えて同一実体だと示すのが望ましい。
+  公式ドメインが分からないので今回は入れていない
+- JSON-LD に **座標・価格帯・予約可否は入れていない**。確かな値が無く、推測を入れると
+  Google側の実店舗情報と食い違って不利になるため
+- `app/layout.tsx` の `viewport` は `maximumScale:1, userScalable:false` のまま。
+  Lighthouse のアクセシビリティで減点される項目だが、モバイルオーダーの
+  アプリ的な操作感を優先した既存の判断なので変えていない
+- `public/fonts/` の HalisR 7ファイルのうち **ExtraLight と Regular は
+  `app/globals.css` から参照されていない**（各53KB）。デプロイ容量の話なので
+  「余分なコードの棚卸し」セッションでまとめて判断したい
+- `/dev/ui` は認証なしで本番に出ている。noindex にはしたが、**そもそも本番に
+  含めるべきかはセキュリティ回で判断**
+
 ## 次にやること
 
-`prompts/`配下の未消化プロンプトは無い。ユーザーから次の指示を受け取るか、
-下記の積み残しを片付ける。
+`prompts/`配下の未消化プロンプトは無い。
 
-### 既知の挙動（未修正）
-- 厨房画面で同じ品目を連続クリックすると2回目が競合扱いになる（楽観ロックの
-  `updated_at` がローカルで更新されないため）。3秒のポーリングを待てば通る。
-  実運用で連打する場面は少ないが、既知の挙動として記録
+### 公開準備の残り
+1. ~~メディア圧縮~~（完了・未コミット）
+2. ~~SEO / favicon / OGP / Search Console~~（完了・未コミット）
+3. セキュリティ点検（RLS・`/dev/ui` の扱い・service_role keyのローテーション・
+   管理画面の権限）
+4. 余分なコード / 依存の棚卸しとパフォーマンス
+5. 本番デプロイ後の実機確認（OGP・動画再生・二次元コードからの導線）
 
 ### 積み残し
-- 編集パネルで画像をアップロードしたあと保存せずキャンセルすると、
-  アップロード済みオブジェクトがStorageに残る（カテゴリ・メニュー共通の既存挙動）
-- `Color Swatch Picker` のFigma説明文は「黒い外枠+チェック」だが実描画は外枠のみ。
-  外枠のみで実装している（要確認）
 - カテゴリ管理PCの「表示順バッジ」はFigmaにPC版コンポーネントが無いため推定実装。
   PCテンプレートを入手できたら要突き合わせ
+- motion-lab の調整値は既定値のまま。天真さんがスライダーで詰めた値があれば
+  `app/globals.css` の `:root` のトークン5行を差し替えるだけで反映できる
+- 商品を削除したとき、その商品が参照していた既存画像はStorageに残る
+  （今回入れたのは「そのパネルで上げたぶん」の掃除まで。過去ぶんの棚卸しは別件）
 
 ## 覚えておくべき運用ルール
 
@@ -1112,10 +1313,25 @@ Componentsページ（`46:16`）しか返らないが、これはツールの挙
     競合コピーが10個できてビルドが落ちた。**この方法は当てにしないこと。**
   - 現状の実用的な回避策は**ビルドをもう一度流すこと**（`rm -rf .next && npm run build`）。
     経験上2回目で通る。
-  - 恒久対策の候補（未実施・ユーザー判断待ち）:
-    1. Dropboxの選択型同期で `.next` を除外する
-    2. `.next` をDropbox外へのシンボリックリンクにする
-       （`rm -rf .next && ln -s /tmp/orderly-next .next`）
+  - 恒久対策の候補:
+    1. Dropboxの選択型同期で `.next` を除外する（未実施・ユーザー判断待ち。**残る唯一の候補**）
+    2. ~~`.next` をDropbox外へのシンボリックリンクにする~~
+       — **試して失敗した（2026-07-29）。この方法は採らないこと。**
+
+> **⚠ `.next` のシンボリックリンク化は絶対にやらないこと（2026-07-29に実証）。**
+> `ln -s /private/tmp/orderly-next .next` にすると、Nextが吐いた
+> `/private/tmp/orderly-next/server/app/page.js` から見て上位に `node_modules` が
+> 無いため `Cannot find module 'next/dist/compiled/next-server/app-page.runtime.dev.js'`
+> で起動しない。逃げようとしてリンク先に `node_modules` のシンボリックリンクを
+> 張ると、今度は `Cannot find module 'next/dist/pages/_app'` になる。
+> **さらに悪いことに、この状態を片付ける過程で `node_modules` が空になった**
+> （379→0。Dropbox の File Provider がリンクを辿ったものと思われる）。
+> 復旧は `npm ci` で済み、**Git管理下のファイルは無傷**だったが、
+> Dropbox配下でシンボリックリンクを使う発想自体を捨てること。
+>
+> なお `npm ci` 前の `node_modules/next/dist/pages/` は**存在しなかった**。
+> Dropboxが同期の過程で欠落させていた可能性が高く、
+> 「動くはずのものが動かない」ときは `npm ci` で入れ直すのが早い。
 - **本番ビルド直後にdevサーバーを起動すると`/dev/ui`等が500になる**（`.next`の成果物が
   production用のまま）。dev起動前にも`rm -rf .next`すること。
 - dev稼働中にも`Cannot find module './948.js'`系のチャンク欠落で500になることがある。

@@ -2,14 +2,25 @@
  * クライアントサイド画像圧縮（Canvas API）
  *
  * 仕様：
- *  - 横 ≤ 1200px かつ 縦 ≤ 800px かつ ファイルサイズ ≤ 100KB なら圧縮不要
- *  - 超える場合は、16:9 目安（1200×800 内に収まるよう）にリサイズ後、
- *    JPEG の品質を反復調整して 100KB 以下を目指す
+ *  - 出力は WebP。同じ見た目なら JPEG より 3〜4 割軽く、iOS/Android の
+ *    現行ブラウザはすべて表示できる。生成できないブラウザ（Safari 13 以前）
+ *    でだけ JPEG に落ちる。
+ *  - リサイズは「長辺 ≤ 1440px」で判定する。以前は 1200×800 の箱に収める
+ *    実装だったが、それだと縦長写真が 600×800 まで縮み、DPR3 のスマホで
+ *    全幅表示したときに目に見えて甘くなっていた。長辺基準なら縦横どちらの
+ *    写真も同じ密度で残る。
+ *  - 1440px の WebP は品質 0.85 で概ね 200〜260KB に収まるので、上限は
+ *    300KB。ここを下回るまで品質を段階的に落とす。
  */
 
-export const COMPRESS_MAX_WIDTH  = 1200;
-export const COMPRESS_MAX_HEIGHT = 800;
-export const COMPRESS_MAX_BYTES  = 100 * 1024; // 100KB
+/** リサイズ後の長辺の上限（px） */
+export const COMPRESS_MAX_EDGE = 1440;
+/** 目標ファイルサイズ */
+export const COMPRESS_MAX_BYTES = 300 * 1024;
+/** 品質の開始値。ここから下げながら COMPRESS_MAX_BYTES を狙う */
+const QUALITY_START = 0.85;
+const QUALITY_FLOOR = 0.5;
+const QUALITY_STEP  = 0.07;
 
 export interface ImageInfo {
   width: number;
@@ -46,7 +57,7 @@ export async function inspectImage(file: File): Promise<ImageInfo & { needsCompr
   const w = img.naturalWidth;
   const h = img.naturalHeight;
   const s = file.size;
-  const fitsDim  = w <= COMPRESS_MAX_WIDTH && h <= COMPRESS_MAX_HEIGHT;
+  const fitsDim  = Math.max(w, h) <= COMPRESS_MAX_EDGE;
   const fitsSize = s <= COMPRESS_MAX_BYTES;
   return {
     width: w,
@@ -56,8 +67,34 @@ export async function inspectImage(file: File): Promise<ImageInfo & { needsCompr
   };
 }
 
-/* ── 実際の圧縮処理 ── */
-export async function compressImage(file: File): Promise<CompressionResult> {
+/* ── canvas を指定 MIME で書き出す（品質を下げながら目標サイズを狙う）── */
+async function encode(canvas: HTMLCanvasElement, mime: string): Promise<Blob | null> {
+  let quality = QUALITY_START;
+  let last: Blob | null = null;
+  while (quality >= QUALITY_FLOOR) {
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), mime, quality)
+    );
+    // 要求した形式で書き出せないブラウザは PNG などを返してくる。呼び出し元で判定させる
+    if (!blob || blob.type !== mime) return blob;
+    last = blob;
+    if (blob.size <= COMPRESS_MAX_BYTES) break;
+    quality -= QUALITY_STEP;
+  }
+  return last;
+}
+
+/**
+ * 画像を WebP に変換する。
+ * @param opts.resize false なら寸法は変えず、形式変換と品質調整だけ行う。
+ *   管理画面の「そのまま」は "縮めたくない" という意思表示なので、寸法は
+ *   尊重したうえで WebP 化の恩恵だけ受けさせる用途。
+ */
+export async function compressImage(
+  file: File,
+  opts: { resize?: boolean } = {}
+): Promise<CompressionResult> {
+  const { resize = true } = opts;
   const img = await loadImage(file);
   const before: ImageInfo = {
     width: img.naturalWidth,
@@ -65,12 +102,10 @@ export async function compressImage(file: File): Promise<CompressionResult> {
     size: file.size,
   };
 
-  // 1200×800 に収まるよう縮小（アスペクト比は維持）
-  const scale = Math.min(
-    COMPRESS_MAX_WIDTH  / img.naturalWidth,
-    COMPRESS_MAX_HEIGHT / img.naturalHeight,
-    1
-  );
+  // 長辺を COMPRESS_MAX_EDGE に収める（アスペクト比は維持。拡大はしない）
+  const scale = resize
+    ? Math.min(COMPRESS_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight), 1)
+    : 1;
   const targetW = Math.max(1, Math.round(img.naturalWidth  * scale));
   const targetH = Math.max(1, Math.round(img.naturalHeight * scale));
 
@@ -85,22 +120,18 @@ export async function compressImage(file: File): Promise<CompressionResult> {
   (ctx as any).imageSmoothingQuality = "high";
   ctx.drawImage(img, 0, 0, targetW, targetH);
 
-  // JPEG で書き出し、品質を段階的に下げて 100KB 以下を狙う
-  let quality = 0.85;
-  let blob: Blob | null = null;
-  for (let i = 0; i < 8; i++) {
-    blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/jpeg", quality)
-    );
-    if (blob && blob.size <= COMPRESS_MAX_BYTES) break;
-    quality -= 0.1;
-    if (quality < 0.3) break;
+  let blob = await encode(canvas, "image/webp");
+  let ext  = "webp";
+  if (!blob || blob.type !== "image/webp") {
+    // WebP を書き出せない環境（Safari 13 以前など）は JPEG に落とす
+    blob = await encode(canvas, "image/jpeg");
+    ext  = "jpg";
   }
   if (!blob) throw new Error("圧縮に失敗しました");
 
   const base = file.name.replace(/\.[^.]+$/, "");
-  const outFile = new File([blob], `${base}.jpg`, {
-    type: "image/jpeg",
+  const outFile = new File([blob], `${base}.${ext}`, {
+    type: blob.type,
     lastModified: Date.now(),
   });
 

@@ -5,6 +5,8 @@
  * 外側 = overflow-x-auto + クリップ、内側 Content = padding 0 16px + gap 16px の
  * 二層構造（スクロール終端にも 16px の余白が残る）。
  * MenuCardWide の場合、マージン16＋ガター16で 2枚目が 58px はみ出すのが正しい状態。
+ * スクロール領域は `carousel-hover-room`（globals.css）でクリップ範囲を下に
+ * 12px広げている。これが無いとPCホバー時にカード下端のボタンの影が切れる。
  *
  * RecommendCarousel のみ、ゆっくり自動横スクロール（左→右、端で反転して往復）する。
  * スクロールできる余地が無い場合（画像1枚等）は自動で無効。
@@ -97,7 +99,7 @@ function ScrollRow({
   return (
     <div
       ref={scrollRef}
-      className={`overflow-x-auto overflow-y-hidden ${className}`}
+      className={`carousel-hover-room overflow-x-auto overflow-y-hidden ${className}`}
       style={{ scrollbarWidth: "none" }}
     >
       <div
@@ -174,7 +176,7 @@ export function MenuCarouselM({
     <div className={className}>
       <div
         ref={scrollRef}
-        className="overflow-x-auto overflow-y-hidden"
+        className="carousel-hover-room overflow-x-auto overflow-y-hidden"
         style={{ scrollbarWidth: "none" }}
       >
         <div
