@@ -1,0 +1,48 @@
+# GitHub Actions ── リモート側のゲート
+#
+# ローカルの Stop hook（.claude/hooks/require-check.sh）と同じ `npm run check` を、
+# GitHub 上でも走らせる。hook は天真さんの Mac でしか効かないが、こちらは
+# どの環境から来た変更にも必ず適用される。main のブランチ保護と組み合わせて
+# 「CIが通らない限りマージできない」という制約にする。
+#
+# public リポジトリなので GitHub Actions の実行時間は無料。
+
+name: check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# 同じブランチに続けて push したとき、古い実行を止めて最新だけ走らせる
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # package-lock.json のとおりに厳密インストール（npm install ではなく ci）
+      - name: 依存をインストール
+        run: npm ci
+
+      - name: typecheck → lint → build
+        run: npm run check
+        env:
+          # lib/supabase.ts がモジュール先頭で createClient() を呼ぶため、
+          # ビルドを通すには値が必要。createClient は URL の形式を見るだけで
+          # 通信はしないので、ダミーで足りる。
+          # （ビルド時に Supabase へ問い合わせるページは無いことを確認済み）
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci
