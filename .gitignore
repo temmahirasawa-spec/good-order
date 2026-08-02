@@ -49,3 +49,6 @@ next-env.d.ts
 # Claude Code hooks が使う一時ファイル（検証待ちフラグ・試行回数）
 .claude/.needs-check
 .claude/.check-attempts
+
+# Sentry Config File
+.env.sentry-build-plugin
