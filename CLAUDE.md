@@ -120,6 +120,8 @@ UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）
 | `hooks/` | 汎用React hooks |
 | `supabase/` | SQLマイグレーション。1機能1ファイル |
 | `prompts/` | リデザイン作業の連番Stepプロンプト |
+| `.github/workflows/` | GitHub Actions。`check.yml` が PR と main で `npm run check` を回す |
+| `PROMPT-TEMPLATE.md` | 作業を依頼するときのプロンプト雛形。完了条件の書き方 |
 | `docs/handoff.md` | 実装の経緯と判断の履歴。**セッション開始時に読む** |
 | `assets/` | 素材ストック。**Next.js の配信対象外**（`public/` と混同しない） |
 
@@ -135,15 +137,40 @@ UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）
 
 ---
 
-## 8. コミット規約
+## 8. ブランチとコミットの規約
+
+### ブランチ
+
+- **`main` への直接 push は禁止**。GitHub のブランチ保護で機構的に不可能（管理者にも適用済み）
+- 作業は必ず feature ブランチを切り、**PR 経由で `main` に入れる**
+- ブランチ名は `種別/短い説明`。種別は `feat` / `fix` / `refactor` / `docs` / `chore` / `ci`
+  例: `feat/order-optimistic-cart`
+
+### コミット
 
 - **Conventional Commits ＋ 日本語**。例: `feat(order): カート投入時の楽観的更新を追加`
 - **各コミットは、それ単体で `npm run check` が通る状態にする**。
   意味の単位ではなく「通る単位」で割る
-- `npm run check` が通っていれば、**コミットとpushは確認を取らずに実行してよい**
-- ただし上記 3 の「止まって確認する」項目を含む変更は、確認を取ってからコミットする
 
-> **⚠ この項は PHASE 1-4（main保護 ＋ PR必須 ＋ CI）の導入時に書き換えること。**
-> 現在は main への直接pushが本番デプロイに直結している。main保護が入ったら
-> 「feature ブランチへのpushは自走、main への直接pushは禁止、PR経由のみ」に改める。
-> **YORKYS BRUNCH の9月リオープンまでに必ず閉じる。**
+### PR とマージ
+
+`npm run check` が通っていれば、ブランチへの commit / push、PR 作成、マージ予約まで
+**確認を取らずに実行してよい**。手順は以下。
+
+1. `git checkout -b 種別/説明`
+2. 実装 → `npm run check` が通るまで自分で直す
+3. `git add -A && git commit -m "..."`
+4. `git push -u origin <branch>`
+5. `gh pr create --fill`
+6. `gh pr merge --squash --auto`（CIが通り次第 GitHub が自動でマージし、ブランチを削除する）
+
+- **マージは squash のみ。** `main` の履歴は一直線に保つ
+- **CI（GitHub Actions の `check`）が落ちたら、報告せずに自分で直す。**
+  ローカルの Stop hook とまったく同じ扱い（上記 2 を参照）
+
+### 例外
+
+- 上記 3 の「止まって確認する」項目を含む変更は、**PR を作るところまでで止めて**
+  天真に確認を取る。`--auto` は付けない
+- **`gh pr merge --admin`、およびブランチ保護の一時解除は、AI は絶対に使わない。**
+  緊急時に天真だけが使う経路
