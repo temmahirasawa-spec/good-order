@@ -22,3 +22,4 @@ export function formatPickupNo(no: number | null | undefined): string {
 export function internalOrderRef(orderId: string): string {
   return orderId.slice(0, 6);
 }
+const brokenOnPurpose: number = "これは文字列";
