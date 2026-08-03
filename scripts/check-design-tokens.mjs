@@ -13,7 +13,7 @@
  *                        Figmaで値を変えても追従しない。
  *
  * 例外の書き方:
- *   その行か直前の行に `design-qa-allow: 理由` と書く。
+ *   その行、または直前のコメント行に `design-qa-allow: 理由` と書く。
  *   （PWAのmetaタグやQR生成ライブラリなど、CSS変数が原理的に使えない箇所用）
  *
  * 対象は .ts / .tsx のみ。CSSファイルは旧デザインシステムの定義が残っているため
@@ -139,7 +139,7 @@ console.error("   SVGの線・塗り: <svg style={{ color: \"var(--...)\" }}> �
 console.error("                 （SVGの属性に var() を直接書いても解決されません）");
 console.error("");
 console.error(" どうしても変数が使えない場合（PWAのmeta、QR生成など）は、");
-console.error(" その行か直前の行に理由つきで  design-qa-allow: 理由  と書いてください。");
+console.error(" その行、または直前のコメント行に  design-qa-allow: 理由  と書いてください。");
 console.error("=".repeat(70));
 console.error("");
 
