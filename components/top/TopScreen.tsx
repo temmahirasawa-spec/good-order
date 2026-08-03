@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useCartStore } from "@/lib/store";
 import { resolveTable } from "@/lib/tables";
+import { useStoreVideo } from "@/lib/useStoreMedia";
 
 function TopContent() {
   const router = useRouter();
@@ -55,12 +56,18 @@ function TopContent() {
     return () => { cancelled = true; };
   }, [isTakeoutOnly, shortCode, legacyNumber, setTable, setTableRef]);
 
+  /* ── 背景動画（管理画面「店舗設定 > トップページ」で差し替える） ──
+     取得が終わるまでは描画しない。表示OFF・動画なしのときも同じで、
+     背景は下に敷いた黒のままになる（白文字が読めなくならないようにする）。 */
+  const bgVideo = useStoreVideo("landing_background");
+  const bgUrl = bgVideo.loaded && bgVideo.media.enabled ? bgVideo.media.url : null;
+
   // iOS Safari では autoplay に playsinline が必須
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     v.play().catch(() => {});
-  }, []);
+  }, [bgUrl]);
 
   const handleStart = () => {
     if (isTakeoutOnly) {
@@ -79,19 +86,26 @@ function TopContent() {
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-between overflow-hidden">
 
+      {/* ── 背景 ────────────────────────────────────────── */}
+      {/* 動画の下に敷く黒。動画が無い／表示OFFのときはこれだけが残る。
+          Suspense の fallback と同じ色にしてあり、白文字の可読性を保つ。 */}
+      <div className="absolute inset-0 bg-black" />
+
       {/* ── 背景動画 ────────────────────────────────────── */}
       {/* poster: 動画の1フレーム目（64KB）。動画本体のデコードが終わるまでの
           一瞬の黒画面を消すために置いている。LCPもこちらで先に確定する。 */}
-      <video
-        ref={videoRef}
-        src="/images/hero/background.mp4"
-        poster="/images/hero/background-poster.webp"
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {bgUrl && (
+        <video
+          ref={videoRef}
+          src={bgUrl}
+          poster={bgVideo.media.posterUrl ?? undefined}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
 
       {/* ── オーバーレイ 30% ─────────────────────────────── */}
       <div className="absolute inset-0 bg-black/65" />
