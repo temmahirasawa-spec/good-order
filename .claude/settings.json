@@ -27,11 +27,13 @@
       "Bash(vercel *)",
       "Bash(gh api -X PUT*)",
       "Bash(gh api -X DELETE*)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(rm -rf *)"
     ],
     "deny": [
       "Bash(git push --force*)",
       "Bash(git push -f*)",
+      "Bash(gh pr merge*)",
       "Bash(gh pr merge*--admin*)",
       "Bash(rm -rf /*)"
     ]
