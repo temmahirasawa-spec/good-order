@@ -1,0 +1,51 @@
+// harness/package.json.snippet
+//
+// 移行先の package.json に、下の "scripts" を丸ごとマージする（JSON にコメントは書けないので
+// このファイルは .snippet 拡張子にしてある。コピーするのは "scripts": { ... } の中身だけ）。
+//
+// 肝は `check` の中身と順番。
+//   typecheck → lint → design → build
+//   前が落ちたらそこで止まる（&& でつないでいるため）。
+//   遅い build を最後に置くことで、型エラーのときに数分待たされずに済む。
+//
+// この `check` が、以下3か所すべての共通の合格ラインになる。
+//   1. AI の Stop hook（.claude/hooks/require-check.sh）
+//   2. GitHub Actions（.github/workflows/check.yml）
+//   3. 人間が手で叩くとき
+// 3つが同じコマンドを見ているから、「ローカルでは通るのに CI で落ちる」が起きにくい。
+
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint --max-warnings 0",
+    "design": "node scripts/check-design-tokens.mjs",
+    "check": "npm run typecheck && npm run lint && npm run design && npm run build",
+
+    "design:figma": "node scripts/check-figma.mjs"
+  }
+}
+
+// ── 補足 ─────────────────────────────────────────────────────
+//
+// ■ `design:figma` を `check` に入れていないのはなぜか
+//   Figma API を叩くのでネットワークと FIGMA_TOKEN が要る。CI には
+//   トークンを置きたくないし、コードを触っただけの PR で Figma を検品しても意味がない。
+//   デザイン作業のときだけ人が手で回す（docs/specs/design-rules.md 4-2）。
+//
+// ■ `--max-warnings 0` の意味
+//   警告も落とす。「警告は後で直す」を許すと、警告が数百件たまって
+//   本当に見るべきものが埋もれる。0 なら埋もれようがない。
+//
+// ■ Figma をまだ使っていないプロジェクトの場合
+//   `design` と `design:figma` の2行と、scripts/ の2ファイルを丸ごと落としてよい。
+//   `check` は "npm run typecheck && npm run lint && npm run build" にする。
+//   ※ 落とす場合、CLAUDE.md.template のデザイントークンの節も併せて削ること。
+//
+// ■ 必要な依存（移行先が Next.js の新規プロジェクトなら大半は最初から入っている）
+//   devDependencies: typescript, eslint, eslint-config-next, @types/node, @types/react, @types/react-dom
+//   scripts/ の2本は Node の標準モジュールと fetch だけで動くので、追加の依存は無い。
+//   Node 18 以上（グローバル fetch が要る）。CI は {{NODE_VERSION}} を指定している。
