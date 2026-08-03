@@ -168,16 +168,19 @@ UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）
 
 ### PR とマージ
 
-`npm run check` が通っていれば、ブランチへの commit / push、PR 作成、マージ予約まで
-**確認を取らずに実行してよい**。手順は以下。
+作業が完了したら、AI は次のところまで**自分で実行する**。手順は以下。
 
 1. `git checkout -b 種別/説明`
 2. 実装 → `npm run check` が通るまで自分で直す
-3. `git add -A && git commit -m "..."`
-4. `git push -u origin <branch>`
-5. `gh pr create --fill`
-6. `gh pr merge --squash --auto`（CIが通り次第 GitHub が自動でマージし、ブランチを削除する）
+3. コミット（説明文は日本語。Conventional Commits）
+4. `git push -u origin <ブランチ名>`
+5. `gh pr create` で PR を作成する。**`--fill` は使わない。** 本文には必ず以下の3項目を書く。
+   - 変更内容（箇条書き、1行ずつ）
+   - プレビューで見てほしいページのパス（例: `/order`, `/cart`）
+   - Playwright で撮った PC 1400px / SP 390px のスクリーンショット
+6. **ここで止まる。AI は `gh pr merge` を実行しない。**
 
+- マージの判断は天真が行う。天真がプレビューを見て問題なければ、天真自身がマージする
 - **マージは squash のみ。** `main` の履歴は一直線に保つ
 - **CI（GitHub Actions の `check`）が落ちたら、報告せずに自分で直す。**
   ローカルの Stop hook とまったく同じ扱い（上記 2 を参照）
@@ -185,6 +188,6 @@ UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）
 ### 例外
 
 - 上記 3 の「止まって確認する」項目を含む変更は、**PR を作るところまでで止めて**
-  天真に確認を取る。`--auto` は付けない
-- **`gh pr merge --admin`、およびブランチ保護の一時解除は、AI は絶対に使わない。**
-  緊急時に天真だけが使う経路
+  天真に確認を取る（通常フローと同じく、AI はここでも `gh pr merge` を実行しない）
+- **`gh pr merge`、`gh pr merge --admin`、およびブランチ保護の一時解除は、AI は絶対に使わない。**
+  マージは天真だけが行う
