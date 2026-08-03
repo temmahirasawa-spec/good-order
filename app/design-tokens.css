@@ -40,7 +40,12 @@
   /* COLOR — Text */
   --color-text-primary:   #1A1A1A;
   --color-text-secondary: #646464;
-  --color-text-tertiary:  #969696;
+  /* 白地で 2.85:1。WCAG AA (4.5:1) には意図的に届かせていない。
+   * secondary(#646464) との差を確保して階層を成立させることを優先した判断（天真, 2026-08-03）。
+   * 前提: tertiary は「めったに使わない付随的な補足」にのみ使う。
+   * 本文・ラベル・入力値など、読めないと困る情報には使わないこと。
+   * → 可読性が必要な箇所で tertiary を使いたくなったら、それは secondary を使うべき場面。 */
+  --color-text-tertiary:  #999999;
   --color-text-disabled:  #C4C4C4;
   --color-text-inverse:   #FFFFFF;
 
