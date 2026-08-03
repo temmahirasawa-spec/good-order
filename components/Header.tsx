@@ -103,10 +103,10 @@ export default function Header({ mode = "home", title, titleNode, onBack }: Head
             aria-label="カート"
             className="relative w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-100 shadow-soft shrink-0"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ color: "var(--color-text-primary)" }}>
               <path
                 d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"
-                stroke="#3D2800" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
               />
             </svg>
             {total > 0 && (
@@ -124,8 +124,8 @@ export default function Header({ mode = "home", title, titleNode, onBack }: Head
             aria-label="メニュー"
             className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-100 shadow-soft shrink-0"
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M3 5h12M3 9h12M3 13h12" stroke="#3D2800" strokeWidth="1.5" strokeLinecap="round" />
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ color: "var(--color-text-primary)" }}>
+              <path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
         </div>

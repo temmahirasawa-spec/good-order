@@ -174,7 +174,7 @@ function PrintContent() {
                       key={i}
                       style={{
                         // カードの境界に沿った薄いグレーの切り取り線
-                        border: "0.2mm solid #E6E6E6",
+                        border: "0.2mm solid var(--color-border-default)",
                         display: "flex",
                         alignItems: "center",
                         gap: "4mm",
@@ -207,38 +207,38 @@ function PrintCardBody({ label, url }: { label: string; url: string }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "0.6mm" }}>
           <span
             className="font-halis"
-            style={{ fontFamily: "HalisR, sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "#1A1A1A" }}
+            style={{ fontFamily: "HalisR, sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "var(--color-text-primary)" }}
           >
             YORKYS
           </span>
           <span
             className="font-halis"
-            style={{ fontFamily: "HalisR, sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "#1A1A1A" }}
+            style={{ fontFamily: "HalisR, sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "var(--color-text-primary)" }}
           >
             BRUNCH
           </span>
           <span
             className="font-halis"
-            style={{ fontFamily: "HalisR, sans-serif", fontSize: "1.9mm", lineHeight: 1.2, letterSpacing: "0.14em", color: "#646464" }}
+            style={{ fontFamily: "HalisR, sans-serif", fontSize: "1.9mm", lineHeight: 1.2, letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}
           >
             GOOD BRUNCH, GREAT DAY!
           </span>
         </div>
 
-        <p className="type-jp-body" style={{ fontSize: "3.1mm", lineHeight: 1.5, color: "#1A1A1A" }}>
+        <p className="type-jp-body" style={{ fontSize: "3.1mm", lineHeight: 1.5, color: "var(--color-text-primary)" }}>
           スマホでご注文いただけます
         </p>
 
         <span
           style={{
             alignSelf: "flex-start",
-            background: "#EFEFEF",
+            background: "var(--color-bg-tertiary)",
             borderRadius: "999px",
             padding: "1.4mm 3.2mm",
             fontSize: "3.4mm",
             lineHeight: 1.2,
             fontWeight: 700,
-            color: "#1A1A1A",
+            color: "var(--color-text-primary)",
           }}
         >
           {/* ラベル自体が「カウンター C-1」と自己説明的なので「テーブル」の接頭辞は付けない */}

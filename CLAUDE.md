@@ -26,8 +26,8 @@
 - 人間に「エラーが出ました、どうしますか」と投げ返さない。それは作業を完了させていないのと同じ
 - 3回直しても同じ箇所で落ちる場合だけ、**何を試して何が起きたか**を添えて相談する
 
-`npm run check` = `typecheck`（`tsc --noEmit`）→ `lint`（`next lint`）→ `build`（`next build`）。
-1つでも落ちたらそこで止まる。
+`npm run check` = `typecheck`（`tsc --noEmit`）→ `lint`（`next lint --max-warnings 0`）
+→ `design`（デザイントークンQA）→ `build`（`next build`）。1つでも落ちたらそこで止まる。
 
 UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）に該当コンポーネントの
 セクションを追加・更新すること。目視確認の導線を切らさないため。
@@ -81,7 +81,15 @@ UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）
 - `/order` 配下の新規JSXでは `p-[var(--space-16)]` `rounded-[var(--radius-xl)]` のような
   任意値記法、または `style={{ }}` で CSS変数を直接参照する。
   これらは Tailwind のデフォルトと同名で値が違うため、**`tailwind.config.ts` には意図的にマージしていない**
-- 生の色コードを直接書かない。ブランド切り替え（YORKYS / Izakaya 等）はアクセント4色の差し替えだけで済む構造を壊さない
+- **生の色コードを直接書かない。** ブランド切り替え（YORKYS / Izakaya 等）はアクセント4色の
+  差し替えだけで済む構造を壊さない
+- これは **`npm run design` が機械的に検出する**（`scripts/check-design-tokens.mjs`）。
+  - トークンに無い色 → デザイン判断が必要。**勝手に決めず天真に確認する**（上記 3 参照）
+  - トークンと同値の直書き → `var(--...)` に置き換える
+  - SVG は属性に `var()` を書いても解決されない。
+    `<svg style={{ color: "var(--...)" }}>` ＋ `stroke="currentColor"` の形にする
+  - PWA の meta や QR 生成など、**構造的に CSS変数が使えない**箇所だけ、
+    その行か直前のコメントに `design-qa-allow: 理由` と書いて除外する。理由は必ず書く
 
 ### Supabase
 
@@ -121,6 +129,7 @@ UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）
 | `supabase/` | SQLマイグレーション。1機能1ファイル |
 | `prompts/` | リデザイン作業の連番Stepプロンプト |
 | `.github/workflows/` | GitHub Actions。`check.yml` が PR と main で `npm run check` を回す |
+| `scripts/` | 検査スクリプト。`check-design-tokens.mjs` が生の色コードを検出する |
 | `PROMPT-TEMPLATE.md` | 作業を依頼するときのプロンプト雛形。完了条件の書き方 |
 | `docs/handoff.md` | 実装の経緯と判断の履歴。**セッション開始時に読む** |
 | `assets/` | 素材ストック。**Next.js の配信対象外**（`public/` と混同しない） |

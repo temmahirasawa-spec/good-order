@@ -512,6 +512,7 @@ export default function UiGalleryPage() {
           <TableChip label="TABLE 2" selected={false} onClick={() => {}} />
           <TableChip label="TABLE 4" selected onClick={() => {}} />
           <TableChip label="TABLE 7" selected={false} showServedDot onClick={() => {}} />
+          {/* design-qa-allow: 受渡番号のサンプル文字列。色ではない */}
           <TableChip label="🛍 #a1b2c3" selected={false} onClick={() => {}} />
         </div>
       </Section>

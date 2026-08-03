@@ -140,8 +140,8 @@ function DrawerItem({
     >
       <span className="text-xl w-6 text-center leading-none">{icon}</span>
       <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        <path d="M6 4l4 4-4 4" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ color: "var(--color-text-tertiary)" }}>
+        <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
   );
