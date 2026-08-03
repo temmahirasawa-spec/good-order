@@ -129,8 +129,11 @@ function checkSection(page, sec, depth = 0) {
 
   if (!isUtility && (subs.length || requirePair)) {
     const names = subs.map((s) => s.name);
-    if (!names.includes("PC")) H(label, "PC セクションがありません（PC を作るときは SP も対で作る）");
-    if (!names.includes("SP")) H(label, "SP セクションがありません（PC を作るときは SP も対で作る）");
+    // 除外セクション（お客様側など、片側しか存在しない画面）は対を要求しない
+    if (!PAIR_EXEMPT_SECTIONS.includes(sec.name)) {
+      if (!names.includes("PC")) H(label, "PC セクションがありません（PC を作るときは SP も対で作る）");
+      if (!names.includes("SP")) H(label, "SP セクションがありません（PC を作るときは SP も対で作る）");
+    }
     const loose = kids.filter((c) => c.type !== "SECTION");
     if (loose.length) H(label, `PC / SP の外に直接置かれた要素があります: ${loose.map((f) => `「${f.name}」`).join(" ")}`);
     for (const sub of subs) checkFit(`${label} / ${sub.name}`, sub, true);
