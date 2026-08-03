@@ -40,6 +40,9 @@ import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import AdminMenuRow from "@/components/admin/menu/AdminMenuRow";
 import TagSelectField from "@/components/admin/menu/TagSelectField";
 import MediaUploaderField from "@/components/admin/menu/MediaUploaderField";
+import SettingsSection from "@/components/admin/settings/SettingsSection";
+import VideoSlotField from "@/components/admin/settings/VideoSlotField";
+import type { StoreMedia } from "@/lib/storeMedia";
 import MenuPreviewCard from "@/components/admin/menu/MenuPreviewCard";
 import CategoryRow from "@/components/admin/category/CategoryRow";
 import ColorSwatchPicker from "@/components/admin/category/ColorSwatchPicker";
@@ -119,6 +122,37 @@ function ToggleSwitchDemo() {
 function TagSelectFieldDemo() {
   const [tag, setTag] = useState("人気");
   return <TagSelectField value={tag} onChange={setTag} />;
+}
+
+function VideoSlotFieldDemo() {
+  const [media, setMedia] = useState<StoreMedia>({
+    enabled: true,
+    url: "/images/hero/background.mp4",
+    posterUrl: "/images/pancake/p1.webp",
+    updatedAt: "2026-08-03T14:32:00+09:00",
+  });
+  return (
+    <SettingsSection
+      title="トップページ"
+      description="お客様が最初に見る2つの画面の動画を差し替えます。動画を消したいだけのときは、削除ではなく表示のオフをお使いください。"
+    >
+      <VideoSlotField
+        slot="order_hero"
+        label="注文ホームのヒーロー動画"
+        hint="メニュー一覧の先頭に、横長の帯として出ます。"
+        notes={[
+          "16:9（横長）に自動でトリミングされます。上下が切れないよう、16:9で書き出した動画をアップロードしてください。",
+          "推奨: 1920×1080・15秒以内・mp4。音声は再生されません。",
+          "アップロードした動画は自動的に圧縮されます（最大1280×720・mp4）。元のファイルは保存されません。",
+        ]}
+        fit="cover-16x9"
+        media={media}
+        onToggle={(enabled) => setMedia((m) => ({ ...m, enabled }))}
+        onUploaded={({ url, posterUrl }) => setMedia((m) => ({ ...m, url, posterUrl }))}
+        onRequestDelete={() => setMedia((m) => ({ ...m, url: null, posterUrl: null }))}
+      />
+    </SettingsSection>
+  );
 }
 
 function MediaUploaderFieldDemo() {
@@ -553,6 +587,12 @@ export default function UiGalleryPage() {
 
       <Section title="MediaUploaderField">
         <MediaUploaderFieldDemo />
+      </Section>
+
+      <Section title="SettingsSection + VideoSlotField（店舗設定 > トップページ）">
+        <div className="max-w-[560px]">
+          <VideoSlotFieldDemo />
+        </div>
       </Section>
 
       <Section title="MenuPreviewCard">

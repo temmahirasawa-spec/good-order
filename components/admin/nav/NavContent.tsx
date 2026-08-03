@@ -19,6 +19,7 @@ const NAV_ICONS: Record<string, IconName> = {
   "/admin/register":  "receipt",
   "/admin/pickup":    "check",
   "/admin/tables":    "qr",
+  "/admin/settings":  "sliders",
 };
 
 /** ops群とmanage群の間に入れる区切り線（上下パディング8・左右12の中に1px） */

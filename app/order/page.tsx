@@ -26,7 +26,9 @@ import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useOrderPageData } from "@/hooks/useOrderPageData";
-import type { MenuItem, MediaItem } from "@/lib/menu";
+import { useStoreVideo } from "@/lib/useStoreMedia";
+import { toMediaItems } from "@/lib/storeMedia";
+import type { MenuItem } from "@/lib/menu";
 
 /* ── セクション構成（フード7 → ドリンク4） ── */
 const SECTION_ORDER = [
@@ -60,12 +62,6 @@ const BEST_SELLER = {
 const TABS = [
   { id: BEST_SELLER.id, label: "おすすめ" },
   ...SECTION_ORDER.map((slug) => ({ id: slug, label: SECTION_COPY[slug].jp })),
-];
-
-/* ── ヒーロー動画（既存アセット。差し替えは この配列を変更するだけ） ── */
-const HERO_MEDIA: MediaItem[] = [
-  { type: "image", url: "/images/pancake/p1.webp" },
-  { type: "video", url: "/images/hero/background.mp4" },
 ];
 
 const FILTER_CHIPS = [
@@ -118,6 +114,13 @@ function OrderContent() {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
 
   const { loading, bestSellerItems, bestSellerEnabled, categorySections } = useOrderPageData();
+
+  /* ── ヒーロー動画（管理画面「店舗設定 > トップページ」で差し替える） ──
+     取得が終わるまでは空配列＝描画しない。表示OFF・動画なしのときも空配列になり、
+     Video16x9 が枠ごと消える。メニュー本体の取得の方が重いので、実際には
+     この下の loading スケルトンが解けるより先に決まる。 */
+  const heroVideo = useStoreVideo("order_hero");
+  const heroMedia = heroVideo.loaded ? toMediaItems(heroVideo.media) : [];
 
   const [activeSection, setActiveSection] = useState<string>(BEST_SELLER.id);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -237,7 +240,7 @@ function OrderContent() {
         ) : (
           <>
             {/* ── ヒーロー動画（16:9・タップ再生） ── */}
-            <Video16x9 media={HERO_MEDIA} />
+            <Video16x9 media={heroMedia} />
 
             {/* ── Best Seller（カテゴリ横断・横カルーセル）──
                 管理画面の設定でOFFにされたら、見出しごと描画しない（空の枠を残さない） ── */}
