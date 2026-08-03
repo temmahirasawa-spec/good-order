@@ -1,0 +1,12 @@
+- main [ref=e4]:
+  - generic [ref=e7]:
+    - generic [ref=e9]:
+      - img "YORKYS BRUNCH" [ref=e10]
+      - generic [ref=e11]:
+        - paragraph [ref=e12]: Takeout
+        - generic [ref=e13]:
+          - generic [ref=e14]: 🛍
+          - generic [ref=e15]: テイクアウト注文
+      - paragraph [ref=e16]: この度はご来店いただき誠にありがとうございます。素敵な時間をお過ごしくださいませ。
+      - button "テイクアウトメニューを見る" [ref=e17] [cursor=pointer]
+    - paragraph [ref=e18]: POWERED BY GOOD ORDER
