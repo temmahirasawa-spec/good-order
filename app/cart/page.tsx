@@ -103,15 +103,15 @@ export default function CartPage() {
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-[var(--space-24)] py-[var(--space-48)]">
             <div className="w-20 h-20 rounded-full bg-bg-tertiary flex items-center justify-center">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color: "var(--color-text-tertiary)" }}>
                 <path
                   d="M6 4h20l-2 16H8L6 4z"
-                  stroke="#969696"
+                  stroke="currentColor"
                   strokeWidth="1.5"
                   strokeLinejoin="round"
                 />
-                <circle cx="12" cy="28" r="2" fill="#969696" />
-                <circle cx="22" cy="28" r="2" fill="#969696" />
+                <circle cx="12" cy="28" r="2" fill="currentColor" />
+                <circle cx="22" cy="28" r="2" fill="currentColor" />
               </svg>
             </div>
             <div className="text-center">

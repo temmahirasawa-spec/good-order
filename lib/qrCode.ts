@@ -43,6 +43,7 @@ export async function toSvgString(url: string, size: number): Promise<string> {
     width: size,
     margin: MARGIN,
     errorCorrectionLevel: ERROR_CORRECTION,
+    // design-qa-allow: QR生成ライブラリに渡す値。CSS変数は解決されない
     color: { dark: "#1A1A1A", light: "#FFFFFF" },
   });
 }
@@ -52,6 +53,7 @@ export async function toPngDataUrl(url: string, size: number): Promise<string> {
     width: size,
     margin: MARGIN,
     errorCorrectionLevel: ERROR_CORRECTION,
+    // design-qa-allow: QR生成ライブラリに渡す値。CSS変数は解決されない
     color: { dark: "#1A1A1A", light: "#FFFFFF" },
   });
 }
