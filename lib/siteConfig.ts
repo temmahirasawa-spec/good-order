@@ -44,8 +44,16 @@ export const STORE = {
     encodeURIComponent("YORKYS BRUNCH 夙川店"),
 } as const;
 
-/** ブランドカラー（テーマカラー / PWA の背景色） */
-export const BRAND_BG = "#FDF8F2";
+/**
+ * ブランドカラー（PWA のテーマカラー / スプラッシュ背景 / アドレスバー）。
+ *
+ * この値は HTML の meta タグと manifest.json に出力されるため、
+ * CSS変数（var(--color-bg-warm)）を使うことが原理的にできない。
+ * design-tokens.css の --color-bg-warm と同じ値を手で同期させること。
+ *
+ * design-qa-allow: PWA メタデータのため CSS変数が使えない（--color-bg-warm と同値）
+ */
+export const BRAND_BG = "#FCF7EE";
 
 export const SITE_DESCRIPTION =
   "兵庫県西宮市・夙川のパンケーキ＆ブランチカフェ「YORKYS BRUNCH 夙川店」の" +
