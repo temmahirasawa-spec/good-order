@@ -22,6 +22,7 @@ import { Video16x9 } from "@/components/ui/VideoBlock";
 import { MenuCardM, MenuCardWide } from "@/components/ui/MenuCard";
 import { MenuCarouselM, MenuCarouselWide } from "@/components/ui/MenuCarousel";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
+import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useOrderPageData } from "@/hooks/useOrderPageData";
@@ -221,12 +222,14 @@ function OrderContent() {
       </div>
 
       {/* ── 絞り込みバー（見た目のみ。タップでプレースホルダーを開く） ── */}
-      <FilterBar
-        chips={FILTER_CHIPS}
-        selectedIds={[]}
-        onToggle={() => setFilterOpen(true)}
-        onCustomize={() => setFilterOpen(true)}
-      />
+      {ENABLE_MENU_FILTER && (
+        <FilterBar
+          chips={FILTER_CHIPS}
+          selectedIds={[]}
+          onToggle={() => setFilterOpen(true)}
+          onCustomize={() => setFilterOpen(true)}
+        />
+      )}
 
       <main className="flex-1 pb-24">
         {loading ? (
@@ -297,7 +300,9 @@ function OrderContent() {
       </main>
 
       {/* ── 絞り込みプレースホルダー ── */}
-      <FilterPlaceholderSheet open={filterOpen} onClose={() => setFilterOpen(false)} />
+      {ENABLE_MENU_FILTER && (
+        <FilterPlaceholderSheet open={filterOpen} onClose={() => setFilterOpen(false)} />
+      )}
 
       {/* ── フローティング（カートへの導線はこれ1つ） ── */}
       <FloatingCartButton />

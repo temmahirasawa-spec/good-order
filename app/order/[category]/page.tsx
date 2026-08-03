@@ -14,6 +14,7 @@ import { FilterBar } from "@/components/ui/FilterBar";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { MenuCard } from "@/components/ui/MenuCard";
 import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
+import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useMenuDataStore } from "@/lib/menuDataStore";
@@ -88,12 +89,14 @@ export default function CategoryListingPage() {
     <div className="mx-auto max-w-md min-h-screen bg-accent-subtle flex flex-col gap-[var(--space-20)]">
       <div className="flex flex-col">
         <OrderHeader variant="close" />
-        <FilterBar
-          chips={FILTER_CHIPS}
-          selectedIds={[]}
-          onToggle={() => setFilterOpen(true)}
-          onCustomize={() => setFilterOpen(true)}
-        />
+        {ENABLE_MENU_FILTER && (
+          <FilterBar
+            chips={FILTER_CHIPS}
+            selectedIds={[]}
+            onToggle={() => setFilterOpen(true)}
+            onCustomize={() => setFilterOpen(true)}
+          />
+        )}
       </div>
 
       {/* ── カテゴリタイトル ── */}
@@ -127,7 +130,9 @@ export default function CategoryListingPage() {
         )}
       </main>
 
-      <FilterPlaceholderSheet open={filterOpen} onClose={() => setFilterOpen(false)} />
+      {ENABLE_MENU_FILTER && (
+        <FilterPlaceholderSheet open={filterOpen} onClose={() => setFilterOpen(false)} />
+      )}
       <BottomViewCartBar />
     </div>
   );

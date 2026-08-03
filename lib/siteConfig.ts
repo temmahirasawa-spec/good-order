@@ -55,6 +55,15 @@ export const STORE = {
  */
 export const BRAND_BG = "#FCF7EE";
 
+/**
+ * 絞り込み機能（アレルギー／苦手な食材 等）の表示可否。
+ *
+ * ロジック自体は削除せず、表示のみをこのフラグで止めている。
+ * YORKYS 以外の店舗で今後使う予定があるため。管理画面からのオン/オフ設定は別タスクで、
+ * それまではコード上の定数として持つ。true に戻せば元の表示に戻る。
+ */
+export const ENABLE_MENU_FILTER = false;
+
 export const SITE_DESCRIPTION =
   "兵庫県西宮市・夙川のパンケーキ＆ブランチカフェ「YORKYS BRUNCH 夙川店」の" +
   "モバイルオーダー。店内は座席の二次元コードから、テイクアウトはそのまま" +
