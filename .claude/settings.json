@@ -1,4 +1,41 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git pull *)",
+      "Bash(git push *)",
+      "Bash(npm run *)",
+      "Bash(npm ci *)",
+      "Bash(npx playwright *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr list *)",
+      "Bash(node scripts/*)"
+    ],
+    "ask": [
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -- *)",
+      "Bash(supabase *)",
+      "Bash(vercel env *)",
+      "Bash(vercel *)",
+      "Bash(gh api -X PUT*)",
+      "Bash(gh api -X DELETE*)",
+      "Bash(npm install *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(gh pr merge*--admin*)",
+      "Bash(rm -rf /*)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
