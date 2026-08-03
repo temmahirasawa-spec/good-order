@@ -49,6 +49,7 @@ export default function VideoSlotField({
   slot,
   label,
   hint,
+  toggleLabel,
   notes,
   fit,
   media,
@@ -62,7 +63,9 @@ export default function VideoSlotField({
   label: string;
   /** どこに出るかの一言 */
   hint: string;
-  /** 注釈テキスト。スロットごとに切り取られ方が違うので文言を変える */
+  /** トグル行の文言。どちらの画面の話かが分かるようスロットごとに変える */
+  toggleLabel: string;
+  /** 注釈テキスト（箇条書き）。スロットごとに切り取られ方が違うので文言を変える */
   notes: string[];
   fit: VideoFit;
   media: StoreMedia;
@@ -146,58 +149,60 @@ export default function VideoSlotField({
 
       {/* ── 表示ON/OFF ── */}
       <div className="bg-bg-secondary flex items-center justify-between gap-[var(--space-12)] px-[var(--space-16)] py-[var(--space-12)] rounded-[var(--radius-sm)] w-full">
-        <span className="type-jp-body text-text-primary">トップページに動画を表示する</span>
+        <span className="type-jp-body text-text-primary">{toggleLabel}</span>
         <ToggleSwitch
           on={media.enabled}
           onClick={() => onToggle(!media.enabled)}
           disabled={busy}
-          ariaLabel={`${label}を表示する`}
+          ariaLabel={toggleLabel}
         />
       </div>
 
-      {/* ── 動画（サムネイル + 削除） ── */}
+      {/* ── 動画（サムネイル + 削除） ──
+          SPは80角のまま（MediaUploaderFieldと揃える）。PCは実際の見え方に近づけて
+          16:9・幅240pxにする。 */}
       {hasVideo && (
-        <div className="flex gap-[var(--space-8)] items-center flex-wrap">
-          <div className="relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 size-[80px]">
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <video
-              src={media.url ?? undefined}
-              poster={media.posterUrl ?? undefined}
-              muted
-              playsInline
-              preload="metadata"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="flex items-center justify-center rounded-full bg-black/40 size-[24px]">
-                <div
-                  className="w-0 h-0 ml-0.5"
-                  style={{
-                    borderTop: "5px solid transparent",
-                    borderBottom: "5px solid transparent",
-                    borderLeft: "8px solid white",
-                  }}
-                />
-              </div>
+        <div className="relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 w-[80px] h-[80px] lg:w-[240px] lg:h-[135px]">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            src={media.url ?? undefined}
+            poster={media.posterUrl ?? undefined}
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="flex items-center justify-center rounded-full bg-black/40 size-[24px] lg:size-[36px]">
+              <div
+                className="w-0 h-0 ml-0.5"
+                style={{
+                  borderTop: "5px solid transparent",
+                  borderBottom: "5px solid transparent",
+                  borderLeft: "8px solid white",
+                }}
+              />
             </div>
-            <button
-              type="button"
-              onClick={onRequestDelete}
-              disabled={busy}
-              aria-label="動画を削除"
-              className="absolute flex items-center justify-center bg-black/55 rounded-full right-[4px] top-[4px] size-[18px] disabled:opacity-40"
-            >
-              <Icon name="close" className="w-2.5 h-2.5 text-white" />
-            </button>
           </div>
-
-          {media.updatedAt && (
-            <p className="type-jp-label text-text-tertiary">
-              最終更新: {formatUpdatedAt(media.updatedAt)}
-            </p>
-          )}
+          <button
+            type="button"
+            onClick={onRequestDelete}
+            disabled={busy}
+            aria-label="動画を削除"
+            className="absolute flex items-center justify-center bg-black/55 rounded-full right-[4px] top-[4px] size-[18px] lg:size-[24px] disabled:opacity-40"
+          >
+            <Icon name="close" className="w-2.5 h-2.5 lg:w-3 lg:h-3 text-white" />
+          </button>
         </div>
       )}
+
+      {/* ── 最終更新 ──
+          動画の有無にかかわらず常に出す。「一度も差し替えていない」ことも
+          運用上の情報なので、行ごと消さない。 */}
+      <p className="type-jp-label text-text-tertiary">
+        最終更新:{" "}
+        {media.updatedAt ? formatUpdatedAt(media.updatedAt) : "まだ変更されていません"}
+      </p>
 
       {/* ── 追加 / 差し替え ── */}
       <button
@@ -269,13 +274,13 @@ export default function VideoSlotField({
       )}
 
       {/* ── 注釈（スロットごとに文言が違う） ── */}
-      <div className="type-jp-label text-text-tertiary w-full">
+      <ul className="type-jp-label text-text-tertiary w-full list-disc pl-[1.25em] flex flex-col gap-[var(--space-2)]">
         {notes.map((n) => (
-          <p key={n} className="leading-[1.4]">
+          <li key={n} className="leading-[1.4]">
             {n}
-          </p>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
