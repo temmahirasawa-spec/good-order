@@ -1242,6 +1242,49 @@ LINEなどが正方形にトリミングしてもロゴが切れないように�
 - `/dev/ui` は認証なしで本番に出ている。noindex にはしたが、**そもそも本番に
   含めるべきかはセキュリティ回で判断**
 
+## ログイン画面のリデザインと、そのFigma起こし（2026-08-04）
+
+コード → Figma の**写し取り**。デザインを新しく決めた作業ではない。
+
+### コード側（PR #26）
+`/admin/login` だけが旧デザイン（`warm-*` / `brand-*` パレット・HalisR・Tailwind既定の角丸と
+グレー）のまま残っていたので、他の管理画面と同じトークンと作法に揃えた。
+借りた先は SettingsSection（カード枠）／ menu/categories の編集パネル（フォーム項目）／
+tables の全幅ボタン（主ボタン）／ VideoSlotField（エラー枠）。
+**`handleLogin` と import は1文字も変えていない**（機械的に照合済み）。文言も変えていない。
+
+### Figma側（`Admin Login / 管理画面ログイン` = `1148:8687`）
+MobileOrder ページの**最下部**に新設。PC 3枚（`1180x820`）＋ SP 3枚（`390x844`）で、
+状態は 通常 / エラー / ローディング の3つ（空・0件・削除確認はこの画面に起こり得ない）。
+
+| 使ったもの | node |
+|---|---|
+| 入力欄 | `Form Field / Type=Text`（`306:1484`）のインスタンス ×12 |
+| 主ボタン | `Modal Button / Style=Primary`（`638:872`）のインスタンス ×6 |
+
+**既存に無かったので新規に作ったもの**: エラーバナー / スピナー / ブランドロックアップ。
+別セッションが同じファイルを触っていたため、Componentsページには登録せず
+ログインのフレーム内に閉じてある（＝共通コンポーネントの子を触らない ＝ 8/3 の
+「Nav Sidebar に子を足したら別画面のラベルが化けた」事故の再発を構造的に防ぐ）。
+
+**⚠ 既知の差分**: ローディングのスピナーは**ボタンの子ではなく、ボタンの上に重ねた絶対配置**。
+Figma はインスタンスに子を追加できないため。スピナーと文字の間隔8pxは実装どおりだが、
+2つ合わせた塊が**本物より約12px 左に寄っている**。
+きれいに直すなら `Modal Button` に Loading バリアントを足すのが正解（＝共通コンポーネントの
+変更なので別タスク）。
+
+### この作業で分かったこと
+- `search_design_system` は**published library しか見ない**。このファイル内のコンポーネントは
+  引っかからず、別プロジェクト（`eSIM Web改善`）の Input / RadioButton が返ってくる。
+  **ファイル内の資産を探すときは Components ページ（`46:16`）の metadata を直接読むこと**
+- `node.query()` の属性セレクタは**値に空白があると壊れる**。`FRAME[name=Login Card]` は
+  `FRAME[name=Login` ＋ `Card]` に分解されて null が返る。空白を含む名前は
+  `children.find(c => c.name === "...")` で取ること
+- セクションの子（フレーム）の x/y は**セクション基準の相対座標**
+- クローンしたフレームの幅を変えても、中のテキストは折り返さない。
+  `textAutoResize = "HEIGHT"` ＋ `layoutSizingHorizontal = "FILL"` を明示すること
+  （PC→SPでバナーの文字が切れて発覚）
+
 ## 次にやること
 
 `prompts/`配下の未消化プロンプトは無い。
@@ -1267,14 +1310,21 @@ LINEなどが正方形にトリミングしてもロゴが切れないように�
 ### Figma MCPの使い方（重要・過去のメモを訂正）
 
 **⚠ 旧メモの「画面テンプレートはこのファイルに存在しない」は誤りだった。** テンプレートは
-全部 **MobileOrder ページ（`32:2`）** にある。`get_metadata`を引数なしで呼ぶと
-Componentsページ（`46:16`）しか返らないが、これはツールの挙動の問題で、
-実際のファイルには5ページある:
+全部 **MobileOrder ページ（`32:2`）** にある。
+
+**⚠ `get_metadata`を引数なしで呼んでも全ページは返らない（2026-08-04 再確認）。**
+返るのは `MobileOrder` / `Components` / `_Archive` の3つだけ。
+実際のページ数はもっと多く、**`npm run design:figma` の出力が正確**（同スクリプトは
+Figma REST API を直接叩いている）。2026-08-04 時点の実在ページ:
+
+> MobileOrder / Website / 居酒屋 / GOOD LOOP / GOOD LOOP LP / Components /
+> Brand Guideline / ロゴ / コーポレートサイト
 
 | ページ名 | node ID |
 |---|---|
 | Components | `46:16` |
 | **MobileOrder（画面テンプレートは全部ここ）** | **`32:2`** |
+| _Archive | `617:8337` |
 | ロゴ | `0:1` |
 | コーポレートサイト | `18:2` |
 | 参考サイト | `60:762` |
@@ -1300,9 +1350,19 @@ Componentsページ（`46:16`）しか返らないが、これはツールの挙
   スキルを読むのが必須（ツール仕様）。
 
 ### ビルド/devサーバー運用
-- `npm run build`と`npm run dev`を同時に同じディレクトリで動かさない。
-  ビルド前は必ず`lsof -ti:3000 | xargs kill -9`＋`pkill -9 -f "next dev"`で落としてから
-  `rm -rf .next && npm run build`する。
+
+> **✅ 2026-08-04 解消: `npm run check` は dev サーバーを起動したまま回してよくなった（PR #24）。**
+> `next dev` と `next build` が同じ `.next/` を奪い合うのが原因だったので、出力先を分けた。
+> - `next.config.mjs` の `distDir` を `NEXT_DIST_DIR` で差し替え可能にした（未指定なら `.next`）
+> - `npm run check` は `npm run build:check`（＝ `NEXT_DIST_DIR=.next-check`）を呼ぶ
+> - `npm run dev` と、Vercel が呼ぶ `npm run build` は**どちらも `.next` のまま**
+>
+> Stop hook が AI の1ターンごとに `npm run check` を回すため、これは単発の不便ではなく
+> ハーネスの構造的な不具合だった。**以下の「同時に動かすな」は、この変更以前の話。**
+
+- ~~`npm run build`と`npm run dev`を同時に同じディレクトリで動かさない~~（PR #24 で解消）。
+  ただし**手で `npm run build` を叩くと従来どおり `.next` を上書きする**ので、dev を
+  起動したまま検証したいときは `npm run check`（＝ `build:check`）を使うこと。
 - **`Cannot find module for page: /_document` の原因が判明した（2026-07-26）。**
   Dropboxがビルド中の`.next`を同期してしまい、`.next/server/pages-manifest.json` 等に
   **競合コピー**（`… (平澤天真 の競合コピー 2026-07-26).json`）を作って本体を差し替えるため、
