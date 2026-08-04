@@ -1,5 +1,23 @@
 "use client";
 
+/**
+ * スタッフ管理画面のログイン。
+ *
+ * 見た目だけを現行の管理画面のトンマナに合わせ直したもの。新しい見た目は作っていない。
+ * 借りている作法は以下のとおり:
+ *   - カード枠      … components/admin/settings/SettingsSection.tsx と同じ
+ *                     （白面・角丸16・SP20 / PC24 パディング・見出しは JP/Heading/S）
+ *   - フォーム項目  … app/admin/(protected)/menu/categories/page.tsx の編集パネルと同じ
+ *                     （ラベル JP/Caption Bold ＋ 高さ44・角丸8・border-border の入力）
+ *   - 主ボタン      … app/admin/(protected)/tables/page.tsx の全幅ボタンと同じ
+ *                     （墨面・角丸full・JP/Heading/S・反転文字）
+ *   - エラー枠      … components/admin/settings/VideoSlotField.tsx と同じ
+ *                     （status-urgent-subtle の面に status-urgent の文字）
+ *   - 読み込み中    … 管理画面共通のスピナー（border-2 の円を回す）
+ *
+ * 認証処理（handleLogin）は一切変更していない。
+ */
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -45,70 +63,86 @@ export default function AdminLoginPage() {
     }
   };
 
+  /* 入力欄は管理画面のフォームと同一。focus のリングは足していない
+     （管理画面の他の入力欄と同じくブラウザ標準の表示に任せる） */
+  const inputClass =
+    "w-full h-[44px] bg-surface-white border border-border rounded-[var(--radius-sm)] px-[var(--space-12)] type-jp-body text-text-primary disabled:opacity-60";
+
   return (
-    <div className="min-h-screen bg-brand-bg flex flex-col items-center justify-center px-6">
-      {/* ロゴ */}
-      <div className="mb-8 text-center">
-        <p
-          className="text-2xl font-bold text-warm-700 tracking-widest"
-          style={{ fontFamily: "HalisR, sans-serif" }}
-        >
-          YORKYS BRUNCH
-        </p>
-        <p className="text-xs text-brand-muted mt-1 tracking-wider">Admin Console</p>
+    <div className="min-h-screen bg-bg-secondary flex flex-col items-center justify-center gap-[var(--space-24)] px-[var(--space-20)] py-[var(--space-40)]">
+      {/* ブランド。文言は従来のまま */}
+      <div className="flex flex-col items-center gap-[var(--space-4)]">
+        <p className="type-en-wordmark text-text-primary">YORKYS BRUNCH</p>
+        <p className="type-jp-caption text-text-secondary">Admin Console</p>
       </div>
 
       {/* ログインカード */}
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-card px-6 py-8">
-        <h1 className="text-lg font-semibold text-gray-800 mb-6">管理画面ログイン</h1>
+      <div className="w-full max-w-[400px] bg-surface-white rounded-[var(--radius-lg)] flex flex-col gap-[var(--space-20)] p-[var(--space-20)] lg:p-[var(--space-24)]">
+        <h1 className="type-jp-heading-s text-text-primary">管理画面ログイン</h1>
 
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">
-            {error}
+          <div
+            role="alert"
+            className="bg-status-urgent-subtle rounded-[var(--radius-sm)] px-[var(--space-16)] py-[var(--space-12)] w-full"
+          >
+            <p className="type-jp-body-small text-status-urgent">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+        <form onSubmit={handleLogin} className="flex flex-col gap-[var(--space-20)] w-full">
+          <div className="flex flex-col gap-[var(--space-4)] w-full">
+            <label htmlFor="admin-email" className="type-jp-caption-bold text-text-primary">
               メールアドレス
             </label>
             <input
+              id="admin-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
               autoComplete="email"
+              aria-invalid={error ? true : undefined}
               placeholder="admin@example.com"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-warm-400 focus:ring-2 focus:ring-warm-100 transition"
+              className={inputClass}
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">
+
+          <div className="flex flex-col gap-[var(--space-4)] w-full">
+            <label htmlFor="admin-password" className="type-jp-caption-bold text-text-primary">
               パスワード
             </label>
             <input
+              id="admin-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
               autoComplete="current-password"
+              aria-invalid={error ? true : undefined}
               placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-warm-400 focus:ring-2 focus:ring-warm-100 transition"
+              className={inputClass}
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-warm-700 text-white rounded-xl text-sm font-medium tracking-wide disabled:opacity-60 active:bg-warm-800 transition-colors mt-2"
+            className="w-full h-[48px] bg-surface-ink disabled:opacity-60 rounded-[var(--radius-full)] flex items-center justify-center gap-[var(--space-8)] type-jp-heading-s text-text-inverse"
           >
+            {loading && (
+              <span
+                aria-hidden
+                className="w-4 h-4 border-2 border-text-tertiary border-t-text-inverse rounded-full animate-spin shrink-0"
+              />
+            )}
             {loading ? "ログイン中…" : "ログイン"}
           </button>
         </form>
       </div>
 
-      <p className="mt-6 text-xs text-brand-muted text-center">
+      <p className="type-jp-caption text-text-tertiary text-center">
         管理者アカウントはSupabase Authで作成してください
       </p>
     </div>
