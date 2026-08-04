@@ -13,6 +13,11 @@
 /.next/
 /out/
 
+# npm run check（Stop hook が毎ターン走らせる）専用のビルド出力先。
+# 起動しっぱなしの next dev（= .next/）を壊さないために分けている。
+# next.config.mjs の distDir と package.json の build:check を参照。
+/.next-check/
+
 # production
 /build
 
