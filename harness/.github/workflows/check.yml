@@ -1,0 +1,66 @@
+# GitHub Actions ── リモート側のゲート
+#
+# ローカルの Stop hook（.claude/hooks/require-check.sh）と同じ `npm run check` を、
+# GitHub 上でも走らせる。hook は {{USER_NAME}} の Mac でしか効かないが、こちらは
+# どの環境から来た変更にも必ず適用される。{{DEFAULT_BRANCH}} のブランチ保護と組み合わせて
+# 「CIが通らない限りマージできない」という制約にする。
+#
+# 実行時間の課金について:
+#   public リポジトリ  … GitHub Actions は無料（実行時間の上限なし）
+#   private リポジトリ … 無料プランは月2,000分まで。超えると課金される
+#   → private で運用する場合は Settings > Billing で残り時間を見ておくこと
+
+name: check
+
+on:
+  pull_request:
+    branches: ["{{DEFAULT_BRANCH}}"]
+  push:
+    branches: ["{{DEFAULT_BRANCH}}"]
+
+# 同じブランチに続けて push したとき、古い実行を止めて最新だけ走らせる
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '{{NODE_VERSION}}'
+          cache: 'npm'
+
+      # package-lock.json のとおりに厳密インストール（npm install ではなく ci）
+      - name: 依存をインストール
+        run: npm ci
+
+      - name: typecheck → lint → design → build
+        run: npm run check
+        env:
+          # ここに書くのは「ビルドを通すためだけのダミー値」。本物のキーは絶対に書かない。
+          #
+          # なぜ必要か:
+          #   クライアント生成をモジュールの先頭で行っている場合（例: lib/supabase.ts の
+          #   createClient()）、値が無いとビルド時に落ちる。createClient は URL の形式を
+          #   見るだけで通信はしないので、ダミーで足りる。
+          #
+          # 移行先で必ずやること:
+          #   1. `npm run build` をローカルで環境変数を空にして実行し、落ちる変数を洗い出す
+          #   2. 落ちた変数だけをここにダミー値で足す
+          #   3. ビルド時に外部へ問い合わせるページが無いことを確認する
+          #      （あるなら、その変数はダミーでは通らない。GitHub の Secrets に入れる）
+          #
+          # 本物の値が要る場合:
+          #   GitHub > Settings > Secrets and variables > Actions に登録し、
+          #   ここでは ${{ secrets.NAME }} で参照する。ワークフローに直書きしない。
+          #
+          # ↓ プレースホルダなので、キー名ごと実際の環境変数名に置き換える。
+          #   置き換えたら引用符は外してよい（YAML として妥当に保つために付けてある）。
+          "{{PUBLIC_ENV_VAR_1}}": "{{PUBLIC_ENV_VAR_1_DUMMY}}"
+          "{{PUBLIC_ENV_VAR_2}}": "{{PUBLIC_ENV_VAR_2_DUMMY}}"
