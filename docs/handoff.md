@@ -1262,6 +1262,86 @@ LINEなどが正方形にトリミングしてもロゴが切れないように�
 - 商品を削除したとき、その商品が参照していた既存画像はStorageに残る
   （今回入れたのは「そのパネルで上げたぶん」の掃除まで。過去ぶんの棚卸しは別件）
 
+## Figma 検品の負債台帳（2026-08-04 時点・未返済 74件）
+
+**この74件は「直したもの」ではない。1件も直っていない。**
+`scripts/figma-check-baseline.json` に登録して、検品を緑にしているだけの
+**未返済の負債**である。台帳は「ここから増えたら落とす」ための基準線であって、
+返済が終わったことを意味しない。
+
+- **合計 74件 / 40種類**（`total: 74` / `keys: 40`）
+- 1種類が複数件あるので、種類の数と件数は一致しない
+- 内訳は下の表のとおり。**要約せず1行ずつ載せてある。返済するときの作業リストとして使う**
+
+### ベースラインの仕組み（2026-08-04 に件数つき形式へ変更）
+
+**キーごとに件数を記録する。「同じ違反が増えたこと」も検出できる。**
+
+| 状況 | 結果 |
+|---|---|
+| キーが台帳に無い | **落とす**（新しい種類の違反） |
+| キーがあり、今回の件数 ≤ 台帳の件数 | 通す |
+| キーがあり、今回の件数 > 台帳の件数 | **落とす**。「8件で登録されていたものが9件に増えています（+1）」と出す |
+| キーがあり、今回の件数 < 台帳の件数 | 通す。「返済が進んだもの」として報告する |
+
+**件数が減っても台帳は自動では書き換わらない。** 書き換わるのは
+`npm run design:figma -- --update-baseline` を明示的に叩いたときだけ。
+勝手に基準線が下がると、返済したことに気づけなくなる。
+
+**旧形式（キーの配列）が置かれていたらエラーで落とす。** 件数を持たない台帳を
+「全部1件ずつ」と読み替えると、いきなり大量に落ちて原因が分からなくなるため。
+
+> 変更前は「セクション名＋メッセージ」の**重複を除いて**記録していたため、
+> 同じセクションに同じ名前のノードをいくつ足してもキーが同じで緑のまま通っていた。
+> 74件を40エントリに畳んだ時点で、**34件ぶんの検出力が失われていた。**
+
+### 内訳（40種類 / 74件）
+
+| ページ / セクション | ノード名 | 違反の内容 | 件数 |
+|---|---|---|---|
+| Components / 00 Foundations | `Chips` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 11 Staff / Orders | `Action Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 2 |
+| Components / 11 Staff / Orders | `Cancel Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 11 Staff / Orders | `Confirm Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 11 Staff / Orders | `Done Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 4 |
+| Components / 12 Staff / Lists & Rows | `Add Seat Chip` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 12 Staff / Lists & Rows | `Delete Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| Components / 12 Staff / Lists & Rows | `Edit Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 2 |
+| Components / 15 Staff / Tables & QR | `DL Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 15 Staff / Tables & QR | `More Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 15 Staff / Tables & QR | `コピー Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Admin Chip` | の高さが 38px です（SPのタップ領域は44px以上） | 8 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Export Button` | の高さが 40px です（SPのタップ領域は44px以上） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tab` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tab` | の高さが 30px です（SPのタップ領域は44px以上） | 3 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tabs` | の高さが 30px です（SPのタップ領域は44px以上） | 1 |
+| MobileOrder / Menu Management / メニュー管理 / SP | `Admin Chip` | の高さが 38px です（SPのタップ領域は44px以上） | 6 |
+| MobileOrder / Register / レジ / SP | `Table Chip` | の高さが 42px です（SPのタップ領域は44px以上） | 5 |
+| Website / 00 LP / メイン | `CTA` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| Website / 00 LP / メイン | `CTA Panel` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| Website / 00 LP / メイン | `SP State — 追従ヘッダー + タブナビ + CTAバー` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / 00 LP / メイン | `Staff Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 2 |
+| Website / PC States / 03 Staff Screens | `Add Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Best Seller Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Category Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Checkout Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `CSV Export Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Print Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Add Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Best Seller Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Checkout Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Export Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Print Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Seat Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Tab` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| Website / SP States / 03 Staff Screens | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `cta` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+
+---
+
 ## 覚えておくべき運用ルール
 
 ### Figma MCPの使い方（重要・過去のメモを訂正）

@@ -220,19 +220,71 @@ for (const page of pages) {
 }
 
 // ── ベースライン ───────────────────────────────────────
-const key = (v) => `${v.sec}||${v.msg}`;
+//
+// **件数つきで記録する。** キーだけを覚えると「同じ違反が増えたこと」を見逃す。
+// 例: 生フレームのボタンが3個あるセクションに、あと10個足しても
+//     キーは同じなので、キーだけの台帳では緑のまま通ってしまう。
+//
+// 判定:
+//   キーが台帳に無い          → 落とす（新しい種類の違反）
+//   今回の件数 ≤ 台帳の件数    → 通す
+//   今回の件数 > 台帳の件数    → 落とす（増えた分だけ落ちる）
+//   今回の件数 < 台帳の件数    → 通す。ただし「返済が進んだ」ものとして報告する
+//
+// 件数が減っても台帳は自動で書き換えない。書き換わるのは --update-baseline を
+// 明示的に叩いたときだけ。勝手に基準線が下がると、返済したことに気づけない。
+const key = (v) => `${v.sec} :: ${v.msg}`;
+
+/** 今回の検出結果を キー → 件数 にまとめる */
+const tally = (list) => {
+  const m = new Map();
+  for (const v of list) m.set(key(v), (m.get(key(v)) || 0) + 1);
+  return m;
+};
+const current = tally(soft);
+
 if (UPDATE) {
-  const uniq = Array.from(new Set(soft.map(key))).sort();
+  const counts = {};
+  for (const k of Array.from(current.keys()).sort()) counts[k] = current.get(k);
   fs.mkdirSync(path.dirname(BASELINE_PATH), { recursive: true });
-  fs.writeFileSync(BASELINE_PATH, JSON.stringify({ count: uniq.length, allowed: uniq }, null, 2) + "\n");
-  console.log(`\n既存分 ${uniq.length} 件を scripts/figma-check-baseline.json に記録しました。\n`);
+  fs.writeFileSync(
+    BASELINE_PATH,
+    JSON.stringify({ total: soft.length, keys: current.size, counts }, null, 2) + "\n"
+  );
+  console.log(`\n既存分 ${soft.length} 件（${current.size} 種類）を scripts/figma-check-baseline.json に記録しました。\n`);
   process.exit(0);
 }
-let baseline = { allowed: [] };
-if (fs.existsSync(BASELINE_PATH)) { try { baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")); } catch (e) {} }
-const allowed = new Set(baseline.allowed || []);
-const newSoft = soft.filter((v) => !allowed.has(key(v)));
-const carried = soft.length - newSoft.length;
+
+let baseline = { counts: {} };
+if (fs.existsSync(BASELINE_PATH)) {
+  try { baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")); } catch (e) { /* 壊れていたら空として扱う */ }
+}
+// 旧形式（キーの配列）は件数を持たないので、黙って読み替えない。
+// 読み替えると「全部1件ずつ」と誤解して、いきなり大量に落ちる
+if (Array.isArray(baseline.allowed)) {
+  console.error("scripts/figma-check-baseline.json が旧形式（キーの配列）です。");
+  console.error("件数つきの形式に作り直してください:  npm run design:figma -- --update-baseline");
+  console.error("※ 作り直す前に、構造・パディングの違反が0件であることを必ず確認すること。");
+  process.exit(1);
+}
+const allowedCounts = new Map(Object.entries(baseline.counts || {}));
+
+/** 台帳との差分。落とすのは「新種」と「増加」だけ */
+const fresh = [];     // 台帳に無いキー
+const grown = [];     // 増えたキー
+const repaid = [];    // 減ったキー（落とさない）
+for (const [k, n] of current) {
+  if (!allowedCounts.has(k)) { fresh.push({ k, n }); continue; }
+  const was = allowedCounts.get(k);
+  if (n > was) grown.push({ k, was, n });
+  else if (n < was) repaid.push({ k, was, n });
+}
+// 台帳にあるのに今回1件も出なかった＝全部返済された
+for (const [k, was] of allowedCounts) if (!current.has(k)) repaid.push({ k, was, n: 0 });
+
+const freshCount = fresh.reduce((a, v) => a + v.n, 0);
+const grownCount = grown.reduce((a, v) => a + (v.n - v.was), 0);
+const carried = soft.length - freshCount - grownCount;
 
 // ── 出力 ──────────────────────────────────────────────
 const R = "\x1b[31m", Y = "\x1b[33m", G = "\x1b[32m", D = "\x1b[2m", X = "\x1b[0m";
@@ -256,13 +308,42 @@ console.log(`${D}ノード数 ${stats.nodes}${X}\n`);
 if (hard.length) print(hard, R, `✗ 構造・パディング（${hard.length}件） — 必ず直してください`);
 else console.log(`${G}✓ 構造・パディング: 全ページ問題なし${X}\n`);
 
-if (newSoft.length) print(newSoft, R, `✗ 今回増えた違反（${newSoft.length}件）`);
-else console.log(`${G}✓ 新しい違反なし${X}\n`);
+/** キーを「セクション」と「メッセージ」に割り戻して表示する */
+const printKeys = (list, color, head, format) => {
+  console.log(`${color}${head}${X}`);
+  const g = {};
+  for (const v of list) {
+    const [sec, msg] = v.k.split(" :: ");
+    (g[sec] = g[sec] || []).push(format(v, msg));
+  }
+  for (const sec of Object.keys(g).sort()) {
+    console.log(`\n  ${sec}`);
+    for (const line of g[sec]) console.log(`    ${color}・${X}${line}`);
+  }
+  console.log("");
+};
+
+if (fresh.length) {
+  printKeys(fresh, R, `✗ 新しい種類の違反（${freshCount}件 / ${fresh.length}種類）`,
+    (v, msg) => `${msg}${v.n > 1 ? ` ${D}×${v.n}${X}` : ""}`);
+}
+if (grown.length) {
+  printKeys(grown, R, `✗ 増えた違反（+${grownCount}件 / ${grown.length}種類）`,
+    (v, msg) => `${msg} ${D}——${X} ${v.was}件で登録されていたものが ${v.n}件に増えています（${R}+${v.n - v.was}${X}）`);
+}
+if (!fresh.length && !grown.length) console.log(`${G}✓ 新しい違反なし・増えた違反なし${X}\n`);
+
+if (repaid.length) {
+  printKeys(repaid, G, `✓ 返済が進んだもの（${repaid.length}種類）— 落としません`,
+    (v, msg) => `${msg} ${D}——${X} ${v.was}件 → ${v.n}件`);
+  console.log(`${D}  台帳は自動では書き換えません。反映するなら  npm run design:figma -- --update-baseline${X}\n`);
+}
 
 if (info.length) print(info, Y, `△ 確認したほうがよいもの（${info.length}件）`);
 if (skipped.length) console.log(`${D}スキップ: ${skipped.join(" / ")}${X}`);
 
-console.log(`${D}既存分（ベースラインで見逃している分）: ${carried}件${X}`);
+console.log(`${D}未返済の負債（ベースラインで見逃している分）: ${carried}件 / ${allowedCounts.size}種類${X}`);
+console.log(`${D}今回の検出合計: ${soft.length}件（新種 ${freshCount} ＋ 増加 ${grownCount} ＋ 既存 ${carried}）${X}`);
 console.log(`${D}未バインドの塗り: ${stats.unboundFills} / テキストスタイル未適用: ${stats.noTextStyle}${X}\n`);
 
-process.exit(hard.length || newSoft.length ? 1 : 0);
+process.exit(hard.length || fresh.length || grown.length ? 1 : 0);
