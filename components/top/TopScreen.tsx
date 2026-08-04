@@ -73,6 +73,17 @@ function TopContent() {
      取得が終わるまでは白（＝従来どおり）にしておく。 */
   const tone = ready ? bg.tone : "light";
   const isDark = tone === "dark";
+  const light = !isDark;
+
+  /* 前景（ロゴ・文字・線・ボタン）の色。
+     **light のときは従来の Tailwind クラス（text-white/75 など）をそのまま使い、
+     style は付けない。**こうしておくと、動画・画像のままの店舗＝常に light では
+     出力が今までと1バイトも変わらない。dark は今回はじめて生まれた経路なので
+     こちらだけ inline で塗る。
+     （いったん全部 inline の rgba に置き換えたところ、同じ色のはずなのに
+       ブラウザの合成で 1/255 だけ値がずれるピクセルが925個出た。実測して戻した経緯） */
+  const ink = (alpha: number, prop: "color" | "backgroundColor"): React.CSSProperties | undefined =>
+    isDark ? ({ [prop]: foregroundColor("dark", alpha) } as React.CSSProperties) : undefined;
 
   // iOS Safari では autoplay に playsinline が必須
   useEffect(() => {
@@ -146,7 +157,7 @@ function TopContent() {
       <div className="relative z-10 w-full flex flex-col items-center justify-between min-h-screen px-6 py-12">
 
         {/* 上部装飾 */}
-        <div className="w-12 h-px" style={{ backgroundColor: foregroundColor(tone, 0.5) }} />
+        <div className={`w-12 h-px ${light ? "bg-white/50" : ""}`} style={ink(0.5, "backgroundColor")} />
 
         {/* 中央ブロック */}
         <div className="flex flex-col items-center gap-10">
@@ -157,57 +168,57 @@ function TopContent() {
             alt="YORKYS BRUNCH"
             width={220}
             height={120}
-            className={`object-contain ${isDark ? "" : "drop-shadow-lg"}`}
+            className={`object-contain ${light ? "drop-shadow-lg" : ""}`}
             priority
           />
 
           {/* ── テーブル番号 / テイクアウト表示 ── */}
           {isTakeoutOnly ? (
             <div
-              className="flex flex-col items-center gap-3"
-              style={{ color: foregroundColor(tone) }}
+              className={`flex flex-col items-center gap-3 ${light ? "text-white" : ""}`}
+              style={ink(1, "color")}
             >
               <p
-                className="text-[10px] tracking-[0.35em] uppercase"
-                style={{ fontFamily: "HalisR, sans-serif", color: foregroundColor(tone, 0.5) }}
+                className={`text-[10px] tracking-[0.35em] uppercase ${light ? "text-white/50" : ""}`}
+                style={{ fontFamily: "HalisR, sans-serif", ...ink(0.5, "color") }}
               >
                 Takeout
               </p>
               <div className="flex items-center gap-4">
                 <span className="text-4xl">🛍</span>
-                <span className="text-2xl font-light leading-none tracking-wide">
+                <span className={`text-2xl font-light leading-none tracking-wide ${light ? "text-white" : ""}`}>
                   テイクアウト注文
                 </span>
               </div>
             </div>
           ) : (
             <div
-              className="flex flex-col items-center gap-3"
-              style={{ color: foregroundColor(tone) }}
+              className={`flex flex-col items-center gap-3 ${light ? "text-white" : ""}`}
+              style={ink(1, "color")}
             >
               <p
-                className="text-[10px] tracking-[0.35em] uppercase"
-                style={{ fontFamily: "HalisR, sans-serif", color: foregroundColor(tone, 0.5) }}
+                className={`text-[10px] tracking-[0.35em] uppercase ${light ? "text-white/50" : ""}`}
+                style={{ fontFamily: "HalisR, sans-serif", ...ink(0.5, "color") }}
               >
                 Table
               </p>
               <div className="flex items-center gap-5">
-                <div className="w-8 h-px" style={{ backgroundColor: foregroundColor(tone, 0.3) }} />
+                <div className={`w-8 h-px ${light ? "bg-white/30" : ""}`} style={ink(0.3, "backgroundColor")} />
                 <span
-                  className="text-6xl font-light leading-none tracking-tight"
+                  className={`text-6xl font-light leading-none tracking-tight ${light ? "text-white" : ""}`}
                   style={{ fontFamily: "HalisR, sans-serif" }}
                 >
                   {tableDisplay ?? "—"}
                 </span>
-                <div className="w-8 h-px" style={{ backgroundColor: foregroundColor(tone, 0.3) }} />
+                <div className={`w-8 h-px ${light ? "bg-white/30" : ""}`} style={ink(0.3, "backgroundColor")} />
               </div>
             </div>
           )}
 
           {/* ── ウェルカムメッセージ ── */}
           <p
-            className="text-sm text-center leading-[2] px-2 tracking-wide"
-            style={{ color: foregroundColor(tone, 0.75) }}
+            className={`text-sm text-center leading-[2] px-2 tracking-wide ${light ? "text-white/75" : ""}`}
+            style={ink(0.75, "color")}
           >
             この度はご来店いただき<br />
             誠にありがとうございます。<br />
@@ -221,18 +232,23 @@ function TopContent() {
           <button
             onClick={handleStart}
             disabled={!isTakeoutOnly && !tableResolved}
-            /* 色は CSS変数経由で渡す。インラインの backgroundColor にすると
-               active: の指定に勝ってしまい、タップしたときの反応（bg-white/20 相当）が
-               効かなくなるため。light のときの実効値は従来の
-               border-white/60・bg-white/10・text-white・active:bg-white/20 と同じ。 */
-            className="w-full max-w-xs border border-[var(--fg-line)] bg-[var(--fg-fill)] text-[var(--fg-text)] backdrop-blur-sm rounded-2xl py-4 text-sm font-medium tracking-wide active:bg-[var(--fg-fill-active)] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:active:scale-100"
+            /* dark のときだけ CSS変数経由で塗る。インラインの backgroundColor にすると
+               active: に勝ってタップの反応が消えるため、変数を挟んでいる。
+               light は従来のクラスをそのまま使う（＝出力が変わらない）。 */
+            className={`w-full max-w-xs border backdrop-blur-sm rounded-2xl py-4 text-sm font-medium tracking-wide active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:active:scale-100 ${
+              light
+                ? "border-white/60 bg-white/10 text-white active:bg-white/20"
+                : "border-[var(--fg-line)] bg-[var(--fg-fill)] text-[var(--fg-text)] active:bg-[var(--fg-fill-active)]"
+            }`}
             style={
-              {
-                "--fg-line": foregroundColor(tone, 0.6),
-                "--fg-fill": foregroundColor(tone, 0.1),
-                "--fg-fill-active": foregroundColor(tone, 0.2),
-                "--fg-text": foregroundColor(tone),
-              } as React.CSSProperties
+              light
+                ? undefined
+                : ({
+                    "--fg-line": foregroundColor("dark", 0.6),
+                    "--fg-fill": foregroundColor("dark", 0.1),
+                    "--fg-fill-active": foregroundColor("dark", 0.2),
+                    "--fg-text": foregroundColor("dark", 1),
+                  } as React.CSSProperties)
             }
           >
             {isTakeoutOnly
@@ -243,8 +259,8 @@ function TopContent() {
 
         {/* 下部クレジット */}
         <p
-          className="text-[10px] tracking-widest"
-          style={{ fontFamily: "HalisR, sans-serif", color: foregroundColor(tone, 0.4) }}
+          className={`text-[10px] tracking-widest ${light ? "text-white/40" : ""}`}
+          style={{ fontFamily: "HalisR, sans-serif", ...ink(0.4, "color") }}
         >
           POWERED BY GOOD ORDER
         </p>
