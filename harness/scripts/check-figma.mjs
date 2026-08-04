@@ -220,6 +220,34 @@ function countComponentDescendants(node, limit) {
   return n;
 }
 
+/**
+ * 枠に対してこの割合以上の大きさの子は、「その枠が包んでいるだけ」の証拠とみなす。
+ *
+ * 個数だけでは容器と本物を区別できない。どちらもインスタンス1個だからである。
+ *   GOOD LOOP の CTA Block … 342×77 の枠に、342×52 の Loop/Button が1個 → 幅が100%一致。容器
+ *   GOOD ORDER の Delete Button … 32×32 の枠に、16×16 の Icon が1個 → 幅は50%。本物のボタン
+ * 区別できるのは**大きさの比率**。枠とほぼ同じ大きさのコンポーネントを持つなら、
+ * その枠はそれを包んでいるだけである。
+ */
+const WRAPPED_CHILD_RATIO = 0.9;
+
+/**
+ * **直接の子**に、枠とほぼ同じ大きさの INSTANCE / COMPONENT があるか。
+ *
+ * 子孫まで見てはいけない。深い階層のインスタンスが偶然大きいだけで除外されてしまう。
+ */
+function wrapsFullSizeComponent(node) {
+  const b = box(node);
+  if (!(b.width > 0 && b.height > 0)) return false;
+  for (const c of node.children || []) {
+    if (c.type !== "INSTANCE" && c.type !== "COMPONENT") continue;
+    const cb = box(c);
+    if (cb.width >= b.width * WRAPPED_CHILD_RATIO) return true;
+    if (cb.height >= b.height * WRAPPED_CHILD_RATIO) return true;
+  }
+  return false;
+}
+
 function walk(node, secLabel, isSP, insideInstance) {
   stats.nodes++;
   const inInst = insideInstance || node.type === "INSTANCE";
@@ -227,16 +255,19 @@ function walk(node, secLabel, isSP, insideInstance) {
   const name = node.name || "";
   const tappable = BUTTONISH.test(name) && !CONTAINERISH.test(name.trim());
 
-  /* 「生フレームのボタン」判定。名前だけで決めると入れ物まで落とすので、2つ除外する。
+  /* 「生フレームのボタン」判定。名前だけで決めると入れ物まで落とすので、3つ除外する。
        1. 子孫に INSTANCE / COMPONENT が2個以上ある → ボタンを並べている入れ物
        2. 高さが RAW_BUTTON_MAX_HEIGHT を超える → ボタンではない（セクション帯・大きなカード）
+       3. 直接の子に、枠とほぼ同じ大きさの INSTANCE / COMPONENT がある
+          → そのコンポーネントを包んでいるだけの容器（個数では 1 と区別できない）
      SPのタップ領域の判定（下）はこの除外を通していない。あちらは高さ44px未満が対象で、
      2 とは排他だし、1 で緩めると本物の小さすぎるボタンを見逃す可能性があるため。 */
   if (!inInst && node.type === "FRAME" && tappable) {
-    const isContainer =
+    const manyComponents =
       countComponentDescendants(node, CONTAINER_MIN_COMPONENTS) >= CONTAINER_MIN_COMPONENTS;
     const tooTall = b.height > RAW_BUTTON_MAX_HEIGHT;
-    if (!isContainer && !tooTall) {
+    const wrapsOne = wrapsFullSizeComponent(node);
+    if (!manyComponents && !tooTall && !wrapsOne) {
       S(secLabel, `「${name}」が生のフレームで作られています。既存のコンポーネントを使ってください`);
     }
   }
