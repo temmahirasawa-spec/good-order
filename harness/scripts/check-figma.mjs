@@ -186,7 +186,31 @@ function checkFit(label, node, spaceChildren) {
 // \b で囲まないと "Rectangle" の中の "cta" に誤反応する
 const BUTTONISH = /\b(button|btn|chip|cta|tab)s?\b/i;
 // 入れ物は対象外。Button Row / Tab Nav / Table Chip Strip など
+// **ここに語を足す方向で誤検知を解こうとしないこと。**「CTA Block」「Hero CTAs」のように
+// 末尾が容器の語でない入れ物はいくらでも作れるので、語リストは永久に足り続ける。
+// 名前ではなく「中身」と「大きさ」で判断する（下の2条件）。
 const CONTAINERISH = /\b(row|strip|nav|bar|group|list|wrap|wrapper|content|container|area|section|stack)s?$/i;
+
+/**
+ * ボタンとして現実的な高さの上限。これを超えるものはセクション帯や大きなカード。
+ * **幅では判定しない。**PC管理画面には横幅864pxの全幅ボタンが実在するため、
+ * 幅を条件に入れると本物の生フレームボタンを見逃す。
+ */
+const RAW_BUTTON_MAX_HEIGHT = 120;
+
+/**
+ * 子孫に INSTANCE / COMPONENT があるか。
+ * **コンポーネントを使っている証拠がその中にある**ということなので、
+ * そのフレームは「生フレームのボタン」ではなく、ボタンを包む入れ物とみなす。
+ * 見つけ次第 true を返して打ち切る。
+ */
+function hasComponentDescendant(node) {
+  for (const c of node.children || []) {
+    if (c.type === "INSTANCE" || c.type === "COMPONENT") return true;
+    if (hasComponentDescendant(c)) return true;
+  }
+  return false;
+}
 
 function walk(node, secLabel, isSP, insideInstance) {
   stats.nodes++;
@@ -195,8 +219,17 @@ function walk(node, secLabel, isSP, insideInstance) {
   const name = node.name || "";
   const tappable = BUTTONISH.test(name) && !CONTAINERISH.test(name.trim());
 
+  /* 「生フレームのボタン」判定。名前だけで決めると入れ物まで落とすので、2つ除外する。
+       1. 子孫に INSTANCE / COMPONENT がある → 中身はコンポーネント化されている
+       2. 高さが RAW_BUTTON_MAX_HEIGHT を超える → ボタンではない
+     SPのタップ領域の判定（下）はこの除外を通していない。あちらは高さ44px未満が対象で、
+     2 とは排他だし、1 で緩めると本物の小さすぎるボタンを見逃す可能性があるため。 */
   if (!inInst && node.type === "FRAME" && tappable) {
-    S(secLabel, `「${name}」が生のフレームで作られています。既存のコンポーネントを使ってください`);
+    const wrapsComponent = hasComponentDescendant(node);
+    const tooTall = b.height > RAW_BUTTON_MAX_HEIGHT;
+    if (!wrapsComponent && !tooTall) {
+      S(secLabel, `「${name}」が生のフレームで作られています。既存のコンポーネントを使ってください`);
+    }
   }
   if (isSP && !insideInstance && tappable && b.height > 0 && b.height < TAP_MIN) {
     S(secLabel, `「${name}」の高さが ${Math.round(b.height)}px です（SPのタップ領域は${TAP_MIN}px以上）`);
@@ -268,8 +301,11 @@ if (UPDATE) {
   process.exit(0);
 }
 
+// 台帳がまだ無い＝新規プロジェクトの初回。出力の最後に案内を出すために覚えておく
+const baselineExists = fs.existsSync(BASELINE_PATH);
+
 let baseline = { counts: {} };
-if (fs.existsSync(BASELINE_PATH)) {
+if (baselineExists) {
   try { baseline = JSON.parse(fs.readFileSync(BASELINE_PATH, "utf8")); } catch (e) { /* 壊れていたら空として扱う */ }
 }
 // 旧形式（キーの配列）は件数を持たないので、黙って読み替えない。
@@ -361,5 +397,16 @@ if (skipped.length) console.log(`${D}スキップ: ${skipped.join(" / ")}${X}`);
 console.log(`${D}未返済の負債（ベースラインで見逃している分）: ${carried}件 / ${allowedCounts.size}種類${X}`);
 console.log(`${D}今回の検出合計: ${soft.length}件（新種 ${freshCount} ＋ 増加 ${grownCount} ＋ 既存 ${carried}）${X}`);
 console.log(`${D}未バインドの塗り: ${stats.unboundFills} / テキストスタイル未適用: ${stats.noTextStyle}${X}\n`);
+
+/* 台帳がまだ無い状態で違反が出たときだけ案内する。
+   新規プロジェクトの初回は必ず全件が「新しい種類」として赤く出るので、
+   次に何をすればいいかが書かれていないと「壊れている」と誤解される。
+   **台帳が既にある場合は出さない。**既存プロジェクトで --update-baseline を
+   安易な逃げ道として案内すると、CLAUDE.md 7章（検品を通さずに完了と言わない）に反する。 */
+if (!baselineExists && (fresh.length || grown.length)) {
+  console.log(`${Y}▶ これは初回の実行です。${X}台帳（scripts/figma-check-baseline.json）がまだ無いため、いま Figma にある違反が全部「新しい種類」として出ています。${Y}壊れているわけではありません。${X}`);
+  console.log(`${D}  いまの状態を基準線として登録する:  npm run design:figma -- --update-baseline${X}`);
+  console.log(`${D}  ※ 登録する前に、上の「構造・パディング」が0件で終わっていることを必ず確認すること。${X}\n`);
+}
 
 process.exit(hard.length || fresh.length || grown.length ? 1 : 0);
