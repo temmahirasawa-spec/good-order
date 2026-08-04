@@ -199,17 +199,25 @@ const CONTAINERISH = /\b(row|strip|nav|bar|group|list|wrap|wrapper|content|conta
 const RAW_BUTTON_MAX_HEIGHT = 120;
 
 /**
- * 子孫に INSTANCE / COMPONENT があるか。
- * **コンポーネントを使っている証拠がその中にある**ということなので、
- * そのフレームは「生フレームのボタン」ではなく、ボタンを包む入れ物とみなす。
- * 見つけ次第 true を返して打ち切る。
+ * 「入れ物」とみなすのに必要な、子孫の INSTANCE / COMPONENT の数。
+ *
+ * **1個ではダメ。** 生フレームのボタンはたいてい中に Icon インスタンスを1個持っている
+ * （`Delete Button` 32×32 の中に `Icon` 1個、など）。1個で除外すると、
+ * **本物の生フレームボタンをまとめて見逃す**（実測で11件が消えた）。
+ * ボタンを2個以上並べているものは、それ自体がボタンではなく入れ物である。
  */
-function hasComponentDescendant(node) {
+const CONTAINER_MIN_COMPONENTS = 2;
+
+/** 子孫の INSTANCE / COMPONENT の数を数える（上限に達したら打ち切る） */
+function countComponentDescendants(node, limit) {
+  let n = 0;
   for (const c of node.children || []) {
-    if (c.type === "INSTANCE" || c.type === "COMPONENT") return true;
-    if (hasComponentDescendant(c)) return true;
+    if (c.type === "INSTANCE" || c.type === "COMPONENT") n++;
+    if (n >= limit) return n;
+    n += countComponentDescendants(c, limit - n);
+    if (n >= limit) return n;
   }
-  return false;
+  return n;
 }
 
 function walk(node, secLabel, isSP, insideInstance) {
@@ -220,14 +228,15 @@ function walk(node, secLabel, isSP, insideInstance) {
   const tappable = BUTTONISH.test(name) && !CONTAINERISH.test(name.trim());
 
   /* 「生フレームのボタン」判定。名前だけで決めると入れ物まで落とすので、2つ除外する。
-       1. 子孫に INSTANCE / COMPONENT がある → 中身はコンポーネント化されている
-       2. 高さが RAW_BUTTON_MAX_HEIGHT を超える → ボタンではない
+       1. 子孫に INSTANCE / COMPONENT が2個以上ある → ボタンを並べている入れ物
+       2. 高さが RAW_BUTTON_MAX_HEIGHT を超える → ボタンではない（セクション帯・大きなカード）
      SPのタップ領域の判定（下）はこの除外を通していない。あちらは高さ44px未満が対象で、
      2 とは排他だし、1 で緩めると本物の小さすぎるボタンを見逃す可能性があるため。 */
   if (!inInst && node.type === "FRAME" && tappable) {
-    const wrapsComponent = hasComponentDescendant(node);
+    const isContainer =
+      countComponentDescendants(node, CONTAINER_MIN_COMPONENTS) >= CONTAINER_MIN_COMPONENTS;
     const tooTall = b.height > RAW_BUTTON_MAX_HEIGHT;
-    if (!wrapsComponent && !tooTall) {
+    if (!isContainer && !tooTall) {
       S(secLabel, `「${name}」が生のフレームで作られています。既存のコンポーネントを使ってください`);
     }
   }

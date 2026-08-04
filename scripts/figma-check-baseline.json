@@ -1,6 +1,6 @@
 {
-  "total": 74,
-  "keys": 40,
+  "total": 65,
+  "keys": 36,
   "counts": {
     "Components / 00 Foundations :: 「Chips」が生のフレームで作られています。既存のコンポーネントを使ってください": 1,
     "Components / 11 Staff / Orders :: 「Action Button」が生のフレームで作られています。既存のコンポーネントを使ってください": 2,
@@ -22,10 +22,6 @@
     "MobileOrder / Dashboard / ダッシュボード / SP :: 「Tab」の高さが 30px です（SPのタップ領域は44px以上）": 3,
     "MobileOrder / Menu Management / メニュー管理 / SP :: 「Admin Chip」の高さが 38px です（SPのタップ領域は44px以上）": 6,
     "MobileOrder / Register / レジ / SP :: 「Table Chip」の高さが 42px です（SPのタップ領域は44px以上）": 5,
-    "Website / 00 LP / メイン :: 「CTA Panel」が生のフレームで作られています。既存のコンポーネントを使ってください": 3,
-    "Website / 00 LP / メイン :: 「CTA」が生のフレームで作られています。既存のコンポーネントを使ってください": 3,
-    "Website / 00 LP / メイン :: 「SP State — 追従ヘッダー + タブナビ + CTAバー」が生のフレームで作られています。既存のコンポーネントを使ってください": 1,
-    "Website / 00 LP / メイン :: 「Staff Tabs」が生のフレームで作られています。既存のコンポーネントを使ってください": 2,
     "Website / PC States / 03 Staff Screens :: 「Add Button」が生のフレームで作られています。既存のコンポーネントを使ってください": 1,
     "Website / PC States / 03 Staff Screens :: 「Best Seller Settings Button」が生のフレームで作られています。既存のコンポーネントを使ってください": 1,
     "Website / PC States / 03 Staff Screens :: 「CSV Export Button」が生のフレームで作られています。既存のコンポーネントを使ってください": 1,
