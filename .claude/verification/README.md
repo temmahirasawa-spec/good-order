@@ -1,0 +1,14 @@
+# 検証スクリーンショット置き場
+
+PR 本文に貼るための証跡。**アプリの成果物ではない。**
+
+GitHub の PR 本文に画像を貼るには、どこかにホストされている必要がある。
+このリポジトリは public なので、ここに置いたものを
+`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>` で参照できる。
+
+日付つきのフォルダを PR ごとに1つ作り、その PR の検証に使った画像だけを入れる。
+**普段のスクリーンショットはここに置かない**（`.playwright-mcp/` は gitignore 済み）。
+
+| フォルダ | 何の検証か |
+|---|---|
+| `2026-08-04-playwright-clean-session/` | Playwright MCP の偽ログイントークン除去（`fix/playwright-clean-session`） |
