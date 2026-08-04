@@ -234,8 +234,6 @@ export default function DisplaySettingsPage() {
                     ) : (
                       <VideoSlotField
                         slot="order_hero"
-                        label="注文ホームのヒーロー動画"
-                        hint="メニュー一覧の先頭に、横長の帯として出ます。"
                         toggleLabel="注文ホームに動画を表示する"
                         notes={ORDER_HERO_NOTES}
                         fit="cover-16x9"
@@ -268,8 +266,6 @@ export default function DisplaySettingsPage() {
                     ) : (
                       <BackgroundSlotField
                         slot="landing_background"
-                        label="二次元コード着地画面の背景"
-                        hint="お客様が二次元コードを読み取って最初に開く画面の、背景いっぱいに出ます。"
                         toggleLabel="着地画面に背景を表示する"
                         notes={LANDING_NOTES}
                         fit="keep-aspect"

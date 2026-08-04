@@ -145,8 +145,6 @@ function VideoSlotFieldDemo() {
     >
       <VideoSlotField
         slot="order_hero"
-        label="注文ホームのヒーロー動画"
-        hint="メニュー一覧の先頭に、横長の帯として出ます。"
         toggleLabel="注文ホームに動画を表示する"
         notes={[
           "16:9（横長）に自動でトリミングされます。上下が切れないよう、16:9で書き出した動画をアップロードしてください。",
@@ -178,8 +176,6 @@ function BackgroundSlotFieldDemo() {
     >
       <BackgroundSlotField
         slot="landing_background"
-        label="二次元コード着地画面の背景"
-        hint="お客様が二次元コードを読み取って最初に開く画面の、背景いっぱいに出ます。"
         toggleLabel="着地画面に背景を表示する"
         notes={{
           color: [

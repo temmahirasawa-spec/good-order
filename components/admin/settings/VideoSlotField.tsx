@@ -18,8 +18,6 @@ import type { StoreMedia, StoreMediaSlot } from "@/lib/storeMedia";
 
 export default function VideoSlotField({
   slot,
-  label,
-  hint,
   toggleLabel,
   notes,
   fit,
@@ -30,10 +28,6 @@ export default function VideoSlotField({
   onRequestDelete,
 }: {
   slot: StoreMediaSlot;
-  /** 枠の名前（例: 注文ホームのヒーロー動画） */
-  label: string;
-  /** どこに出るかの一言 */
-  hint: string;
   /** トグル行の文言。どちらの画面の話かが分かるようスロットごとに変える */
   toggleLabel: string;
   /** 注釈テキスト（箇条書き）。スロットごとに切り取られ方が違うので文言を変える */
@@ -45,14 +39,10 @@ export default function VideoSlotField({
   onUploaded: (next: { url: string; posterUrl: string | null }) => void;
   onRequestDelete: () => void;
 }) {
+  /* 枠の名前と説明は SettingsSection のヘッダー（「① 注文ホームのヒーロー動画」）が
+     持っているので、ここでは繰り返さない。 */
   return (
     <div className="flex flex-col gap-[var(--space-12)] items-start w-full">
-      {/* ── 枠の名前 ── */}
-      <div className="flex flex-col gap-[var(--space-2)] w-full">
-        <p className="type-jp-caption-bold text-text-primary">{label}</p>
-        <p className="type-jp-label text-text-tertiary">{hint}</p>
-      </div>
-
       {/* ── 表示ON/OFF ── */}
       <div className="bg-bg-secondary flex items-center justify-between gap-[var(--space-12)] px-[var(--space-16)] py-[var(--space-12)] rounded-[var(--radius-sm)] w-full">
         <span className="type-jp-body text-text-primary">{toggleLabel}</span>

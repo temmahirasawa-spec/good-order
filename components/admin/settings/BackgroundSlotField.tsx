@@ -58,8 +58,6 @@ function ColorPreview({ hex }: { hex: string }) {
 
 export default function BackgroundSlotField({
   slot,
-  label,
-  hint,
   toggleLabel,
   notes,
   fit,
@@ -74,8 +72,6 @@ export default function BackgroundSlotField({
   onRequestDeleteImage,
 }: {
   slot: StoreMediaSlot;
-  label: string;
-  hint: string;
   toggleLabel: string;
   /** 背景タイプごとの注釈。切り取られ方も注意点も違うので共通化しない */
   notes: Record<BackgroundType, string[]>;
@@ -94,13 +90,8 @@ export default function BackgroundSlotField({
   const color = normalizeHex(media.backgroundColor ?? "") ?? DEFAULT_BACKGROUND_COLOR;
 
   return (
+    /* 枠の名前と説明は SettingsSection のヘッダーが持っているので、ここでは繰り返さない */
     <div className="flex flex-col gap-[var(--space-12)] items-start w-full">
-      {/* ── 枠の名前 ── */}
-      <div className="flex flex-col gap-[var(--space-2)] w-full">
-        <p className="type-jp-caption-bold text-text-primary">{label}</p>
-        <p className="type-jp-label text-text-tertiary">{hint}</p>
-      </div>
-
       {/* ── 表示ON/OFF ── */}
       <div className="bg-bg-secondary flex items-center justify-between gap-[var(--space-12)] px-[var(--space-16)] py-[var(--space-12)] rounded-[var(--radius-sm)] w-full">
         <span className="type-jp-body text-text-primary">{toggleLabel}</span>
