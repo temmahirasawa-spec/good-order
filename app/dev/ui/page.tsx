@@ -42,6 +42,8 @@ import TagSelectField from "@/components/admin/menu/TagSelectField";
 import MediaUploaderField from "@/components/admin/menu/MediaUploaderField";
 import SettingsSection from "@/components/admin/settings/SettingsSection";
 import VideoSlotField from "@/components/admin/settings/VideoSlotField";
+import BackgroundSlotField from "@/components/admin/settings/BackgroundSlotField";
+import DisplayTabs, { type DisplayTabId } from "@/components/admin/display/DisplayTabs";
 import type { StoreMedia } from "@/lib/storeMedia";
 import MenuPreviewCard from "@/components/admin/menu/MenuPreviewCard";
 import CategoryRow from "@/components/admin/category/CategoryRow";
@@ -124,17 +126,22 @@ function TagSelectFieldDemo() {
   return <TagSelectField value={tag} onChange={setTag} />;
 }
 
+const DEMO_MEDIA: StoreMedia = {
+  enabled: true,
+  url: "/images/hero/background.mp4",
+  posterUrl: "/images/pancake/p1.webp",
+  updatedAt: "2026-08-03T14:32:00+09:00",
+  backgroundType: "video",
+  backgroundColor: null,
+  imageUrl: null,
+};
+
 function VideoSlotFieldDemo() {
-  const [media, setMedia] = useState<StoreMedia>({
-    enabled: true,
-    url: "/images/hero/background.mp4",
-    posterUrl: "/images/pancake/p1.webp",
-    updatedAt: "2026-08-03T14:32:00+09:00",
-  });
+  const [media, setMedia] = useState<StoreMedia>(DEMO_MEDIA);
   return (
     <SettingsSection
-      title="トップページ"
-      description="お客様が最初に見る2つの画面の動画を差し替えます。動画を消したいだけのときは、削除ではなく表示のオフをお使いください。"
+      title="① 注文ホームのヒーロー動画"
+      description="メニュー一覧の先頭に、横長の帯として出ます。"
     >
       <VideoSlotField
         slot="order_hero"
@@ -155,6 +162,52 @@ function VideoSlotFieldDemo() {
       />
     </SettingsSection>
   );
+}
+
+/** 表示設定 > 動画設定 の2枚目。色 / 画像 / 動画 の切り替えと、文字色の自動判定を確認する */
+function BackgroundSlotFieldDemo() {
+  const [media, setMedia] = useState<StoreMedia>({
+    ...DEMO_MEDIA,
+    backgroundType: "color",
+    backgroundColor: "#2F3D34", // design-qa-allow: パレット（lib/backgroundColor.ts）の「ダークグリーン」。ギャラリーの初期値
+  });
+  return (
+    <SettingsSection
+      title="② 二次元コード着地画面の背景"
+      description="お客様が二次元コードを読み取って最初に開く画面の、背景いっぱいに出ます。"
+    >
+      <BackgroundSlotField
+        slot="landing_background"
+        label="二次元コード着地画面の背景"
+        hint="お客様が二次元コードを読み取って最初に開く画面の、背景いっぱいに出ます。"
+        toggleLabel="着地画面に背景を表示する"
+        notes={{
+          color: [
+            "画面全体がこの色一色で塗られます。写真や動画より軽く、通信が弱い店舗でも確実に表示されます。",
+            "文字とロゴの色は、選んだ色の明るさに合わせて自動で切り替わります（明るい色 → 黒い文字 / 暗い色 → 白い文字）。",
+            "カスタムでは HEX（#RRGGBB）で自由に指定できます。",
+          ],
+          image: ["文字とロゴは白で表示されます。暗めの写真をご用意ください。"],
+          video: ["文字とロゴは白で表示されます。暗めの映像をご用意ください。"],
+        }}
+        fit="keep-aspect"
+        media={media}
+        onToggle={(enabled) => setMedia((m) => ({ ...m, enabled }))}
+        onChangeType={(backgroundType) => setMedia((m) => ({ ...m, backgroundType }))}
+        onChangeColor={(backgroundColor) => setMedia((m) => ({ ...m, backgroundColor }))}
+        onUploadedVideo={({ url, posterUrl }) => setMedia((m) => ({ ...m, url, posterUrl }))}
+        onUploadedImage={({ url }) => setMedia((m) => ({ ...m, imageUrl: url }))}
+        onRequestDeleteVideo={() => setMedia((m) => ({ ...m, url: null, posterUrl: null }))}
+        onRequestDeleteImage={() => setMedia((m) => ({ ...m, imageUrl: null }))}
+      />
+    </SettingsSection>
+  );
+}
+
+/** 表示設定のタブ。SPは等分、PCは左寄せ */
+function DisplayTabsDemo() {
+  const [tab, setTab] = useState<DisplayTabId>("video");
+  return <DisplayTabs active={tab} onSelect={setTab} />;
 }
 
 function MediaUploaderFieldDemo() {
@@ -591,9 +644,25 @@ export default function UiGalleryPage() {
         <MediaUploaderFieldDemo />
       </Section>
 
-      <Section title="SettingsSection + VideoSlotField（店舗設定 > トップページ）">
+      <Section title="DisplayTabs（表示設定のタブ）">
+        <div className="max-w-[560px] border border-border-divider">
+          <DisplayTabsDemo />
+        </div>
+      </Section>
+
+      <Section title="SettingsSection + VideoSlotField（表示設定 > 動画設定 ①）">
         <div className="max-w-[560px]">
           <VideoSlotFieldDemo />
+        </div>
+      </Section>
+
+      <Section title="SettingsSection + BackgroundSlotField（表示設定 > 動画設定 ②）">
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          セグメントで 色 / 画像 / 動画 を切り替える。「色」ではプレビューのロゴと文字色が
+          背景の明るさで自動的に入れ替わる（暗い色 → 白、明るい色 → 黒）。
+        </p>
+        <div className="max-w-[560px]">
+          <BackgroundSlotFieldDemo />
         </div>
       </Section>
 

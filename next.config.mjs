@@ -25,6 +25,15 @@ const nextConfig = {
         destination: "/admin/menu",
         permanent: false,
       },
+      {
+        // 「店舗設定」を「表示設定」に作り替えたときに /admin/settings → /admin/display へ
+        // 移した。ブックマークされている可能性があるのでリダイレクトを残す。
+        // permanent:false（307）なのは /admin/takeout と同じ理由で、
+        // ブラウザに永続キャッシュさせないため（将来また動かす余地を残す）。
+        source: "/admin/settings",
+        destination: "/admin/display",
+        permanent: false,
+      },
     ];
   },
   images: {

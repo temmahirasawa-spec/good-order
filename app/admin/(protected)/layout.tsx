@@ -29,7 +29,7 @@ const REDESIGNED_PREFIXES = [
   "/admin/pickup",
   "/admin/dashboard",
   "/admin/tables",
-  "/admin/settings",
+  "/admin/display",
 ];
 
 export default function AdminProtectedLayout({
