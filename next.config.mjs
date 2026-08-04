@@ -1,6 +1,18 @@
 import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ビルド成果物の出力先。既定は .next。
+  //
+  // next dev と next build が同じ .next/ を共有しているため、dev サーバーを
+  // 起動したまま next build を走らせると dev 側のチャンクが上書きされて 404 になる。
+  // Stop hook が AI の1ターンごとに npm run check（＝内部で next build）を回すので、
+  // これは単発の不便ではなくハーネスの構造的な不具合だった。
+  //
+  // そこで NEXT_DIST_DIR で出力先を差し替えられるようにし、npm run check から
+  // 呼ばれるビルド（npm run build:check）だけ .next-check を使わせて分離する。
+  // 未指定なら従来どおり .next。next dev はこちらを使うので起動速度は変わらない。
+  // Vercel が実行する `npm run build` も環境変数を渡さないので .next のまま。
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async redirects() {
     return [
       {

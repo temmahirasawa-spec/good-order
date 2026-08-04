@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:check": "NEXT_DIST_DIR=.next-check next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "next lint --max-warnings 0",
-    "check": "npm run typecheck && npm run lint && npm run design && npm run build",
+    "check": "npm run typecheck && npm run lint && npm run design && npm run build:check",
     "design": "node scripts/check-design-tokens.mjs",
     "design:figma": "node scripts/check-figma.mjs"
   },

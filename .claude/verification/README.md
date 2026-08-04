@@ -12,3 +12,4 @@ GitHub の PR 本文に画像を貼るには、どこかにホストされてい
 | フォルダ | 何の検証か |
 |---|---|
 | `2026-08-04-playwright-clean-session/` | Playwright MCP の偽ログイントークン除去（`fix/playwright-clean-session`） |
+| `2026-08-04-separate-build-dir/` | `npm run check` のビルド出力先を分離し dev を壊さなくした（`fix/separate-build-dir`） |
