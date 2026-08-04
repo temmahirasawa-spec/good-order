@@ -61,10 +61,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   // 「QRコード」は登録商標のため、画面に出す文言は必ず「二次元コード」にする。
   // 220px幅のサイドバーだと1行に収まらず中途半端な位置で折れるので、改行位置を固定する
   { href: "/admin/tables",    label: "テーブル/\n二次元コード", roles: ["manager"],               group: "manage" },
-  // 店舗設定は manage 群の末尾に足す。**先頭（index 0）には絶対に入れないこと。**
+  // 表示設定は manage 群の末尾に足す。**先頭（index 0）には絶対に入れないこと。**
   // 上のコメントのとおり allowed[0] が各ロールの着地先を兼ねているため、
   // 先頭に入れると manager のログイン直後の画面が厨房から設定画面に変わってしまう。
-  { href: "/admin/settings",  label: "店舗設定",       roles: ["manager"],                        group: "manage" },
+  // 旧「店舗設定」（/admin/settings）から改名・移動した。旧URLは next.config.mjs で
+  // /admin/display にリダイレクトしている。
+  { href: "/admin/display",   label: "表示設定",       roles: ["manager"],                        group: "manage" },
   { href: "/admin/dashboard", label: "ダッシュボード", roles: ["manager"],                        group: "review" },
 ];
 // /admin/takeout（テイクアウト商品のCRUD）は /admin/menu に統合して廃止した。
