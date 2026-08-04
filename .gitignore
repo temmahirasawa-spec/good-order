@@ -52,4 +52,12 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Playwright MCP がスクリーンショット・ログを吐く場所
 .playwright-mcp/
+
+# Playwright MCP のログイン状態ファイル（--storage-state で使う）。
+# 本物のセッショントークンが入るので絶対にコミットしない。
+# ※ 平常時は --isolated で毎回まっさらに起動するので、このファイルは作られない。
+#    管理画面のスクショを撮るために一時的に使う場合の保険。
+playwright-storage-state*.json
