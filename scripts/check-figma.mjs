@@ -237,6 +237,80 @@ function wrapsFullSizeComponent(node) {
   return false;
 }
 
+/**
+ * 余白のスケール。
+ *
+ * **スペーシングを用いるのは将来スケールを変える可能性があるからではなく、
+ * この数字で組むと美しくなるから。中途半端な数字が交じると崩れていく。**
+ *
+ * これは Figma の `Spacing` コレクションの写し。実行時に Figma から取れれば
+ * そちらを使い、取れないときだけこの表を使う（下の readSpacingScale）。
+ */
+const SPACING_SCALE_FALLBACK = [0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 112, 128];
+
+/** 検査する余白のプロパティ */
+const SPACING_PROPS = ["paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "itemSpacing", "counterAxisSpacing"];
+
+let spacingScale = new Set(SPACING_SCALE_FALLBACK);
+let spacingScaleSource = "";
+
+/**
+ * Figma の `Spacing` コレクションからスケールを取り出す。
+ *
+ * `/v1/files/:key` の応答には変数の定義が含まれない（`document` `components`
+ * `componentSets` `styles` だけ）。変数の値を返す `/variables/local` は
+ * `file_variables:read` スコープが要る（CLAUDE.md 4章）。
+ * したがって現状は必ずフォールバックになる。**その事実は出力に明記する。**
+ * 将来スコープ付きのトークンに替えたら、ここが自動で本物を拾う。
+ */
+function readSpacingScale(file) {
+  const collections = file.variableCollections || file.variables || null;
+  if (collections) {
+    const values = new Set();
+    for (const c of Object.values(collections)) {
+      if (!/spacing/i.test(c.name || "")) continue;
+      for (const v of Object.values(c.variables || {})) {
+        for (const val of Object.values(v.valuesByMode || {})) {
+          if (typeof val === "number") values.add(val);
+        }
+      }
+    }
+    if (values.size) {
+      spacingScaleSource = `Figma の Spacing コレクションから取得（${values.size}段階）`;
+      return values;
+    }
+  }
+  spacingScaleSource =
+    "⚠ Figma から取得できないため、スクリプト内の表を使用（file_variables:read スコープが無いため）";
+  return new Set(SPACING_SCALE_FALLBACK);
+}
+
+/** 浮動小数の誤差を丸める。16.0000001 を 16 として扱うため */
+const snap = (x) => (Math.abs(x - Math.round(x)) < 0.01 ? Math.round(x) : x);
+
+/**
+ * オートレイアウトの余白がスケールに乗っているか。
+ *
+ * 合格の条件は2つだけ。
+ *   1. Spacing 変数にバインドされている
+ *   2. 未バインドでも、値がスケール上にある（0 を含む）
+ * どちらでもない値は、意図して置かれた中途半端な数字である。
+ *
+ * **インスタンスの内部は見ない。**そちらはコンポーネント側で担保する。
+ */
+function checkSpacing(node, secLabel) {
+  if (!node.layoutMode || node.layoutMode === "NONE") return;
+  const bound = node.boundVariables || {};
+  for (const prop of SPACING_PROPS) {
+    const raw = node[prop];
+    if (typeof raw !== "number") continue;
+    if (bound[prop]) continue;
+    const v = snap(raw);
+    if (spacingScale.has(v)) continue;
+    S(secLabel, `「${node.name}」の余白がスケール外です（${prop}=${v}）`);
+  }
+}
+
 function walk(node, secLabel, isSP, insideInstance) {
   stats.nodes++;
   const inInst = insideInstance || node.type === "INSTANCE";
@@ -263,6 +337,8 @@ function walk(node, secLabel, isSP, insideInstance) {
   if (isSP && !insideInstance && tappable && b.height > 0 && b.height < TAP_MIN) {
     S(secLabel, `「${name}」の高さが ${Math.round(b.height)}px です（SPのタップ領域は${TAP_MIN}px以上）`);
   }
+  // インスタンスの内部は見ない（コンポーネント側で担保する）
+  if (!inInst) checkSpacing(node, secLabel);
   if (!inInst) {
     for (const p of [].concat(node.fills || [], node.strokes || [])) {
       if (p && p.type === "SOLID" && p.visible !== false) {
@@ -277,6 +353,7 @@ function walk(node, secLabel, isSP, insideInstance) {
 
 // ── 実行 ──────────────────────────────────────────────
 const file = await fetchFile();
+spacingScale = readSpacingScale(file);
 const pages = (file.document.children || []).filter((p) => !SKIP_PAGES.includes(p.name));
 
 for (const page of pages) {
@@ -379,7 +456,8 @@ function print(list, color, head) {
 
 console.log("");
 console.log(`${D}対象ページ: ${pages.map((p) => p.name).join(", ")}${X}`);
-console.log(`${D}ノード数 ${stats.nodes}${X}\n`);
+console.log(`${D}ノード数 ${stats.nodes}${X}`);
+console.log(`${D}余白のスケール: ${spacingScaleSource}${X}\n`);
 
 if (hard.length) print(hard, R, `✗ 構造・パディング（${hard.length}件） — 必ず直してください`);
 else console.log(`${G}✓ 構造・パディング: 全ページ問題なし${X}\n`);
