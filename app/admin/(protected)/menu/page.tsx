@@ -33,12 +33,8 @@ import AdminMenuRow from "@/components/admin/menu/AdminMenuRow";
 import TagSelectField from "@/components/admin/menu/TagSelectField";
 import MediaUploaderField from "@/components/admin/menu/MediaUploaderField";
 import MenuPreviewCard from "@/components/admin/menu/MenuPreviewCard";
-import BestSellerModal, { type BestSellerCandidate } from "@/components/admin/menu/BestSellerModal";
-import {
-  fetchBestSellerSetting,
-  saveBestSellerSetting,
-  type BestSellerSetting,
-} from "@/lib/bestSellers";
+/* ベストセラー設定は表示設定（/admin/display）の「ベストセラー」タブに移設した。
+   この画面からは扱わないので、関連の import と state はここには無い。 */
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import { Icon } from "@/components/Icon";
@@ -110,8 +106,6 @@ export default function AdminMenuPage() {
     before: ImageInfo;
     after: ImageInfo;
   } | null>(null);
-  const [bestSellerOpen, setBestSellerOpen] = useState(false);
-  const [bestSeller, setBestSeller] = useState<BestSellerSetting | null>(null);
 
   /* ── Storage との整合を取るための持ち物（パネル1回ぶん） ──
      ファイルは選んだ瞬間にアップロードするので、Storage と DB のどちらが先に
@@ -503,28 +497,8 @@ export default function AdminMenuPage() {
     }
   };
 
-  /* ── ベストセラー設定 ──
-     二次元コード管理の「席カテゴリの設定」と同じく、Top Barのボタンからモーダルで開く */
-  const openBestSeller = async () => {
-    setBestSellerOpen(true);
-    try {
-      setBestSeller(await fetchBestSellerSetting());
-    } catch (e) {
-      console.error("[menu] best seller fetch failed:", e);
-      // 読めなくてもモーダルは開けておく（空の状態から設定し直せる）
-      setBestSeller({ enabled: true, itemIds: [] });
-    }
-  };
-
   const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? "—";
 
-  const bestSellerCandidates: BestSellerCandidate[] = items.map((i) => ({
-    id: i.id,
-    name: i.name,
-    categoryId: i.category_id ?? null,
-    categoryName: i.is_takeout ? "テイクアウト" : catName(i.category_id ?? ""),
-    thumbnailUrl: i.image_url,
-  }));
   const selectedCategory = categories.find((c) => c.id === form.category_id);
   const previewImageUrl = form.media.find((m) => m.type === "image")?.url ?? null;
 
@@ -537,18 +511,8 @@ export default function AdminMenuPage() {
             onMenuClick={openDrawer}
             action={
               <div className="flex gap-[var(--space-8)] items-center shrink-0">
-              {/* SPは幅が無いので👑アイコンのみの丸ボタン */}
-              <button
-                type="button"
-                onClick={() => void openBestSeller()}
-                aria-label="ベストセラーの設定"
-                className="bg-bg-tertiary rounded-[var(--radius-full)] shrink-0 flex gap-[var(--space-8)] items-center justify-center size-[44px] lg:size-auto lg:px-[var(--space-16)] lg:py-[10px]"
-              >
-                <Icon name="crown" className="w-4 h-4 text-text-primary shrink-0" />
-                <span className="hidden lg:inline font-jp font-bold text-[14px] leading-[1.6] tracking-[0.14px] text-text-primary whitespace-nowrap">
-                  ベストセラーの設定
-                </span>
-              </button>
+              {/* 「ベストセラーの設定」ボタンはここから外した。
+                  表示設定（/admin/display）の「ベストセラー」タブに移設している。 */}
               <button
                 type="button"
                 onClick={openCreate}
@@ -664,18 +628,6 @@ export default function AdminMenuPage() {
               )}
             </div>
           </main>
-
-          <BestSellerModal
-            open={bestSellerOpen}
-            setting={bestSeller}
-            candidates={bestSellerCandidates}
-            categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-            onClose={() => setBestSellerOpen(false)}
-            onSave={async (next) => {
-              await saveBestSellerSetting(next);
-              setBestSeller(next);
-            }}
-          />
 
           {/* ── 編集/追加パネル（PC: 右420pxスライド＋プレビュー／SP: フルスクリーン） ── */}
           {panelOpen && (

@@ -1305,6 +1305,1040 @@ Figma はインスタンスに子を追加できないため。スピナーと�
 - 商品を削除したとき、その商品が参照していた既存画像はStorageに残る
   （今回入れたのは「そのパネルで上げたぶん」の掃除まで。過去ぶんの棚卸しは別件）
 
+## Figma 検品の負債台帳（2026-08-05 時点・未返済 2030件）
+
+**この2030件は「直したもの」ではない。1件も直っていない。**
+`scripts/figma-check-baseline.json` に登録して、検品を緑にしているだけの
+**未返済の負債**である。台帳は「ここから増えたら落とす」ための基準線であって、
+返済が終わったことを意味しない。
+
+- **合計 2030件 / 923種類**（`total: 2030` / `keys: 923`）
+- 1種類が複数件あるので、種類の数と件数は一致しない
+- 内訳は下の表のとおり。**要約せず1行ずつ載せてある。返済するときの作業リストとして使う**
+
+### ⚠ 65件 → 2030件 に増えたのは「悪化」ではなく「検査を新しく足したから」（2026-08-05）
+
+`harness/scripts/check-figma.mjs`（#35 でハーネス側に先行移植済み）から
+**余白のスケール検査**を本体 `scripts/check-figma.mjs` に移植した。この検査は、
+オートレイアウトの `paddingTop/Right/Bottom/Left` `itemSpacing` `counterAxisSpacing` が
+Spacing変数のスケール（`0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 112, 128`）に
+乗っているか、または変数バインド済みかを見る。値がスケール外の中途半端な数字（例:
+`itemSpacing=10.174359321594238`）だと落ちる。
+
+移植すると、これまで検知していなかった**887種類 / 1965件**の余白違反が新たに見えるようになった。
+**これは1件も新規に増えた不備ではない。** 検査を足す前から Figma 側に存在していた違反が、
+検査を足したことで初めて可視化されただけである。旧来の36種類/65件（生フレームのボタン・
+SPタップ領域）と合算して、台帳は **923種類 / 2030件** になった。
+
+移植前に「構造・パディング」が0件であることを確認してから
+`npm run design:figma -- --update-baseline` で台帳を作り直した（この確認を怠ると、
+構造違反を抱えたまま台帳に焼き付けてしまい、以後その穴が見えなくなる）。
+
+**PRの本文でもこの書き分けを崩さないこと**（「増えた」ではなく「見えるようになった」。
+「返済した」と「誤検知が消えた」を混ぜないのと同じ理由）。
+
+### ⚠ 74件 → 65件 に減ったが、**9件は「返済した」のではなく「誤検知だった」**
+
+判定の誤りを直した結果、**9件が台帳から消えた。これは1件も直していない。**
+消えたのは以下で、いずれも中身はコンポーネント化されており、**それを包む枠を責めていただけ**だった。
+
+| ノード | 寸法 | 実体 |
+|---|---|---|
+| `CTA` ×3 / `CTA Panel` ×3 | 最大 1440×630 | LP のセクション帯そのもの |
+| `Staff Tabs` ×2 | 689×40 / 342×79 | 中身は `Web / Tab Pill` インスタンス5個 |
+| `SP State — 追従ヘッダー + タブナビ + CTAバー` | 390×844 | 画面まるごとのフレーム |
+
+**返済すべき実体は 65件。** 内訳の表がそれである。
+
+### 「生フレームのボタン」判定の考え方（2026-08-04 に変更）
+
+名前だけで決めると入れ物まで落とす。**中身と大きさも見る。**
+名前が `button|btn|chip|cta|tab` にあたり、末尾が入れ物の語でない Frame を候補にしたうえで、
+
+1. **子孫に INSTANCE / COMPONENT が2個以上あるもの**は候補から外す（ボタンを並べている入れ物）
+2. **高さが 120px を超えるもの**は候補から外す（セクション帯・大きなカード）
+
+> **「1個以上」にしてはいけない（2026-08-04 に実測して判明）。**
+> 生フレームのボタンはたいてい中に `Icon` インスタンスを1個持っている
+> （`Delete Button` 32×32 の中に `Icon` 1個、など）。1個で除外すると
+> **本物の生フレームボタン11件がまとめて消えた。**
+> `Delete Button`×3 / `Edit Button`×2 / `More Button` / `コピー Button` / `DL Button` /
+> `Best Seller Settings Button`×2 / `Export Button` がそれ。2個以上に絞って拾い直している。
+
+3. **直接の子に、枠とほぼ同じ大きさ（幅または高さが90%以上）の INSTANCE / COMPONENT が
+   あるもの**は候補から外す（そのコンポーネントを包んでいるだけの容器）
+
+> **なぜ3つ目が要るか（2026-08-04 に追加）。個数では容器と本物を区別できない。**
+> GOOD LOOP の `CTA Block` は 342×77 の枠に `Loop / Button`（342×52）が**1個**だけ。
+> GOOD ORDER の `Delete Button` は 32×32 の枠に `Icon`（16×16）が**1個**だけ。
+> どちらもインスタンス1個・高さ120px以下なので、条件1と2では区別できない。
+> 違うのは**大きさの比率**で、前者は幅が100%一致（＝包んでいるだけ）、後者は50%（＝本物のボタン）。
+> これで GOOD LOOP 側に残っていた `CTA Block` 18件（9業態×2）が除外される。
+>
+> **「直接の子」に限ること。** 子孫まで見ると、深い階層のインスタンスが偶然大きいだけで除外される。
+>
+> **GOOD ORDER の件数はこの条件では変わらない。** 追加除外されるノードが1件も無いことを
+> 実際に走査して確認済み（MobileOrder 5 / Website 17 / Components 18 / 居酒屋 1 のまま）。
+> この条件は LOOP 側の誤検知を消すために足したもので、ORDER の負債65件はそのまま残る。
+
+**幅では判定しない。** PC管理画面には横幅864pxの全幅ボタンが実在するため、
+幅を条件に入れると本物を見逃す。
+**`CONTAINERISH` の語リストに語を足す方向で解こうとしないこと。**
+末尾が容器の語でない入れ物（`CTA Block` `Hero CTAs`）はいくらでも作れるので、語は永久に足り続ける。
+
+### ベースラインの仕組み（2026-08-04 に件数つき形式へ変更）
+
+**キーごとに件数を記録する。「同じ違反が増えたこと」も検出できる。**
+
+| 状況 | 結果 |
+|---|---|
+| キーが台帳に無い | **落とす**（新しい種類の違反） |
+| キーがあり、今回の件数 ≤ 台帳の件数 | 通す |
+| キーがあり、今回の件数 > 台帳の件数 | **落とす**。「8件で登録されていたものが9件に増えています（+1）」と出す |
+| キーがあり、今回の件数 < 台帳の件数 | 通す。「返済が進んだもの」として報告する |
+
+**件数が減っても台帳は自動では書き換わらない。** 書き換わるのは
+`npm run design:figma -- --update-baseline` を明示的に叩いたときだけ。
+勝手に基準線が下がると、返済したことに気づけなくなる。
+
+**旧形式（キーの配列）が置かれていたらエラーで落とす。** 件数を持たない台帳を
+「全部1件ずつ」と読み替えると、いきなり大量に落ちて原因が分からなくなるため。
+
+**台帳がまだ無い状態で違反が出たときだけ、初回向けの案内を出す。**
+台帳が既にある場合は出さない（`--update-baseline` を安易な逃げ道として案内しないため）。
+
+### 内訳（923種類 / 2030件）
+
+内訳は下表のとおり。既存分（36種類/65件・生フレームのボタン・SPタップ領域）と、今回移植した余白のスケール検査分（887種類/1965件）が両方含まれる。
+
+| ページ / セクション | ノード名 | 違反の内容 | 件数 |
+|---|---|---|---|
+| Brand Guideline / 02_LOGO_SYSTEM | `Logo/Lockup/Horizontal` | の余白がスケール外です（itemSpacing=22） | 1 |
+| Brand Guideline / 02_LOGO_SYSTEM | `Logo/Lockup/Stacked` | の余白がスケール外です（itemSpacing=28） | 1 |
+| Brand Guideline / 03_COMPONENTS | `BB/Card/Rule` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Brand Guideline / 03_COMPONENTS | `BB/Tag/Status` | の余白がスケール外です（paddingBottom=3） | 1 |
+| Brand Guideline / 03_COMPONENTS | `BB/Tag/Status` | の余白がスケール外です（paddingLeft=10） | 1 |
+| Brand Guideline / 03_COMPONENTS | `BB/Tag/Status` | の余白がスケール外です（paddingRight=10） | 1 |
+| Brand Guideline / 03_COMPONENTS | `BB/Tag/Status` | の余白がスケール外です（paddingTop=3） | 1 |
+| Components / 00 Foundations | `Chips` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 00 Foundations | `Demo` | の余白がスケール外です（itemSpacing=10） | 3 |
+| Components / 00 Foundations | `Info` | の余白がスケール外です（itemSpacing=3） | 17 |
+| Components / 00 Foundations | `List` | の余白がスケール外です（itemSpacing=14） | 1 |
+| Components / 00 Foundations | `Meta` | の余白がスケール外です（itemSpacing=3） | 27 |
+| Components / 00 Foundations | `Num` | の余白がスケール外です（paddingLeft=10） | 6 |
+| Components / 00 Foundations | `Num` | の余白がスケール外です（paddingRight=10） | 6 |
+| Components / 00 Foundations | `Orderly — Foundations` | の余白がスケール外です（itemSpacing=72） | 1 |
+| Components / 00 Foundations | `Orderly — Foundations` | の余白がスケール外です（paddingBottom=72） | 1 |
+| Components / 00 Foundations | `Orderly — Foundations` | の余白がスケール外です（paddingLeft=72） | 1 |
+| Components / 00 Foundations | `Orderly — Foundations` | の余白がスケール外です（paddingRight=72） | 1 |
+| Components / 00 Foundations | `Orderly — Foundations` | の余白がスケール外です（paddingTop=72） | 1 |
+| Components / 00 Foundations | `Pill` | の余白がスケール外です（paddingBottom=14） | 3 |
+| Components / 00 Foundations | `Pill` | の余白がスケール外です（paddingLeft=28） | 3 |
+| Components / 00 Foundations | `Pill` | の余白がスケール外です（paddingRight=28） | 3 |
+| Components / 00 Foundations | `Pill` | の余白がスケール外です（paddingTop=14） | 3 |
+| Components / 00 Foundations | `radius/full` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 00 Foundations | `radius/lg` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 00 Foundations | `radius/md` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 00 Foundations | `radius/sm` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 00 Foundations | `radius/xl` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 00 Foundations | `radius/xs` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 02 Buttons & CTAs | `Count Badge` | の余白がスケール外です（paddingLeft=6） | 1 |
+| Components / 02 Buttons & CTAs | `Count Badge` | の余白がスケール外です（paddingRight=6） | 1 |
+| Components / 03 Navigation | `State=Active` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 03 Navigation | `State=Active` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 03 Navigation | `State=Inactive` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 03 Navigation | `State=Inactive` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 04 Tags & Steppers | `Category Tag` | の余白がスケール外です（paddingLeft=10） | 1 |
+| Components / 04 Tags & Steppers | `Category Tag` | の余白がスケール外です（paddingRight=10） | 1 |
+| Components / 05 Cards | `Category Tag` | の余白がスケール外です（paddingLeft=10） | 3 |
+| Components / 05 Cards | `Category Tag` | の余白がスケール外です（paddingRight=10） | 3 |
+| Components / 05 Cards | `Text` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 06 Carousels | `Carousel Dots` | の余白がスケール外です（itemSpacing=6） | 1 |
+| Components / 10 Staff / Navigation | `State=Default` | の余白がスケール外です（itemSpacing=6） | 1 |
+| Components / 10 Staff / Navigation | `State=Default` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 10 Staff / Navigation | `State=Default` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 10 Staff / Navigation | `State=Selected` | の余白がスケール外です（itemSpacing=6） | 1 |
+| Components / 10 Staff / Navigation | `State=Selected` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 10 Staff / Navigation | `State=Selected` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 10 Staff / Navigation | `Sub Items` | の余白がスケール外です（paddingLeft=28） | 2 |
+| Components / 11 Staff / Orders | `Action Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 2 |
+| Components / 11 Staff / Orders | `Cancel Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 11 Staff / Orders | `Confirm Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 11 Staff / Orders | `Done Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 4 |
+| Components / 11 Staff / Orders | `Done Button` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 11 Staff / Orders | `Done Button` | の余白がスケール外です（paddingTop=10） | 1 |
+| Components / 11 Staff / Orders | `Header` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 11 Staff / Orders | `Item Row` | の余白がスケール外です（paddingBottom=10） | 2 |
+| Components / 11 Staff / Orders | `Item Row` | の余白がスケール外です（paddingTop=10） | 2 |
+| Components / 11 Staff / Orders | `Number Row` | の余白がスケール外です（itemSpacing=6） | 1 |
+| Components / 12 Staff / Lists & Rows | `Add Seat Chip` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 12 Staff / Lists & Rows | `Add Seat Chip` | の余白がスケール外です（paddingBottom=6） | 1 |
+| Components / 12 Staff / Lists & Rows | `Add Seat Chip` | の余白がスケール外です（paddingTop=6） | 1 |
+| Components / 12 Staff / Lists & Rows | `Best Seller Row` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 12 Staff / Lists & Rows | `Best Seller Row` | の余白がスケール外です（paddingTop=10） | 1 |
+| Components / 12 Staff / Lists & Rows | `Best Seller Row (Mobile)` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 12 Staff / Lists & Rows | `Best Seller Row (Mobile)` | の余白がスケール外です（paddingTop=10） | 1 |
+| Components / 12 Staff / Lists & Rows | `Category Head` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 12 Staff / Lists & Rows | `Delete Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| Components / 12 Staff / Lists & Rows | `Edit Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 2 |
+| Components / 12 Staff / Lists & Rows | `Order Badge` | の余白がスケール外です（paddingBottom=3） | 1 |
+| Components / 12 Staff / Lists & Rows | `Order Badge` | の余白がスケール外です（paddingTop=3） | 1 |
+| Components / 12 Staff / Lists & Rows | `Seat Chip` | の余白がスケール外です（paddingBottom=6） | 1 |
+| Components / 12 Staff / Lists & Rows | `Seat Chip` | の余白がスケール外です（paddingTop=6） | 1 |
+| Components / 12 Staff / Lists & Rows | `Seats` | の余白がスケール外です（paddingLeft=26） | 1 |
+| Components / 12 Staff / Lists & Rows | `Table Category Row` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 12 Staff / Lists & Rows | `Table Category Row` | の余白がスケール外です（paddingBottom=14） | 1 |
+| Components / 12 Staff / Lists & Rows | `Table Category Row` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `Input` | の余白がスケール外です（paddingBottom=10） | 2 |
+| Components / 13 Staff / Forms & Inputs | `Input` | の余白がスケール外です（paddingTop=10） | 2 |
+| Components / 13 Staff / Forms & Inputs | `Swatches` | の余白がスケール外です（counterAxisSpacing=10） | 1 |
+| Components / 13 Staff / Forms & Inputs | `Swatches` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 13 Staff / Forms & Inputs | `おすすめ` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `おすすめ` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `なし` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `なし` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `人気` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `人気` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `限定` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 13 Staff / Forms & Inputs | `限定` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 15 Staff / Tables & QR | `DL Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 15 Staff / Tables & QR | `DL Button` | の余白がスケール外です（itemSpacing=6） | 1 |
+| Components / 15 Staff / Tables & QR | `Info` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Components / 15 Staff / Tables & QR | `More Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 15 Staff / Tables & QR | `Print Card (91x55mm)` | の余白がスケール外です（paddingLeft=22） | 1 |
+| Components / 15 Staff / Tables & QR | `Print Card (91x55mm)` | の余白がスケール外です（paddingRight=22） | 1 |
+| Components / 15 Staff / Tables & QR | `QR Card` | の余白がスケール外です（paddingBottom=14） | 1 |
+| Components / 15 Staff / Tables & QR | `QR Card` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 15 Staff / Tables & QR | `Table Tag` | の余白がスケール外です（paddingBottom=5） | 1 |
+| Components / 15 Staff / Tables & QR | `Table Tag` | の余白がスケール外です（paddingTop=5） | 1 |
+| Components / 15 Staff / Tables & QR | `コピー Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Components / 15 Staff / Tables & QR | `コピー Button` | の余白がスケール外です（itemSpacing=6） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / お問い合わせ` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / お問い合わせ` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / お問い合わせ` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 実店舗検証` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 実店舗検証` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 実店舗検証` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 導入の流れ` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 導入の流れ` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 導入の流れ` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 機能` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 機能` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 機能` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 管理画面` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 管理画面` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 管理画面` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 課題` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 課題` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Item / 課題` | の余白がスケール外です（paddingTop=14） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Neutral` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Neutral` | の余白がスケール外です（paddingLeft=18） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Neutral` | の余白がスケール外です（paddingRight=18） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Neutral` | の余白がスケール外です（paddingTop=10） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Outline` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Outline` | の余白がスケール外です（paddingLeft=18） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Outline` | の余白がスケール外です（paddingRight=18） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Outline` | の余白がスケール外です（paddingTop=10） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Warm` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Warm` | の余白がスケール外です（paddingLeft=18） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Warm` | の余白がスケール外です（paddingRight=18） | 1 |
+| Components / 17 Website / Buttons & Tabs | `Variant=Warm` | の余白がスケール外です（paddingTop=10） | 1 |
+| Components / 18 Website / Overlay Parts | `Web / Annotation Label` | の余白がスケール外です（paddingBottom=6） | 1 |
+| Components / 18 Website / Overlay Parts | `Web / Annotation Label` | の余白がスケール外です（paddingLeft=10） | 1 |
+| Components / 18 Website / Overlay Parts | `Web / Annotation Label` | の余白がスケール外です（paddingRight=10） | 1 |
+| Components / 18 Website / Overlay Parts | `Web / Annotation Label` | の余白がスケール外です（paddingTop=6） | 1 |
+| Components / 18 Website / Overlay Parts | `Web / Sheet Grabber` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（itemSpacing=3） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（itemSpacing=6） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingBottom=13） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingBottom=5） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingBottom=6） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingLeft=11） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingLeft=14） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingRight=11） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingRight=14） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingTop=13） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingTop=5） | 1 |
+| Components / 19 Website / Cards & Blocks | `Frame` | の余白がスケール外です（paddingTop=6） | 1 |
+| Components / 19 Website / Cards & Blocks | `Web / Sticky CTA Bar (SP)` | の余白がスケール外です（paddingBottom=14） | 1 |
+| Components / 19 Website / Cards & Blocks | `Web / Sticky CTA Bar (SP)` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Frame` | の余白がスケール外です（paddingLeft=14） | 8 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Frame` | の余白がスケール外です（paddingRight=14） | 8 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Hour Header` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Hour Header` | の余白がスケール外です（paddingLeft=28） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Row 土` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Row 日` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Row 月` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Row 木` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Row 水` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Row 火` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Row 金` | の余白がスケール外です（itemSpacing=3） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / PC | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Admin Chip` | の高さが 38px です（SPのタップ領域は44px以上） | 8 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Bar Col` | の余白がスケール外です（itemSpacing=6） | 8 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Bars` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Category Breakdown Card` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Col` | の余白がスケール外です（itemSpacing=6） | 15 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Export Button` | の高さが 40px です（SPのタップ領域は44px以上） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Grid` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Header Row` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Item` | の余白がスケール外です（itemSpacing=6） | 2 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Row 土` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Row 日` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Row 月` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Row 木` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Row 水` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Row 火` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Row 金` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Secondary KPI Grid` | の余白がスケール外です（counterAxisSpacing=10） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Secondary KPI Grid` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Spend Histogram Card` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Stack` | の余白がスケール外です（itemSpacing=1） | 7 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tab` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tab` | の余白がスケール外です（paddingBottom=6） | 3 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tab` | の余白がスケール外です（paddingTop=6） | 3 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tab` | の高さが 30px です（SPのタップ領域は44px以上） | 3 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Tabs` | の高さが 30px です（SPのタップ領域は44px以上） | 1 |
+| MobileOrder / Dashboard / ダッシュボード / SP | `Value Row` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Add Form` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Add Form` | の余白がスケール外です（paddingBottom=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Add Form` | の余白がスケール外です（paddingLeft=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Add Form` | の余白がスケール外です（paddingRight=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Add Form` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Card / ベストセラー` | の余白がスケール外です（paddingTop=22） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Card / 二次元コード着地画面の背景` | の余白がスケール外です（paddingTop=22） | 3 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Card / 注文ホームのヒーロー動画` | の余白がスケール外です（paddingTop=22） | 3 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Card Head` | の余白がスケール外です（itemSpacing=10） | 7 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Color Picker` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Color Picker` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Field` | の余白がスケール外です（paddingRight=10） | 2 |
+| MobileOrder / Display Settings / 表示設定 / PC | `HEX Field` | の余白がスケール外です（paddingBottom=10） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `HEX Field` | の余白がスケール外です（paddingLeft=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `HEX Field` | の余白がスケール外です（paddingRight=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `HEX Field` | の余白がスケール外です（paddingTop=10） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `List Head` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Num` | の余白がスケール外です（paddingBottom=3） | 6 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Num` | の余白がスケール外です（paddingLeft=9） | 6 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Num` | の余白がスケール外です（paddingRight=9） | 6 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Num` | の余白がスケール外です（paddingTop=3） | 6 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Ref / 背景タイプ選択UI（採用：セグメント）` | の余白がスケール外です（paddingTop=36） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment` | の余白がスケール外です（paddingBottom=3） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment` | の余白がスケール外です（paddingLeft=3） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment` | の余白がスケール外です（paddingRight=3） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment` | の余白がスケール外です（paddingTop=3） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment / 動画` | の余白がスケール外です（paddingBottom=9） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment / 動画` | の余白がスケール外です（paddingTop=9） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment / 画像` | の余白がスケール外です（paddingBottom=9） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment / 画像` | の余白がスケール外です（paddingTop=9） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment / 色` | の余白がスケール外です（paddingBottom=9） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Segment / 色` | の余白がスケール外です（paddingTop=9） | 4 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Select / カテゴリ` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Select / 商品名` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Toggle Row` | の余白がスケール外です（paddingBottom=10） | 7 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Toggle Row` | の余白がスケール外です（paddingTop=10） | 7 |
+| MobileOrder / Display Settings / 表示設定 / PC | `Type Selector` | の余白がスケール外です（itemSpacing=6） | 3 |
+| MobileOrder / Display Settings / 表示設定 / PC | `案 案1　セグメント` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Add Form` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Add Form` | の余白がスケール外です（paddingBottom=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Add Form` | の余白がスケール外です（paddingLeft=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Add Form` | の余白がスケール外です（paddingRight=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Add Form` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Card / ベストセラー` | の余白がスケール外です（paddingTop=18） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Card / 二次元コード着地画面の背景` | の余白がスケール外です（paddingTop=18） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Card / 注文ホームのヒーロー動画` | の余白がスケール外です（paddingTop=18） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Content` | の余白がスケール外です（itemSpacing=14） | 4 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Field` | の余白がスケール外です（paddingRight=10） | 2 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Fields` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `HEX Field` | の余白がスケール外です（paddingBottom=9） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `HEX Field` | の余白がスケール外です（paddingTop=9） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `List Head` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Notes` | の余白がスケール外です（paddingTop=6） | 7 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Palette` | の余白がスケール外です（counterAxisSpacing=6） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Palette` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment` | の余白がスケール外です（paddingBottom=3） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment` | の余白がスケール外です（paddingLeft=3） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment` | の余白がスケール外です（paddingRight=3） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment` | の余白がスケール外です（paddingTop=3） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment / 動画` | の余白がスケール外です（paddingBottom=9） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment / 動画` | の余白がスケール外です（paddingTop=9） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment / 画像` | の余白がスケール外です（paddingBottom=9） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment / 画像` | の余白がスケール外です（paddingTop=9） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment / 色` | の余白がスケール外です（paddingBottom=9） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Segment / 色` | の余白がスケール外です（paddingTop=9） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Select / カテゴリ` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Select / 商品名` | の余白がスケール外です（itemSpacing=6） | 1 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Toggle Row` | の余白がスケール外です（paddingBottom=10） | 7 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Toggle Row` | の余白がスケール外です（paddingTop=10） | 7 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Type Selector` | の余白がスケール外です（itemSpacing=6） | 3 |
+| MobileOrder / Display Settings / 表示設定 / SP | `Type Selector` | の余白がスケール外です（paddingTop=10） | 3 |
+| MobileOrder / Menu Management / メニュー管理 / PC | `Actions` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / Menu Management / メニュー管理 / SP | `Admin Chip` | の高さが 38px です（SPのタップ領域は44px以上） | 6 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Actions` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Body` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Body` | の余白がスケール外です（paddingTop=18） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Content` | の余白がスケール外です（itemSpacing=28） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Group / A ・ カウンター席` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Group / B ・ テーブル席` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Group / C ・ ソファー席` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Group / テイクアウト` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Group Header` | の余白がスケール外です（itemSpacing=10） | 4 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Popover / コード選択 — PC` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Popover / コード選択 — PC` | の余白がスケール外です（paddingBottom=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Popover / コード選択 — PC` | の余白がスケール外です（paddingLeft=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Popover / コード選択 — PC` | の余白がスケール外です（paddingRight=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / PC | `Popover / コード選択 — PC` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Body` | の余白がスケール外です（itemSpacing=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Body` | の余白がスケール外です（paddingBottom=28） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Body` | の余白がスケール外です（paddingTop=18） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Bottom Print Bar` | の余白がスケール外です（paddingBottom=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Bottom Print Bar` | の余白がスケール外です（paddingTop=14） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Group / A ・ カウンター席` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Group / B ・ テーブル席` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Group / テイクアウト` | の余白がスケール外です（itemSpacing=10） | 1 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Handle` | の余白がスケール外です（paddingTop=10） | 2 |
+| MobileOrder / QR Management / 二次元コード管理 / SP | `Header` | の余白がスケール外です（paddingBottom=14） | 2 |
+| MobileOrder / Register / レジ / SP | `Table Chip` | の高さが 42px です（SPのタップ領域は44px以上） | 5 |
+| MobileOrder / 注文 / SP | `Order Item Row` | の余白がスケール外です（paddingBottom=10） | 5 |
+| MobileOrder / 注文 / SP | `Order Item Row` | の余白がスケール外です（paddingTop=10） | 5 |
+| MobileOrder / 注文 / SP | `Section Header` | の余白がスケール外です（itemSpacing=10） | 2 |
+| Website / 00 LP / メイン | `CTA` | の余白がスケール外です（paddingBottom=88） | 1 |
+| Website / 00 LP / メイン | `CTA Panel` | の余白がスケール外です（itemSpacing=18） | 1 |
+| Website / 00 LP / メイン | `CTA Panel` | の余白がスケール外です（paddingBottom=44） | 1 |
+| Website / 00 LP / メイン | `CTA Panel` | の余白がスケール外です（paddingLeft=28） | 1 |
+| Website / 00 LP / メイン | `CTA Panel` | の余白がスケール外です（paddingRight=28） | 1 |
+| Website / 00 LP / メイン | `CTA Panel` | の余白がスケール外です（paddingTop=52） | 1 |
+| Website / 00 LP / メイン | `Call Section` | の余白がスケール外です（paddingBottom=7.630769729614258） | 1 |
+| Website / 00 LP / メイン | `Call Section` | の余白がスケール外です（paddingTop=7.630769729614258） | 1 |
+| Website / 00 LP / メイン | `Call Strip` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / 00 LP / メイン | `Call Strip` | の余白がスケール外です（itemSpacing=7.630769729614258） | 1 |
+| Website / 00 LP / メイン | `Call Strip` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Call Strip` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Category Listing` | の余白がスケール外です（itemSpacing=9.743589401245117） | 1 |
+| Website / 00 LP / メイン | `Category Title` | の余白がスケール外です（itemSpacing=1.9487179517745972） | 1 |
+| Website / 00 LP / メイン | `Category Title` | の余白がスケール外です（paddingLeft=11.692307472229004） | 1 |
+| Website / 00 LP / メイン | `Category Title` | の余白がスケール外です（paddingRight=11.692307472229004） | 1 |
+| Website / 00 LP / メイン | `Category Title` | の余白がスケール外です（paddingTop=1.9487179517745972） | 1 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（itemSpacing=10.174359321594238） | 2 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（itemSpacing=12.307692527770996） | 2 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（itemSpacing=7.794871807098389） | 3 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（paddingLeft=10.174359321594238） | 2 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（paddingLeft=12.307692527770996） | 2 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（paddingLeft=7.794871807098389） | 3 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（paddingRight=10.174359321594238） | 2 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（paddingRight=12.307692527770996） | 2 |
+| Website / 00 LP / メイン | `Content` | の余白がスケール外です（paddingRight=7.794871807098389） | 3 |
+| Website / 00 LP / メイン | `Dots` | の余白がスケール外です（itemSpacing=7） | 1 |
+| Website / 00 LP / メイン | `Dots Wrap` | の余白がスケール外です（paddingTop=1.9487179517745972） | 9 |
+| Website / 00 LP / メイン | `Dots Wrap` | の余白がスケール外です（paddingTop=2.5435898303985596） | 6 |
+| Website / 00 LP / メイン | `Dots Wrap` | の余白がスケール外です（paddingTop=3.076923131942749） | 6 |
+| Website / 00 LP / メイン | `Drawer` | の余白がスケール外です（paddingBottom=28） | 1 |
+| Website / 00 LP / メイン | `Drawer` | の余白がスケール外です（paddingTop=14） | 1 |
+| Website / 00 LP / メイン | `Feature Card 01` | の余白がスケール外です（itemSpacing=14） | 1 |
+| Website / 00 LP / メイン | `Feature Card 02` | の余白がスケール外です（itemSpacing=14） | 1 |
+| Website / 00 LP / メイン | `Feature Card 03` | の余白がスケール外です（itemSpacing=14） | 1 |
+| Website / 00 LP / メイン | `Float / Cart Toast` | の余白がスケール外です（paddingBottom=9） | 1 |
+| Website / 00 LP / メイン | `Float / Cart Toast` | の余白がスケール外です（paddingRight=14） | 1 |
+| Website / 00 LP / メイン | `Float / Cart Toast` | の余白がスケール外です（paddingTop=9） | 1 |
+| Website / 00 LP / メイン | `Float / Recommend` | の余白がスケール外です（paddingBottom=9） | 1 |
+| Website / 00 LP / メイン | `Float / Recommend` | の余白がスケール外です（paddingRight=14） | 1 |
+| Website / 00 LP / メイン | `Float / Recommend` | の余白がスケール外です（paddingTop=9） | 1 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（itemSpacing=10） | 2 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（itemSpacing=7） | 3 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingBottom=10） | 1 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingBottom=13） | 3 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingBottom=18） | 4 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingBottom=7） | 3 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingBottom=9） | 2 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingLeft=14） | 6 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingRight=14） | 6 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingTop=13） | 3 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingTop=18） | 4 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingTop=7） | 3 |
+| Website / 00 LP / メイン | `Frame` | の余白がスケール外です（paddingTop=9） | 2 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（itemSpacing=1.9487179517745972） | 12 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（itemSpacing=2.5435898303985596） | 8 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（itemSpacing=3.076923131942749） | 8 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（paddingLeft=10.174359321594238） | 8 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（paddingLeft=12.307692527770996） | 8 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（paddingLeft=7.794871807098389） | 12 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（paddingRight=10.174359321594238） | 8 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（paddingRight=12.307692527770996） | 8 |
+| Website / 00 LP / メイン | `Frame 1` | の余白がスケール外です（paddingRight=7.794871807098389） | 12 |
+| Website / 00 LP / メイン | `Frame 3` | の余白がスケール外です（itemSpacing=1.9487179517745972） | 2 |
+| Website / 00 LP / メイン | `Frame 3` | の余白がスケール外です（itemSpacing=3.076923131942749） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（itemSpacing=7.794871807098389） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（paddingBottom=46.769229888916016） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（paddingLeft=7.794871807098389） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（paddingRight=7.794871807098389） | 1 |
+| Website / 00 LP / メイン | `Grid` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / 00 LP / メイン | `Half Modal / 先行導入の相談` | の余白がスケール外です（itemSpacing=14） | 1 |
+| Website / 00 LP / メイン | `Header` | の余白がスケール外です（itemSpacing=3.8974359035491943） | 2 |
+| Website / 00 LP / メイン | `Header` | の余白がスケール外です（itemSpacing=6.153846263885498） | 1 |
+| Website / 00 LP / メイン | `Hero` | の余白がスケール外です（paddingBottom=56） | 1 |
+| Website / 00 LP / メイン | `Hero` | の余白がスケール外です（paddingTop=36） | 1 |
+| Website / 00 LP / メイン | `Intro` | の余白がスケール外です（itemSpacing=5.846153736114502） | 2 |
+| Website / 00 LP / メイン | `Intro` | の余白がスケール外です（itemSpacing=9.230769157409668） | 1 |
+| Website / 00 LP / メイン | `Intro` | の余白がスケール外です（paddingLeft=12.307692527770996） | 1 |
+| Website / 00 LP / メイン | `Intro` | の余白がスケール外です（paddingLeft=7.794871807098389） | 2 |
+| Website / 00 LP / メイン | `Intro` | の余白がスケール外です（paddingRight=12.307692527770996） | 1 |
+| Website / 00 LP / メイン | `Intro` | の余白がスケール外です（paddingRight=7.794871807098389） | 2 |
+| Website / 00 LP / メイン | `Item / 管理画面` | の余白がスケール外です（paddingBottom=18） | 1 |
+| Website / 00 LP / メイン | `Item / 管理画面` | の余白がスケール外です（paddingTop=18） | 1 |
+| Website / 00 LP / メイン | `Lane` | の余白がスケール外です（itemSpacing=14） | 1 |
+| Website / 00 LP / メイン | `Left` | の余白がスケール外です（itemSpacing=7.630769729614258） | 1 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（itemSpacing=5.846153736114502） | 9 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（itemSpacing=7.630769729614258） | 6 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（itemSpacing=9.230769157409668） | 6 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（paddingLeft=10.174359321594238） | 6 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（paddingLeft=12.307692527770996） | 6 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（paddingLeft=7.794871807098389） | 9 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（paddingRight=10.174359321594238） | 6 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（paddingRight=12.307692527770996） | 6 |
+| Website / 00 LP / メイン | `Menu Carousel` | の余白がスケール外です（paddingRight=7.794871807098389） | 9 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（itemSpacing=10.174359321594238） | 6 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（itemSpacing=12.307692527770996） | 6 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（itemSpacing=7.794871807098389） | 9 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（paddingBottom=19.487178802490234） | 9 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（paddingBottom=25.435897827148438） | 6 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（paddingBottom=30.76923179626465） | 6 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（paddingTop=19.487178802490234） | 9 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（paddingTop=25.435897827148438） | 6 |
+| Website / 00 LP / メイン | `Menu Section` | の余白がスケール外です（paddingTop=30.76923179626465） | 6 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（itemSpacing=10.174359321594238） | 2 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（itemSpacing=12.307692527770996） | 2 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（itemSpacing=7.794871807098389） | 3 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（paddingBottom=19.487178802490234） | 3 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（paddingBottom=25.435897827148438） | 2 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（paddingBottom=30.76923179626465） | 2 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（paddingTop=19.487178802490234） | 3 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（paddingTop=25.435897827148438） | 2 |
+| Website / 00 LP / メイン | `Menu Section Wide` | の余白がスケール外です（paddingTop=30.76923179626465） | 2 |
+| Website / 00 LP / メイン | `Order List` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Order List` | の余白がスケール外です（paddingBottom=25.435897827148438） | 1 |
+| Website / 00 LP / メイン | `Order List` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Order List` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Order List` | の余白がスケール外です（paddingTop=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Product Detail` | の余白がスケール外です（itemSpacing=19.487178802490234） | 2 |
+| Website / 00 LP / メイン | `Product Detail` | の余白がスケール外です（itemSpacing=30.76923179626465） | 1 |
+| Website / 00 LP / メイン | `Recommended` | の余白がスケール外です（itemSpacing=15.384615898132324） | 1 |
+| Website / 00 LP / メイン | `Recommended` | の余白がスケール外です（itemSpacing=9.743589401245117） | 2 |
+| Website / 00 LP / メイン | `Recommended` | の余白がスケール外です（paddingBottom=38.97435760498047） | 2 |
+| Website / 00 LP / メイン | `Recommended` | の余白がスケール外です（paddingBottom=61.5384635925293） | 1 |
+| Website / 00 LP / メイン | `Recommended` | の余白がスケール外です（paddingTop=19.487178802490234） | 2 |
+| Website / 00 LP / メイン | `Recommended` | の余白がスケール外です（paddingTop=30.76923179626465） | 1 |
+| Website / 00 LP / メイン | `Row` | の余白がスケール外です（itemSpacing=7.794871807098389） | 3 |
+| Website / 00 LP / メイン | `Solution` | の余白がスケール外です（itemSpacing=36） | 1 |
+| Website / 00 LP / メイン | `Solution` | の余白がスケール外です（paddingTop=88） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingBottom=14.644067764282227） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingBottom=7.630769729614258） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / 00 LP / メイン | `Top Bar` | の余白がスケール外です（paddingTop=7.630769729614258） | 1 |
+| Website / PC States / 01 Problem Modals | `Compare` | の余白がスケール外です（itemSpacing=31.535619735717773） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（itemSpacing=10.511873245239258） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（itemSpacing=12.2638521194458） | 4 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（itemSpacing=14） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（itemSpacing=5.255936622619629） | 2 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（itemSpacing=7） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（itemSpacing=8.759894371032715） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingBottom=10.511873245239258） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingBottom=10） | 3 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingBottom=11） | 3 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingBottom=12.2638521194458） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingBottom=17.51978874206543） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingBottom=7） | 2 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingLeft=12.2638521194458） | 2 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingLeft=14） | 2 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingLeft=17.51978874206543） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingLeft=18） | 3 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingRight=12.2638521194458） | 2 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingRight=14） | 2 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingRight=17.51978874206543） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingRight=18） | 3 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingTop=10.511873245239258） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingTop=10） | 3 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingTop=11） | 3 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingTop=12.2638521194458） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingTop=17.51978874206543） | 1 |
+| Website / PC States / 01 Problem Modals | `Frame` | の余白がスケール外です（paddingTop=7） | 2 |
+| Website / PC States / 01 Problem Modals | `Mobile Order` | の余白がスケール外です（itemSpacing=19.271766662597656） | 1 |
+| Website / PC States / 01 Problem Modals | `Mobile Order` | の余白がスケール外です（paddingBottom=28.031661987304688） | 1 |
+| Website / PC States / 01 Problem Modals | `Mobile Order` | の余白がスケール外です（paddingLeft=35.03957748413086） | 1 |
+| Website / PC States / 01 Problem Modals | `Mobile Order` | の余白がスケール外です（paddingRight=35.03957748413086） | 1 |
+| Website / PC States / 01 Problem Modals | `Mobile Order` | の余白がスケール外です（paddingTop=31.535619735717773） | 1 |
+| Website / PC States / 01 Problem Modals | `Paper Menu` | の余白がスケール外です（itemSpacing=19.271766662597656） | 1 |
+| Website / PC States / 01 Problem Modals | `Paper Menu` | の余白がスケール外です（paddingBottom=28.031661987304688） | 1 |
+| Website / PC States / 01 Problem Modals | `Paper Menu` | の余白がスケール外です（paddingLeft=35.03957748413086） | 1 |
+| Website / PC States / 01 Problem Modals | `Paper Menu` | の余白がスケール外です（paddingRight=35.03957748413086） | 1 |
+| Website / PC States / 01 Problem Modals | `Paper Menu` | の余白がスケール外です（paddingTop=31.535619735717773） | 1 |
+| Website / PC States / 02 Feature Switch | `Button Row` | の余白がスケール外です（itemSpacing=12.307692527770996） | 2 |
+| Website / PC States / 02 Feature Switch | `Content` | の余白がスケール外です（itemSpacing=12.307692527770996） | 4 |
+| Website / PC States / 02 Feature Switch | `Content` | の余白がスケール外です（itemSpacing=18.461538314819336） | 1 |
+| Website / PC States / 02 Feature Switch | `Content` | の余白がスケール外です（paddingBottom=61.5384635925293） | 1 |
+| Website / PC States / 02 Feature Switch | `Content` | の余白がスケール外です（paddingLeft=12.307692527770996） | 5 |
+| Website / PC States / 02 Feature Switch | `Content` | の余白がスケール外です（paddingRight=12.307692527770996） | 5 |
+| Website / PC States / 02 Feature Switch | `DRINK CATEGORY` | の余白がスケール外です（itemSpacing=6.153846263885498） | 1 |
+| Website / PC States / 02 Feature Switch | `Dots Wrap` | の余白がスケール外です（paddingTop=3.076923131942749） | 12 |
+| Website / PC States / 02 Feature Switch | `FOOD CATEGORY` | の余白がスケール外です（itemSpacing=6.153846263885498） | 1 |
+| Website / PC States / 02 Feature Switch | `Frame 1` | の余白がスケール外です（itemSpacing=3.076923131942749） | 16 |
+| Website / PC States / 02 Feature Switch | `Frame 1` | の余白がスケール外です（paddingLeft=12.307692527770996） | 16 |
+| Website / PC States / 02 Feature Switch | `Frame 1` | の余白がスケール外です（paddingRight=12.307692527770996） | 16 |
+| Website / PC States / 02 Feature Switch | `Frame 3` | の余白がスケール外です（itemSpacing=3.076923131942749） | 2 |
+| Website / PC States / 02 Feature Switch | `Header` | の余白がスケール外です（itemSpacing=6.153846263885498） | 2 |
+| Website / PC States / 02 Feature Switch | `Intro` | の余白がスケール外です（itemSpacing=9.230769157409668） | 2 |
+| Website / PC States / 02 Feature Switch | `Intro` | の余白がスケール外です（paddingLeft=12.307692527770996） | 2 |
+| Website / PC States / 02 Feature Switch | `Intro` | の余白がスケール外です（paddingRight=12.307692527770996） | 2 |
+| Website / PC States / 02 Feature Switch | `Links` | の余白がスケール外です（itemSpacing=12.307692527770996） | 1 |
+| Website / PC States / 02 Feature Switch | `Menu` | の余白がスケール外です（itemSpacing=12.307692527770996） | 1 |
+| Website / PC States / 02 Feature Switch | `Menu Carousel` | の余白がスケール外です（itemSpacing=9.230769157409668） | 12 |
+| Website / PC States / 02 Feature Switch | `Menu Carousel` | の余白がスケール外です（paddingLeft=12.307692527770996） | 12 |
+| Website / PC States / 02 Feature Switch | `Menu Carousel` | の余白がスケール外です（paddingRight=12.307692527770996） | 12 |
+| Website / PC States / 02 Feature Switch | `Menu Section` | の余白がスケール外です（itemSpacing=12.307692527770996） | 12 |
+| Website / PC States / 02 Feature Switch | `Menu Section` | の余白がスケール外です（paddingBottom=30.76923179626465） | 12 |
+| Website / PC States / 02 Feature Switch | `Menu Section` | の余白がスケール外です（paddingTop=30.76923179626465） | 12 |
+| Website / PC States / 02 Feature Switch | `Menu Section Wide` | の余白がスケール外です（itemSpacing=12.307692527770996） | 4 |
+| Website / PC States / 02 Feature Switch | `Menu Section Wide` | の余白がスケール外です（paddingBottom=30.76923179626465） | 4 |
+| Website / PC States / 02 Feature Switch | `Menu Section Wide` | の余白がスケール外です（paddingTop=30.76923179626465） | 4 |
+| Website / PC States / 02 Feature Switch | `Product Detail` | の余白がスケール外です（itemSpacing=30.76923179626465） | 2 |
+| Website / PC States / 02 Feature Switch | `Recommended` | の余白がスケール外です（itemSpacing=15.384615898132324） | 2 |
+| Website / PC States / 02 Feature Switch | `Recommended` | の余白がスケール外です（paddingBottom=61.5384635925293） | 1 |
+| Website / PC States / 02 Feature Switch | `Recommended` | の余白がスケール外です（paddingBottom=61.540000915527344） | 1 |
+| Website / PC States / 02 Feature Switch | `Recommended` | の余白がスケール外です（paddingTop=30.76923179626465） | 1 |
+| Website / PC States / 02 Feature Switch | `Row` | の余白がスケール外です（itemSpacing=6.153846263885498） | 5 |
+| Website / PC States / 02 Feature Switch | `Section Header` | の余白がスケール外です（itemSpacing=7.692307949066162） | 2 |
+| Website / PC States / 03 Staff Screens | `Actions` | の余白がスケール外です（itemSpacing=9.152542114257812） | 2 |
+| Website / PC States / 03 Staff Screens | `Add Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Add Button` | の余白がスケール外です（paddingBottom=9.152542114257812） | 1 |
+| Website / PC States / 03 Staff Screens | `Add Button` | の余白がスケール外です（paddingLeft=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Add Button` | の余白がスケール外です（paddingRight=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Add Button` | の余白がスケール外です（paddingTop=9.152542114257812） | 1 |
+| Website / PC States / 03 Staff Screens | `Add Table Card` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Bars List` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Best Seller Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Best Seller Settings Button` | の余白がスケール外です（itemSpacing=5.491525650024414） | 1 |
+| Website / PC States / 03 Staff Screens | `Best Seller Settings Button` | の余白がスケール外です（paddingBottom=8.237288475036621） | 1 |
+| Website / PC States / 03 Staff Screens | `Best Seller Settings Button` | の余白がスケール外です（paddingLeft=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Best Seller Settings Button` | の余白がスケール外です（paddingRight=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Best Seller Settings Button` | の余白がスケール外です（paddingTop=8.237288475036621） | 1 |
+| Website / PC States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（itemSpacing=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingBottom=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingTop=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Body` | の余白がスケール外です（itemSpacing=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Body` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Body` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Body` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Body` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Bottom Row` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Bottom Row 2` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Bottom Row 3` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `CSV Export Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `CSV Export Button` | の余白がスケール外です（paddingBottom=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `CSV Export Button` | の余白がスケール外です（paddingLeft=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `CSV Export Button` | の余白がスケール外です（paddingRight=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `CSV Export Button` | の余白がスケール外です（paddingTop=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Call Strip` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Card` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Category Settings Button` | の余白がスケール外です（paddingBottom=8.237288475036621） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Settings Button` | の余白がスケール外です（paddingLeft=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Settings Button` | の余白がスケール外です（paddingRight=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Category Settings Button` | の余白がスケール外です（paddingTop=8.237288475036621） | 1 |
+| Website / PC States / 03 Staff Screens | `Chart Card` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Chart Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Chart Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Chart Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Chart Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Checkout Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Checkout Button` | の余白がスケール外です（paddingBottom=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Checkout Button` | の余白がスケール外です（paddingTop=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（itemSpacing=25.627119064331055） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingBottom=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingBottom=29.288135528564453） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingLeft=29.288135528564453） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingRight=29.288135528564453） | 1 |
+| Website / PC States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingTop=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（paddingBottom=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（paddingTop=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Footer` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Footer` | の余白がスケール外です（paddingBottom=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Footer` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Footer` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Footer` | の余白がスケール外です（paddingTop=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（itemSpacing=3.6610169410705566） | 22 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（itemSpacing=7.322033882141113） | 39 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingBottom=10.983051300048828） | 2 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingBottom=3.6610169410705566） | 3 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingBottom=7.322033882141113） | 8 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingLeft=10.983051300048828） | 3 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingLeft=12.813559532165527） | 8 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingRight=10.983051300048828） | 3 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingRight=12.813559532165527） | 8 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingTop=10.983051300048828） | 2 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingTop=3.6610169410705566） | 3 |
+| Website / PC States / 03 Staff Screens | `Frame` | の余白がスケール外です（paddingTop=7.322033882141113） | 8 |
+| Website / PC States / 03 Staff Screens | `Grid` | の余白がスケール外です（itemSpacing=14.644067764282227） | 5 |
+| Website / PC States / 03 Staff Screens | `Grid` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Grid` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Grid` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Grid` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Group` | の余白がスケール外です（itemSpacing=7.322033882141113） | 2 |
+| Website / PC States / 03 Staff Screens | `Group / A ・ カウンター席` | の余白がスケール外です（itemSpacing=12.813559532165527） | 1 |
+| Website / PC States / 03 Staff Screens | `Group / B ・ テーブル席` | の余白がスケール外です（itemSpacing=12.813559532165527） | 1 |
+| Website / PC States / 03 Staff Screens | `Group / C ・ ソファー席` | の余白がスケール外です（itemSpacing=12.813559532165527） | 1 |
+| Website / PC States / 03 Staff Screens | `Group / テイクアウト` | の余白がスケール外です（itemSpacing=12.813559532165527） | 1 |
+| Website / PC States / 03 Staff Screens | `Group Header` | の余白がスケール外です（itemSpacing=9.152542114257812） | 4 |
+| Website / PC States / 03 Staff Screens | `Header` | の余白がスケール外です（paddingBottom=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Header` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Header` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Header` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Heatmap Card` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Heatmap Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Heatmap Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Heatmap Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Heatmap Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingBottom=3.6610169410705566） | 1 |
+| Website / PC States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingTop=3.6610169410705566） | 1 |
+| Website / PC States / 03 Staff Screens | `Histogram Card` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Histogram Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Histogram Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Histogram Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Histogram Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Hour Header` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Hour Header` | の余白がスケール外です（paddingLeft=25.627119064331055） | 1 |
+| Website / PC States / 03 Staff Screens | `KPI Row` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Legend` | の余白がスケール外です（itemSpacing=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Legend` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `List Scroll` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `List Scroll` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `List Scroll` | の余白がスケール外です（paddingTop=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Preview Wrap` | の余白がスケール外です（paddingBottom=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Preview Wrap` | の余白がスケール外です（paddingTop=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Print Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Print Button` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Print Button` | の余白がスケール外です（paddingBottom=9.152542114257812） | 1 |
+| Website / PC States / 03 Staff Screens | `Print Button` | の余白がスケール外です（paddingLeft=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Print Button` | の余白がスケール外です（paddingRight=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Print Button` | の余白がスケール外です（paddingTop=9.152542114257812） | 1 |
+| Website / PC States / 03 Staff Screens | `Ranking Card` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Ranking Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Ranking Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Ranking Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Ranking Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Row 土` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Row 日` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Row 月` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Row 木` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Row 水` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Row 火` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Row 金` | の余白がスケール外です（itemSpacing=2.745762825012207） | 1 |
+| Website / PC States / 03 Staff Screens | `Rows` | の余白がスケール外です（itemSpacing=1.8305084705352783） | 2 |
+| Website / PC States / 03 Staff Screens | `Scroll Area` | の余白がスケール外です（itemSpacing=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Scroll Area` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Scroll Area` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Scroll Area` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Scroll Area` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Sub Bar` | の余白がスケール外です（paddingBottom=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Sub Bar` | の余白がスケール外です（paddingLeft=29.288135528564453） | 1 |
+| Website / PC States / 03 Staff Screens | `Sub Bar` | の余白がスケール外です（paddingRight=29.288135528564453） | 1 |
+| Website / PC States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingBottom=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingLeft=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingRight=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingTop=14.644067764282227） | 1 |
+| Website / PC States / 03 Staff Screens | `Table Bars` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Table Chip Strip` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / PC States / 03 Staff Screens | `Tabs` | の余白がスケール外です（itemSpacing=7.322033882141113） | 1 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（itemSpacing=10.983051300048828） | 3 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingBottom=14.644067764282227） | 5 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingLeft=21.966102600097656） | 4 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingLeft=29.288135528564453） | 1 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingRight=21.966102600097656） | 4 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingRight=29.288135528564453） | 1 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingTop=18.305084228515625） | 4 |
+| Website / PC States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingTop=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Top10 Card` | の余白がスケール外です（itemSpacing=10.983051300048828） | 1 |
+| Website / PC States / 03 Staff Screens | `Top10 Card` | の余白がスケール外です（paddingBottom=18.305084228515625） | 1 |
+| Website / PC States / 03 Staff Screens | `Top10 Card` | の余白がスケール外です（paddingLeft=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Top10 Card` | の余白がスケール外です（paddingRight=21.966102600097656） | 1 |
+| Website / PC States / 03 Staff Screens | `Top10 Card` | の余白がスケール外です（paddingTop=18.305084228515625） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（counterAxisSpacing=10） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（itemSpacing=10） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（itemSpacing=11.324502944946289） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（itemSpacing=13.15384578704834） | 4 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（itemSpacing=13.589404106140137） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（itemSpacing=5.637362480163574） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（itemSpacing=6.794702053070068） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（itemSpacing=9.059602737426758） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingBottom=13.589404106140137） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingBottom=15.854305267333984） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingBottom=18.791208267211914） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingBottom=6） | 4 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingBottom=9） | 3 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingLeft=14） | 3 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingLeft=15.854305267333984） | 2 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingLeft=18.791208267211914） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingRight=14） | 3 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingRight=15.854305267333984） | 2 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingRight=18.791208267211914） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingTop=13.589404106140137） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingTop=15.854305267333984） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingTop=18.791208267211914） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingTop=6） | 2 |
+| Website / SP States / 01 Problem Half Modals | `Frame` | の余白がスケール外です（paddingTop=9） | 3 |
+| Website / SP States / 01 Problem Half Modals | `Mobile Order` | の余白がスケール外です（itemSpacing=24.913908004760742） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Mobile Order` | の余白がスケール外です（paddingBottom=36.23841094970703） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Mobile Order` | の余白がスケール外です（paddingLeft=45.298011779785156） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Mobile Order` | の余白がスケール外です（paddingRight=45.298011779785156） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Mobile Order` | の余白がスケール外です（paddingTop=40.768211364746094） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Paper Menu` | の余白がスケール外です（itemSpacing=20.670330047607422） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Paper Menu` | の余白がスケール外です（paddingBottom=30.065933227539062） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Paper Menu` | の余白がスケール外です（paddingLeft=37.58241653442383） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Paper Menu` | の余白がスケール外です（paddingRight=37.58241653442383） | 1 |
+| Website / SP States / 01 Problem Half Modals | `Paper Menu` | の余白がスケール外です（paddingTop=33.82417297363281） | 1 |
+| Website / SP States / 02 Feature Switch | `Button Row` | の余白がスケール外です（itemSpacing=7.794871807098389） | 2 |
+| Website / SP States / 02 Feature Switch | `Content` | の余白がスケール外です（itemSpacing=11.692307472229004） | 1 |
+| Website / SP States / 02 Feature Switch | `Content` | の余白がスケール外です（itemSpacing=7.794871807098389） | 4 |
+| Website / SP States / 02 Feature Switch | `Content` | の余白がスケール外です（paddingBottom=38.97435760498047） | 1 |
+| Website / SP States / 02 Feature Switch | `Content` | の余白がスケール外です（paddingLeft=7.794871807098389） | 5 |
+| Website / SP States / 02 Feature Switch | `Content` | の余白がスケール外です（paddingRight=7.794871807098389） | 5 |
+| Website / SP States / 02 Feature Switch | `DRINK CATEGORY` | の余白がスケール外です（itemSpacing=3.8974359035491943） | 1 |
+| Website / SP States / 02 Feature Switch | `Dots Wrap` | の余白がスケール外です（paddingTop=1.9487179517745972） | 12 |
+| Website / SP States / 02 Feature Switch | `FOOD CATEGORY` | の余白がスケール外です（itemSpacing=3.8974359035491943） | 1 |
+| Website / SP States / 02 Feature Switch | `Frame 1` | の余白がスケール外です（itemSpacing=1.9487179517745972） | 16 |
+| Website / SP States / 02 Feature Switch | `Frame 1` | の余白がスケール外です（paddingLeft=7.794871807098389） | 16 |
+| Website / SP States / 02 Feature Switch | `Frame 1` | の余白がスケール外です（paddingRight=7.794871807098389） | 16 |
+| Website / SP States / 02 Feature Switch | `Frame 3` | の余白がスケール外です（itemSpacing=1.9487179517745972） | 2 |
+| Website / SP States / 02 Feature Switch | `Header` | の余白がスケール外です（itemSpacing=3.8974359035491943） | 2 |
+| Website / SP States / 02 Feature Switch | `Intro` | の余白がスケール外です（itemSpacing=5.846153736114502） | 2 |
+| Website / SP States / 02 Feature Switch | `Intro` | の余白がスケール外です（paddingLeft=7.794871807098389） | 2 |
+| Website / SP States / 02 Feature Switch | `Intro` | の余白がスケール外です（paddingRight=7.794871807098389） | 2 |
+| Website / SP States / 02 Feature Switch | `Links` | の余白がスケール外です（itemSpacing=7.794871807098389） | 1 |
+| Website / SP States / 02 Feature Switch | `Menu` | の余白がスケール外です（itemSpacing=7.794871807098389） | 1 |
+| Website / SP States / 02 Feature Switch | `Menu Carousel` | の余白がスケール外です（itemSpacing=5.846153736114502） | 12 |
+| Website / SP States / 02 Feature Switch | `Menu Carousel` | の余白がスケール外です（paddingLeft=7.794871807098389） | 12 |
+| Website / SP States / 02 Feature Switch | `Menu Carousel` | の余白がスケール外です（paddingRight=7.794871807098389） | 12 |
+| Website / SP States / 02 Feature Switch | `Menu Section` | の余白がスケール外です（itemSpacing=7.794871807098389） | 12 |
+| Website / SP States / 02 Feature Switch | `Menu Section` | の余白がスケール外です（paddingBottom=19.487178802490234） | 12 |
+| Website / SP States / 02 Feature Switch | `Menu Section` | の余白がスケール外です（paddingTop=19.487178802490234） | 12 |
+| Website / SP States / 02 Feature Switch | `Menu Section Wide` | の余白がスケール外です（itemSpacing=7.794871807098389） | 4 |
+| Website / SP States / 02 Feature Switch | `Menu Section Wide` | の余白がスケール外です（paddingBottom=19.487178802490234） | 4 |
+| Website / SP States / 02 Feature Switch | `Menu Section Wide` | の余白がスケール外です（paddingTop=19.487178802490234） | 4 |
+| Website / SP States / 02 Feature Switch | `Product Detail` | の余白がスケール外です（itemSpacing=19.487178802490234） | 2 |
+| Website / SP States / 02 Feature Switch | `Recommended` | の余白がスケール外です（itemSpacing=9.743589401245117） | 2 |
+| Website / SP States / 02 Feature Switch | `Recommended` | の余白がスケール外です（paddingBottom=38.97435760498047） | 2 |
+| Website / SP States / 02 Feature Switch | `Recommended` | の余白がスケール外です（paddingTop=19.487178802490234） | 2 |
+| Website / SP States / 02 Feature Switch | `Row` | の余白がスケール外です（itemSpacing=3.8974359035491943） | 5 |
+| Website / SP States / 02 Feature Switch | `Section Header` | の余白がスケール外です（itemSpacing=4.871794700622559） | 2 |
+| Website / SP States / 03 Staff Screens | `Actions` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Add Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Add Table Card` | の余白がスケール外です（itemSpacing=2.5435898303985596） | 1 |
+| Website / SP States / 03 Staff Screens | `Bar Col` | の余白がスケール外です（itemSpacing=3.815384864807129） | 8 |
+| Website / SP States / 03 Staff Screens | `Bars` | の余白がスケール外です（itemSpacing=6.358974456787109） | 1 |
+| Website / SP States / 03 Staff Screens | `Best Seller Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Bill Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Bottom Print Bar` | の余白がスケール外です（paddingBottom=8.90256404876709） | 1 |
+| Website / SP States / 03 Staff Screens | `Bottom Print Bar` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Bottom Print Bar` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Bottom Print Bar` | の余白がスケール外です（paddingTop=8.90256404876709） | 1 |
+| Website / SP States / 03 Staff Screens | `Call Section` | の余白がスケール外です（paddingBottom=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Call Section` | の余白がスケール外です（paddingTop=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Call Strip` | の余白がスケール外です（itemSpacing=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Call Strip` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Call Strip` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Cards` | の余白がスケール外です（itemSpacing=7.630769729614258） | 3 |
+| Website / SP States / 03 Staff Screens | `Category Breakdown Card` | の余白がスケール外です（itemSpacing=8.90256404876709） | 1 |
+| Website / SP States / 03 Staff Screens | `Category Breakdown Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Category Breakdown Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Category Breakdown Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Category Breakdown Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Checkout Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Checkout Button` | の余白がスケール外です（paddingBottom=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Checkout Button` | の余白がスケール外です（paddingTop=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Col` | の余白がスケール外です（itemSpacing=2.5435898303985596） | 12 |
+| Website / SP States / 03 Staff Screens | `Col` | の余白がスケール外です（itemSpacing=3.815384864807129） | 15 |
+| Website / SP States / 03 Staff Screens | `Compare Row` | の余白がスケール外です（itemSpacing=2.5435898303985596） | 3 |
+| Website / SP States / 03 Staff Screens | `Content` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Content` | の余白がスケール外です（itemSpacing=15.261539459228516） | 1 |
+| Website / SP States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingBottom=25.435897827148438） | 1 |
+| Website / SP States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingLeft=10.174359321594238） | 2 |
+| Website / SP States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingRight=10.174359321594238） | 2 |
+| Website / SP States / 03 Staff Screens | `Content` | の余白がスケール外です（paddingTop=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Dine-in vs Takeout Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Export Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（paddingBottom=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Filter Row` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Grid` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Group` | の余白がスケール外です（itemSpacing=5.087179660797119） | 2 |
+| Website / SP States / 03 Staff Screens | `Group / A ・ カウンター席` | の余白がスケール外です（itemSpacing=6.358974456787109） | 1 |
+| Website / SP States / 03 Staff Screens | `Group / B ・ テーブル席` | の余白がスケール外です（itemSpacing=6.358974456787109） | 1 |
+| Website / SP States / 03 Staff Screens | `Group / テイクアウト` | の余白がスケール外です（itemSpacing=6.358974456787109） | 1 |
+| Website / SP States / 03 Staff Screens | `Group Header` | の余白がスケール外です（itemSpacing=5.087179660797119） | 3 |
+| Website / SP States / 03 Staff Screens | `Header Row` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Hero KPI Card` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Hero KPI Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Hero KPI Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Hero KPI Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Hero KPI Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingBottom=7.630769729614258） | 2 |
+| Website / SP States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingLeft=10.174359321594238） | 2 |
+| Website / SP States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingRight=10.174359321594238） | 2 |
+| Website / SP States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Hint Wrap` | の余白がスケール外です（paddingTop=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Item` | の余白がスケール外です（itemSpacing=3.815384864807129） | 2 |
+| Website / SP States / 03 Staff Screens | `Left` | の余白がスケール外です（itemSpacing=5.087179660797119） | 5 |
+| Website / SP States / 03 Staff Screens | `Left` | の余白がスケール外です（itemSpacing=7.630769729614258） | 5 |
+| Website / SP States / 03 Staff Screens | `Legend` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Legend` | の余白がスケール外です（itemSpacing=2.5435898303985596） | 1 |
+| Website / SP States / 03 Staff Screens | `List` | の余白がスケール外です（itemSpacing=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `List` | の余白がスケール外です（paddingBottom=15.261539459228516） | 1 |
+| Website / SP States / 03 Staff Screens | `List` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `List` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `List Scroll` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `List Scroll` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `List Scroll` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `List Scroll` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Order List` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Order List` | の余白がスケール外です（paddingBottom=25.435897827148438） | 1 |
+| Website / SP States / 03 Staff Screens | `Order List` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Order List` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Order List` | の余白がスケール外です（paddingTop=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Page Content` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Page Content` | の余白がスケール外です（paddingBottom=20.348718643188477） | 1 |
+| Website / SP States / 03 Staff Screens | `Page Content` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Page Content` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Page Content` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Peak Time Heatmap Card` | の余白がスケール外です（itemSpacing=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Peak Time Heatmap Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Peak Time Heatmap Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Peak Time Heatmap Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Peak Time Heatmap Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Period Selector` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Period Selector` | の余白がスケール外です（paddingBottom=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Period Selector` | の余白がスケール外です（paddingLeft=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Period Selector` | の余白がスケール外です（paddingRight=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Period Selector` | の余白がスケール外です（paddingTop=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Popular Menu Card` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Popular Menu Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Popular Menu Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Popular Menu Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Popular Menu Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Print Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Rank Row` | の余白がスケール外です（itemSpacing=2.5435898303985596） | 5 |
+| Website / SP States / 03 Staff Screens | `Row 土` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Row 日` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Row 月` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Row 木` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Row 水` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Row 火` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Row 金` | の余白がスケール外です（itemSpacing=3.815384864807129） | 1 |
+| Website / SP States / 03 Staff Screens | `Rows` | の余白がスケール外です（itemSpacing=1.2717949151992798） | 2 |
+| Website / SP States / 03 Staff Screens | `Rows` | の余白がスケール外です（itemSpacing=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Sales Chart Card` | の余白がスケール外です（itemSpacing=10.174359321594238） | 1 |
+| Website / SP States / 03 Staff Screens | `Sales Chart Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Sales Chart Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Sales Chart Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Sales Chart Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Seat Settings Button` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Secondary KPI Grid` | の余白がスケール外です（counterAxisSpacing=10） | 1 |
+| Website / SP States / 03 Staff Screens | `Secondary KPI Grid` | の余白がスケール外です（itemSpacing=6.358974456787109） | 1 |
+| Website / SP States / 03 Staff Screens | `Spend Histogram Card` | の余白がスケール外です（itemSpacing=8.90256404876709） | 1 |
+| Website / SP States / 03 Staff Screens | `Spend Histogram Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Spend Histogram Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Spend Histogram Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Spend Histogram Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Stack` | の余白がスケール外です（itemSpacing=0.6358974575996399） | 7 |
+| Website / SP States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingBottom=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingLeft=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingRight=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Summary Block` | の余白がスケール外です（paddingTop=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Tab` | が生のフレームで作られています。既存のコンポーネントを使ってください | 3 |
+| Website / SP States / 03 Staff Screens | `Tab` | の余白がスケール外です（paddingBottom=3.815384864807129） | 3 |
+| Website / SP States / 03 Staff Screens | `Tab` | の余白がスケール外です（paddingLeft=7.630769729614258） | 3 |
+| Website / SP States / 03 Staff Screens | `Tab` | の余白がスケール外です（paddingRight=7.630769729614258） | 3 |
+| Website / SP States / 03 Staff Screens | `Tab` | の余白がスケール外です（paddingTop=3.815384864807129） | 3 |
+| Website / SP States / 03 Staff Screens | `Table Chip Strip` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（itemSpacing=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingBottom=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingLeft=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingRight=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Table Utilization Card` | の余白がスケール外です（paddingTop=12.717948913574219） | 1 |
+| Website / SP States / 03 Staff Screens | `Tabs` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+| Website / SP States / 03 Staff Screens | `Tabs` | の余白がスケール外です（itemSpacing=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（itemSpacing=7.630769729614258） | 1 |
+| Website / SP States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingBottom=7.630769729614258） | 2 |
+| Website / SP States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingLeft=10.174359321594238） | 5 |
+| Website / SP States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingRight=10.174359321594238） | 5 |
+| Website / SP States / 03 Staff Screens | `Top Bar` | の余白がスケール外です（paddingTop=7.630769729614258） | 2 |
+| Website / SP States / 03 Staff Screens | `Trend Tag` | の余白がスケール外です（paddingBottom=2.5435898303985596） | 1 |
+| Website / SP States / 03 Staff Screens | `Trend Tag` | の余白がスケール外です（paddingLeft=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Trend Tag` | の余白がスケール外です（paddingRight=5.087179660797119） | 1 |
+| Website / SP States / 03 Staff Screens | `Trend Tag` | の余白がスケール外です（paddingTop=2.5435898303985596） | 1 |
+| Website / SP States / 03 Staff Screens | `Value Row` | の余白がスケール外です（itemSpacing=6.358974456787109） | 1 |
+| Website / SP States / 03 Staff Screens | `Values` | の余白がスケール外です（itemSpacing=5.087179660797119） | 3 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Category Tag` | の余白がスケール外です（paddingBottom=5） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Category Tag` | の余白がスケール外です（paddingLeft=10） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Category Tag` | の余白がスケール外です（paddingRight=10） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Category Tag` | の余白がスケール外です（paddingTop=5） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Filter Chip` | の余白がスケール外です（paddingBottom=5） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Filter Chip` | の余白がスケール外です（paddingLeft=10） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Filter Chip` | の余白がスケール外です（paddingRight=10） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Filter Chip` | の余白がスケール外です（paddingTop=5） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Staff Call Button` | の余白がスケール外です（paddingLeft=14） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Staff Call Button` | の余白がスケール外です（paddingRight=14） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Tag` | の余白がスケール外です（paddingBottom=3） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Tag` | の余白がスケール外です（paddingLeft=6） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Tag` | の余白がスケール外です（paddingRight=6） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `IZ / Tag` | の余白がスケール外です（paddingTop=3） | 1 |
+| 居酒屋 / 01 Components / 居酒屋 | `cta` | が生のフレームで作られています。既存のコンポーネントを使ってください | 1 |
+
+---
+
 ## 覚えておくべき運用ルール
 
 ### Figma MCPの使い方（重要・過去のメモを訂正）

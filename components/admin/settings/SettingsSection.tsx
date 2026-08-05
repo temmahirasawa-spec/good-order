@@ -23,7 +23,9 @@ export default function SettingsSection({
 }) {
   return (
     <section className="bg-surface-white rounded-[var(--radius-lg)] flex flex-col gap-[var(--space-20)] min-w-0 p-[var(--space-20)] lg:px-[var(--space-24)]">
-      <div className="flex flex-col gap-[var(--space-4)] w-full">
+      {/* 見出しと中身の境目にヘアラインを引く（Figma 1103:24024 の各カード）。
+          カードが縦に長いので、どこまでが見出しかが分からないと読み始めの位置を見失う */}
+      <div className="border-b border-border-divider flex flex-col gap-[var(--space-4)] pb-[var(--space-12)] w-full">
         <h2 className="type-jp-heading-s text-text-primary">{title}</h2>
         {description && (
           <p className="type-jp-caption text-text-secondary">{description}</p>
