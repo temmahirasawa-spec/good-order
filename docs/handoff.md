@@ -2557,3 +2557,96 @@ EPSON TM-m30III-H の**サーバーダイレクトプリント**で厨房伝票�
 フェーズ4: ニセ・プリンタ（`scripts/fake-printer.mjs`）＋ `/dev/ui` にプレビュー
 フェーズ5: 管理画面「印刷状況」（`app/admin/(protected)/print/page.tsx`）
 フェーズ6: 実機接続（店舗・営業時間外）
+
+## 厨房伝票の印刷（フェーズ2-4: 受け口API・伝票生成・ニセプリンタ）
+
+### 通信仕様の根拠（重要）
+
+EPSON の **Server Direct Print User's Manual Rev.K**（M00062910）と
+**ePOS-Print XML User's Manual Rev.S**（M00048218）から起こした。
+
+**プリンタ → サーバー**（`application/x-www-form-urlencoded`、パラメータは2〜3個だけ）:
+
+| ConnectionType | 付随パラメータ | 意味 |
+|---|---|---|
+| `GetRequest` | `ID` | 印刷するものある? |
+| `SetResponse` | `ID` / `ResponseFile` | 印刷結果の報告（ResponseFileは結果XML） |
+| `SetStatus` | `ID` / `Status` | 状態通知 |
+
+**サーバー → プリンタ**: `Content-Type: text/xml; charset=utf-8`。
+- 印刷するものがある → `<PrintRequestInfo Version="1.00">` に包んだ ePOS-Print XML
+- **印刷するものが無い → HTTP 200 ＋ 空ボディ**（204でもエラーでもない。マニュアル規定）
+- 結果・状態を受けた後も同じく 200 ＋ 空ボディ
+
+**確認できなかった点**: Rev.K は2016年版で TM-m30III-H の記載が無い（本機は Rev.R / 2023年で追記）。
+Rev.R以降の本文はクリックスルー同意の内側で取得できなかった。
+そのため**本機がどの `PrintRequestInfo Version` に対応するかは未確認**。
+`Version="1.00"` は全機種・全ファームで「バージョン指定なし」と同じ扱いになる
+最も保守的な選択なのでこれを採用した。**SDP対応そのものは本機の
+Technical Reference Guide Rev.F に明記あり**（p.16 / p.92）。実機確認はフェーズ6。
+
+### 判断: Digest認証を使わず、URLにトークンを埋める
+
+マニュアルはDigest認証を案内しているが採用していない。Digestはサーバー側で
+nonce を保持する必要があり、Vercelのサーバーレス（インスタンスの使い回しが前提にできない）
+と相性が悪い。代わりに `/api/print/<token>` の形でパスに推測不能なトークンを置く。
+通信はHTTPSなのでトークンは経路上で暗号化され、実効的な強度は同等。
+プリンタ側のURL欄は2043文字まで入るので長さの制約も無い。
+
+- 環境変数 `PRINT_ENDPOINT_TOKEN`（`.env.local.example` に記載）。`openssl rand -hex 24` で生成
+- **未設定なら503を返して何もしない**。印刷が動かないだけで注文には影響しない
+- トークン比較は `timingSafeEqual`。不一致は404（存在しないURLとして扱い、情報を与えない）
+
+### `lib/receipt.ts`（新規）
+
+ePOS-Print XML の組み立て。**`<text>` は「属性だけの空要素で状態を切り替え、
+中身入りの要素で印字する」というスタイル指定モデル**で、`<text em="true"/>` 以降が
+ずっと太字になる。使い終わったら必ず戻すこと。改行は要素の区切りではなく本文中の `&#10;`。
+
+- 座標系は 80mm紙の印字幅 **576ドット**（= 半角48桁 / 全角24文字）
+- 受付時刻と合計点数は**右端から逆算して右揃え**（点数の桁数が変わっても揃う）
+- 長い品名は `wrapByWidth()` で自前に折り返して**継続行を品名の左端に字下げ**する。
+  プリンタ任せの自動折り返しだと継続行が左端に戻り、数量の列と重なって読めなくなる
+- `parsePrintResult()` は正規表現で `success` / `code` / `status` を拾う。
+  XMLパーサを足さないのは、この応答が1要素で形が固定されており、依存を増やすより
+  読み取り箇所を1つに閉じ込めるほうが安全なため
+- `describePrintFailure()` が `status` のビットを「用紙切れ」「カバーが開いています」等の
+  日本語にする。フェーズ5の管理画面でそのまま出せる
+
+### `app/api/print/[token]/route.ts`（新規）
+
+- `ConnectionType` で3分岐。未知の値は 200 + 空ボディで受け流す
+- `GetRequest` のたびに `reclaim_stale_print_jobs()` → `claim_print_job()` の順で呼ぶ。
+  **滞留ジョブ回収のための cron は要らない**
+- **DBエラー時も 200 + 空ボディを返す**。エラーを返すとプリンタがリトライを繰り返すため、
+  「今は無い」として次のポーリングに任せる
+- `SetResponse` にはジョブIDが含まれない（`printjobid` は Version 2.00 以降の機能）。
+  渡してあるジョブは常に1件なので `status='printing'` の最古を対象にする
+- `SetStatus` は今はログのみ。保存先テーブルはフェーズ5で作る
+
+### `scripts/fake-printer.mjs`（新規）— ニセ・プリンタ
+
+実機と同じ喋り方で `/api/print/<token>` を叩き、返ってきたXMLを
+「紙に出たらこう見える」形にターミナルへ描いて、結果を報告し返す。
+
+```
+node scripts/fake-printer.mjs            # 3秒おきにポーリング（要 npm run dev）
+node scripts/fake-printer.mjs --once     # 1回だけ
+node scripts/fake-printer.mjs --fail     # 用紙切れとして報告（失敗経路の確認）
+node scripts/fake-printer.mjs --xml      # 生のXMLも表示
+node scripts/fake-printer.mjs --render foo.xml   # サーバー無しで見た目だけ確認
+```
+
+紙のシミュレーションで踏んだ罠を2つ記録しておく（同じ実装をするとき再発しやすい）:
+
+1. **自己終了タグが後続の閉じタグを飲み込む**。`<text lang="ja"/>` を
+   `/<text\b([^>]*?)(\/?)>(?:([\s\S]*?)<\/text>)?/` で拾うと、次の `</text>` までを
+   中身として取ってしまう。開きタグだけ正規表現で拾い、**閉じタグは自分で探す**こと
+2. **スパース配列の穴**。`x` 指定で桁を飛ばすと配列が歯抜けになり、`map`/`join` が
+   穴を詰めて桁位置が崩れる。添字で舐めて空白を敷き直すこと
+
+### 残り
+
+フェーズ5: 管理画面「印刷状況」（プリンタの生存・未印刷・失敗・再印刷ボタン）。
+  `SetStatus` の保存先テーブルもここで作る
+フェーズ6: 実機接続（店舗・営業時間外）
