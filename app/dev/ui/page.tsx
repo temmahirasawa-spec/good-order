@@ -30,6 +30,9 @@ import InfoRow from "@/components/ui/InfoRow";
 import NavItem from "@/components/admin/nav/NavItem";
 import NavSidebar from "@/components/admin/nav/NavSidebar";
 import StatusBadge, { type StatusBadgeState } from "@/components/admin/StatusBadge";
+import PrinterHealthCard from "@/components/admin/print/PrinterHealthCard";
+import PrintJobRowCard from "@/components/admin/print/PrintJobRowCard";
+import { describePrinterHealth, type PrinterHealthView, type PrintJobRow } from "@/lib/printStatus";
 import StaffCallChip from "@/components/admin/StaffCallChip";
 import OrderCard, { type OrderCardItem } from "@/components/admin/kitchen/OrderCard";
 import TableChip from "@/components/admin/register/TableChip";
@@ -105,6 +108,30 @@ const sampleCat: ApiCategory = {
 const sampleVideo = [
   { type: "image" as const, url: "/images/pancake/p1.webp" },
   { type: "video" as const, url: "/images/hero/background.mp4" },
+];
+
+/* ── 印刷状況（/admin/print）のサンプル ──
+   時刻は固定値から逆算する。Date.now() を直に使うと再描画のたびに
+   「◯分前」が動いてFigmaとの突き合わせがしづらくなるため */
+const SAMPLE_PRINT_NOW = new Date("2026-08-20T12:00:00+09:00").getTime();
+const minutesAgo = (m: number) => new Date(SAMPLE_PRINT_NOW - m * 60_000).toISOString();
+
+const SAMPLE_PRINTER_HEALTH: Record<PrinterHealthView["health"], PrinterHealthView> = {
+  ok:      describePrinterHealth({ lastSeenAt: minutesAgo(0),  lastStatusAt: null, statusNote: null },       SAMPLE_PRINT_NOW),
+  warning: describePrinterHealth({ lastSeenAt: minutesAgo(0),  lastStatusAt: null, statusNote: "用紙切れ" }, SAMPLE_PRINT_NOW),
+  offline: describePrinterHealth({ lastSeenAt: minutesAgo(12), lastStatusAt: null, statusNote: null },       SAMPLE_PRINT_NOW),
+  unknown: describePrinterHealth(null, SAMPLE_PRINT_NOW),
+};
+
+const SAMPLE_PRINT_JOBS: PrintJobRow[] = [
+  { id: "s1", status: "pending",  seq: 1, attempts: 0, lastError: null,
+    createdAt: minutesAgo(1),  tableLabel: "テーブル A-1", pickupNo: 3, orderType: "dine_in" },
+  { id: "s2", status: "printing", seq: 2, attempts: 1, lastError: null,
+    createdAt: minutesAgo(2),  tableLabel: "カウンター L-1", pickupNo: 4, orderType: "dine_in" },
+  { id: "s3", status: "failed",   seq: 1, attempts: 5, lastError: "用紙切れ",
+    createdAt: minutesAgo(9),  tableLabel: null, pickupNo: 7, orderType: "takeout" },
+  { id: "s4", status: "done",     seq: 3, attempts: 1, lastError: null,
+    createdAt: minutesAgo(35), tableLabel: "テーブル A-5", pickupNo: 2, orderType: "dine_in" },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -714,6 +741,29 @@ export default function UiGalleryPage() {
             onComplete={() => {}}
           />
         </div>
+      </Section>
+
+      {/* ── 厨房プリンタ: 印刷状況（/admin/print） ── */}
+      <Section title="PrinterHealthCard">
+        <div className="max-w-[560px] flex flex-col gap-[var(--space-12)]">
+          {(["ok", "warning", "offline", "unknown"] as const).map((h) => (
+            <PrinterHealthCard key={h} view={SAMPLE_PRINTER_HEALTH[h]} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="PrintJobRowCard">
+        <ul className="max-w-[560px] flex flex-col gap-[var(--space-8)]">
+          {SAMPLE_PRINT_JOBS.map((job) => (
+            <PrintJobRowCard
+              key={job.id}
+              job={job}
+              now={SAMPLE_PRINT_NOW}
+              requeueing={false}
+              onRequeue={() => {}}
+            />
+          ))}
+        </ul>
       </Section>
 
       <BottomViewCartBar />
