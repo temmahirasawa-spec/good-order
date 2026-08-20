@@ -123,13 +123,26 @@ export function seqLabel(seq: number): string {
  * 常に採番されている受渡番号にフォールバックする。
  */
 function headline(job: ReceiptJob): { label: string; value: string } {
-  if (job.orderType === "takeout") {
-    return { label: "受渡番号", value: `#${String(job.pickupNo ?? 0).padStart(2, "0")}` };
+  const pickup = { label: "受渡番号", value: `#${String(job.pickupNo ?? 0).padStart(2, "0")}` };
+  if (job.orderType === "takeout") return pickup;
+  if (!job.tableLabel) return pickup;
+
+  // orders.table_label は「テーブル A-1」「カウンター L-1」のように
+  // 「カテゴリー名 + 空白 + 短縮ラベル」で保存されている
+  // （lib/tables.ts の resolveTable が返す label をそのままスナップショットしている）。
+  //
+  // 小さいラベルに「テーブル」を決め打ちで出すと「テーブル / テーブル A-1」と
+  // 二重になるので、最後の空白で割って前半をラベル、後半を主役の値にする。
+  // カウンター席なら小さいラベルが「カウンター」になり、席種も伝わる。
+  const sep = job.tableLabel.lastIndexOf(" ");
+  if (sep > 0 && sep < job.tableLabel.length - 1) {
+    return {
+      label: job.tableLabel.slice(0, sep),
+      value: job.tableLabel.slice(sep + 1),
+    };
   }
-  if (job.tableLabel) {
-    return { label: "テーブル", value: job.tableLabel };
-  }
-  return { label: "受渡番号", value: `#${String(job.pickupNo ?? 0).padStart(2, "0")}` };
+  // 空白が無い形（移行前の数値だけのラベル等）はそのまま主役に置く
+  return { label: "テーブル", value: job.tableLabel };
 }
 
 /**
