@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import * as Sentry from "@sentry/nextjs";
 import type { MenuItem } from "./menu";
 import { supabase } from "./supabase";
 import { appendHistory, type HistoryEntry } from "./history";
@@ -20,23 +21,28 @@ function generateUuid(): string {
 }
 
 /**
- * orderId から order_items 用の決定的なUUIDを作る。
- * 同じ注文を再送しても同じ id になるので、ON CONFLICT DO NOTHING で
- * 明細が二重登録されない（UUIDの書式は保ったまま末尾のnode部をindexで置換）。
+ * 注文を DB に保存する。
+ *
+ * 生テーブルへの INSERT ではなく SECURITY DEFINER の RPC `place_order` を呼ぶ
+ * （`supabase/order_insert_rpc.sql`）。理由:
+ *
+ *   PostgREST の upsert は ON CONFLICT DO NOTHING であっても UPDATE 権限を要求する。
+ *   orders の UPDATE は staff_role_rls.sql でスタッフのロール限定になっており
+ *   anon には UPDATE ポリシーが無いため、以前ここで使っていた
+ *   upsert(..., { ignoreDuplicates: true }) は RLS に弾かれて
+ *   **注文がまったく保存されていなかった**（2026-08-20 発覚）。
+ *
+ * RPC 側で以下が担保される:
+ *   - 注文と明細が1トランザクションで入る（明細の無い注文が残らない）
+ *   - 同じ orderId の再送は「何もしない」＝受渡番号が振り直されない
+ *   - status は必ず 'pending'（クライアントには決めさせない）
+ *   - テイクアウトの卓の正規化（table_* を落とす）もサーバー側で行う
+ *
+ * 受渡番号（orders.pickup_no）は BEFORE INSERT トリガーが採番するので
+ * ここからは一切渡さない（`supabase/pickup_no.sql`）。
+ *
+ * @returns 保存できたか。再送で「既にある」場合も true（失敗ではない）
  */
-function derivedItemId(orderId: string, index: number): string {
-  // "xxxxxxxx-xxxx-4xxx-yxxx-" までの24文字を残し、残り12文字をindexで埋める
-  return orderId.slice(0, 24) + String(index).padStart(12, "0");
-}
-
-// RLS で anon の SELECT が制限されているため、id はクライアント側で生成して
-// .select() を使わずに INSERT する。
-//
-// 受渡番号（orders.pickup_no）はサーバー側の BEFORE INSERT トリガーが採番するため
-// ここでは一切渡さない（supabase/pickup_no.sql）。
-// 同じ orderId が再送された場合に受渡番号が振り直されないよう、
-// orders / order_items とも upsert + ignoreDuplicates（= ON CONFLICT DO NOTHING）
-// にしている。再送時は既存行が一切書き換わらないので pickup_no も変わらない。
 async function saveOrderToDb(
   orderId: string,
   items: { item: MenuItem; quantity: number }[],
@@ -47,43 +53,34 @@ async function saveOrderToDb(
   totalAmount: number
 ): Promise<boolean> {
   try {
-    const { error: orderError } = await supabase
-      .from("orders")
-      .upsert(
-        {
-          id: orderId,
-          store_id: STORE_ID,
-          table_number: orderType === "takeout" ? 0 : (tableNumber ?? 0),
-          // table_id は集計・絞り込み用、table_label は注文時点のラベルのスナップショット。
-          // 卓を消したりカテゴリーのコードを変えても、過去の伝票の卓名は変わらない
-          table_id:    orderType === "takeout" ? null : tableId,
-          table_label: orderType === "takeout" ? null : tableLabel,
-          status: "pending",
-          order_type: orderType,
-          total_amount: totalAmount,
-        },
-        { onConflict: "id", ignoreDuplicates: true }
-      );
+    const { error } = await supabase.rpc("place_order", {
+      p_order_id:     orderId,
+      p_store_id:     STORE_ID,
+      p_table_number: tableNumber,
+      // table_id は集計・絞り込み用、table_label は注文時点のラベルのスナップショット。
+      // 卓を消したりカテゴリーのコードを変えても、過去の伝票の卓名は変わらない
+      p_table_id:     tableId,
+      p_table_label:  tableLabel,
+      p_order_type:   orderType,
+      p_total_amount: totalAmount,
+      p_items: items.map((ci) => ({
+        menu_item_id: ci.item.id,
+        quantity:     ci.quantity,
+        unit_price:   ci.item.price,
+      })),
+    });
 
-    if (orderError) throw orderError;
-
-    const orderItems = items.map((ci, idx) => ({
-      id: derivedItemId(orderId, idx),
-      order_id: orderId,
-      menu_item_id: ci.item.id,
-      quantity: ci.quantity,
-      unit_price: ci.item.price,
-    }));
-
-    const { error: itemsError } = await supabase
-      .from("order_items")
-      .upsert(orderItems, { onConflict: "id", ignoreDuplicates: true });
-
-    if (itemsError) throw itemsError;
-
+    if (error) throw error;
     return true;
   } catch (err) {
+    // placeOrder はここを待たない（fire-and-forget）ため、失敗しても
+    // お客様の画面は完了に進む。黙って消えると厨房に注文が届かないまま
+    // 誰も気づけないので、コンソールと Sentry の両方に必ず残す。
     console.error("[saveOrderToDb] failed:", err);
+    Sentry.captureException(err, {
+      tags: { feature: "order-submit" },
+      extra: { orderId, orderType, itemCount: items.length, totalAmount },
+    });
     return false;
   }
 }
