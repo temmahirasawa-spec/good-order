@@ -34,6 +34,7 @@ import {
   buildPrintRequest,
   buildReceiptXml,
   describePrintFailure,
+  describePrinterStatus,
   parsePrintResult,
   type ReceiptJob,
 } from "@/lib/receipt";
@@ -106,7 +107,7 @@ export async function POST(
     // マニュアル内で ConnectionType の表記が Status / SetStatus と割れているため両方受ける
     case "SetStatus":
     case "Status":
-      return handleSetStatus(form);
+      return handleSetStatus(db, form);
 
     default:
       console.warn("[print] 未知の ConnectionType:", connectionType);
@@ -118,15 +119,12 @@ export async function POST(
 async function handleGetRequest(
   db: NonNullable<ReturnType<typeof admin>>
 ): Promise<NextResponse> {
-  // プリンタに渡したまま報告が返ってこなかったジョブを先に回収する。
-  // ポーリングのたびに呼ぶので、これ専用の cron は要らない。
-  const { error: reclaimError } = await db.rpc("reclaim_stale_print_jobs");
-  if (reclaimError) {
-    // 回収に失敗しても印刷自体は続けたいので、記録だけして先へ進む
-    console.error("[print] 滞留ジョブの回収に失敗:", reclaimError.message);
-  }
-
-  const { data, error } = await db.rpc("claim_print_job", { p_store_id: STORE_ID });
+  // printer_poll が3つまとめてやる（supabase/printer_status.sql）:
+  //   1. プリンタの生存記録（15秒に1回に間引かれる）
+  //   2. 渡したまま報告が返ってこなかったジョブの回収
+  //   3. 次に刷るジョブの取り出し
+  // 3秒おきに叩かれる経路なので、DBへの往復は1回に抑える。
+  const { data, error } = await db.rpc("printer_poll", { p_store_id: STORE_ID });
   if (error) {
     console.error("[print] ジョブの取得に失敗:", error.message);
     // エラーを返すとプリンタ側がリトライを繰り返すため、
@@ -196,13 +194,32 @@ async function handleSetResponse(
 }
 
 /**
- * 状態通知が来た。
- * 保存先のテーブルはまだ無いのでログに残すだけ。
- * 管理画面の「印刷状況」（フェーズ5）でプリンタの生存表示を作るときに
- * 保存へ切り替える。
+ * 状態通知が来た。管理画面の「印刷状況」に出すため printer_status に残す。
+ *
+ * 状態通知XMLのビットは `asbstatus="0x0F00003C"` の形（16進の文字列）で、
+ * 印刷結果XMLの `status`（10進）とは表記が違う点に注意。
  */
-async function handleSetStatus(form: URLSearchParams): Promise<NextResponse> {
-  const status = form.get("Status") ?? form.get("ResponseFile") ?? "";
-  console.info("[print] プリンタ状態通知:", status.slice(0, 300));
+async function handleSetStatus(
+  db: NonNullable<ReturnType<typeof admin>>,
+  form: URLSearchParams
+): Promise<NextResponse> {
+  const raw = form.get("Status") ?? form.get("ResponseFile") ?? "";
+
+  const hex = /\basbstatus\s*=\s*"([^"]*)"/i.exec(raw)?.[1];
+  const bits = hex ? Number.parseInt(hex, 16) : NaN;
+  // 異常があるときだけ日本語の理由を入れる。正常時は null にして
+  // 画面が「異常なし」を出せるようにする
+  const note = Number.isFinite(bits)
+    ? describePrinterStatus({ success: true, code: null, status: bits })
+    : null;
+
+  const { error } = await db.rpc("record_printer_status", {
+    p_store_id: STORE_ID,
+    p_note: note,
+    p_raw: raw,
+  });
+  if (error) console.error("[print] 状態通知の記録に失敗:", error.message);
+
+  console.info("[print] プリンタ状態通知:", note ?? "異常なし");
   return emptyOk();
 }

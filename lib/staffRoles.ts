@@ -56,6 +56,10 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/kitchen",   label: "厨房",           roles: ["manager", "kitchen"],             group: "ops" },
   { href: "/admin/register",  label: "レジ",           roles: ["manager", "register"],            group: "ops" },
   { href: "/admin/pickup",    label: "テイクアウト",   roles: ["manager", "kitchen", "counter"],  group: "ops" },
+  // 厨房プリンタの監視と伝票の刷り直し。刷り直せるロール（supabase/printer_status.sql の
+  // requeue_print_job）と揃えて manager / kitchen / counter に開けている。
+  // register を外しているのは伝票の再発行に関与しないため。
+  { href: "/admin/print",     label: "印刷状況",       roles: ["manager", "kitchen", "counter"],  group: "ops" },
   // 新デザインのサイドバーではこの項目は Menu Accordion に置き換わる（ラベルは親行と同じ「メニュー」）
   { href: "/admin/menu",      label: "メニュー",       roles: ["manager"],                        group: "manage" },
   // 「QRコード」は登録商標のため、画面に出す文言は必ず「二次元コード」にする。

@@ -305,15 +305,26 @@ export function parsePrintResult(responseFile: string): PrintResult {
   };
 }
 
+/** status のビットを日本語の並びにする。異常が無ければ空配列 */
+function statusReasons(status: number | null): string[] {
+  if (status === null || !Number.isFinite(status)) return [];
+  return STATUS_BITS.filter(({ bit }) => (status & bit) !== 0).map(({ label }) => label);
+}
+
 /** 印刷失敗の理由を、店舗のスタッフが読んで動ける日本語にする */
 export function describePrintFailure(result: PrintResult): string {
-  const reasons: string[] = [];
-  if (result.status !== null) {
-    for (const { bit, label } of STATUS_BITS) {
-      if ((result.status & bit) !== 0) reasons.push(label);
-    }
-  }
+  const reasons = statusReasons(result.status);
   if (reasons.length === 0 && result.code) reasons.push(result.code);
   if (reasons.length === 0) reasons.push("原因不明の印刷エラー");
   return reasons.join(" / ");
+}
+
+/**
+ * 状態通知から、いま困っていることを日本語で返す。
+ * **異常が無ければ null**。管理画面が「異常なし」と出し分けるために
+ * describePrintFailure（必ず文字列を返す）とは別にしてある。
+ */
+export function describePrinterStatus(result: PrintResult): string | null {
+  const reasons = statusReasons(result.status);
+  return reasons.length === 0 ? null : reasons.join(" / ");
 }

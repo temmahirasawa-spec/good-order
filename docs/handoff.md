@@ -2842,3 +2842,67 @@ A  -  1                              08/20 16:28     A  -  1                    
 （HMRのWebSocketが切れて404が出る）、修正前のコードが動いて誤った結論を出しかける。
 コンソールのエラーは**過去のページ読み込みぶんも溜まっている**ので、
 判断はコンソールではなく**DBの実データ**で行うこと。
+
+## 厨房伝票の印刷（フェーズ5: 管理画面「印刷状況」）
+
+営業中にプリンタが止まっても誰も気づけない、という状態を無くすための画面。
+`/admin/print`。アクセスできるのは manager / kitchen / counter。
+
+### `supabase/printer_status.sql`（新規）
+
+- `printer_status` テーブル（店舗につき1行）: `last_seen_at` / `last_status_at` /
+  `status_note`（「用紙切れ」等の日本語）/ `status_raw`（調査用の元XML）
+- `printer_poll(store_id)` = **受け口APIが毎回呼ぶ処理を1本にまとめたもの**。
+  生存記録 → 滞留ジョブの回収 → 次のジョブ取り出し。
+  3秒おきに叩かれる経路なのでDBへの往復を1回に減らした（以前は reclaim + claim で2回）
+- `record_printer_status(store_id, note, raw)` = 状態通知の記録
+- `requeue_print_job(job_id)` = 刷り直し。**中で `app_metadata.role` を見て
+  manager / kitchen / counter 以外は弾く**。register を外しているのは伝票の
+  再発行に関与しないため。会計（paid）権限まわりは一切触っていない
+
+**判断: 生存記録の書き込みは15秒に1回に間引く。**
+3秒ごとに1行を更新し続けると1日3万回近い更新になり、1行しかないテーブルに
+不要なゴミ（dead tuple）が溜まる。画面側の判定は「60秒以上音沙汰なし＝停止」
+（`PRINTER_OFFLINE_AFTER_MS`）なので15秒の粒度で足りる。
+
+### `lib/printStatus.ts`（新規）
+
+画面とギャラリー（`/dev/ui`）の両方から使う表示ロジック。
+`describePrinterHealth()` が状態を ok / warning / offline / unknown の4つに落とし、
+**見出し（何が起きているか）と補足（原因とやること）をセットで返す**。
+「つながっているか」→「困りごとがあるか」の順で判定する。
+通信が切れていれば紙の有無は分からないので、そちらを先に出す。
+
+### 状態通知のビットは16進、印刷結果は10進
+
+`<printerstatus asbstatus="0x0F00003C"/>` と `<response status="251854870"/>` で
+**同じ意味のビットなのに表記が違う**。受け口API側で 16進をパースしてから
+`describePrinterStatus()` に渡している。
+
+`lib/receipt.ts` に `describePrinterStatus()`（異常が無ければ **null**）を追加した。
+`describePrintFailure()`（必ず文字列を返す）とは別にしてあるのは、
+画面が「異常なし」を出し分けられるようにするため。
+
+### 判断: この画面のデザインはFigmaに対応ノードが無い
+
+新規画面のためFigmaにノードが無い。**新しい配色やタイポは一切足さず**、
+既存の管理画面（`/admin/pickup`・`/admin/kitchen`）のレイアウトと
+`app/design-tokens.css` のトークン（status-success / warning / urgent / info）
+だけで組んだ。`StatusBadge` と同じドット＋ラベルの形も踏襲している。
+**Figmaを起こす場合は差し替え前提**。天真に確認済みではないので、
+気に入らなければ作り直す。
+
+### `/dev/ui` のスクリーンショットについて
+
+`PrinterHealthCard`（4状態）と `PrintJobRowCard`（4状態）のセクションを追加し、
+PC 1400px / SP 390px の両方で確認済み。
+
+**注意: この環境では Playwright MCP のブラウザが未インストール**
+（`npx @playwright/mcp install-browser chrome-for-testing` が必要）だったため、
+Browser ペインで確認した。ペインには**スクロール後に再描画されない不具合**があり、
+真っ白な画像しか撮れない。**ウィンドウを数px リサイズすると再描画される**ので、
+「JSでスクロール → resize_window で高さを±20px 変える → 撮影」で回避できる。
+
+### 残り
+
+フェーズ6: 実機接続（店舗・営業時間外）。開発側の作業はこれで完了。
