@@ -2650,3 +2650,116 @@ node scripts/fake-printer.mjs --render foo.xml   # サーバー無しで見た�
 フェーズ5: 管理画面「印刷状況」（プリンタの生存・未印刷・失敗・再印刷ボタン）。
   `SetStatus` の保存先テーブルもここで作る
 フェーズ6: 実機接続（店舗・営業時間外）
+
+---
+
+## お客様が注文を確定できなかった不具合と修正（2026-08-20）
+
+厨房プリンタの通しテスト中に発見。**印刷とは無関係の既存の不具合**で、
+`lib/store.ts` の `saveOrderToDb` が RLS に弾かれ、注文が DB に入らない。
+
+### 症状
+
+`/order` で商品をカートに入れて注文を確定すると、画面は `/complete` に進み
+「ご注文ありがとうございます」まで表示されるが、**注文は保存されていない**。
+ブラウザのコンソールにだけエラーが出る:
+
+```
+[saveOrderToDb] failed: {code: 42501,
+  message: new row violates row-level security policy for table "orders"}
+```
+
+`saveOrderToDb` は例外を握りつぶして `false` を返すだけなので、
+**お客様にもスタッフにも失敗が見えない**。これが厄介な点。
+
+### 切り分け（anonキーで直接叩いて確認）
+
+| 送り方 | 結果 |
+|---|---|
+| 素の INSERT（`Prefer: return=minimal`） | **HTTP 201 成功** |
+| upsert（`Prefer: resolution=ignore-duplicates`）＝**アプリと同じ** | **HTTP 401 / 42501 RLS違反** |
+
+`setup.sql` の `orders_insert_all`（anon の INSERT を `WITH CHECK (true)` で許可）は
+正しく効いている。落ちているのは **upsert のときだけ**。
+
+### 原因
+
+PostgREST の upsert は `ON CONFLICT DO NOTHING` であっても
+**UPDATE 権限を要求する**。しかし `staff_role_rls.sql` の
+`orders_update_role_scoped` で UPDATE はスタッフのロール限定になっており、
+**anon には UPDATE ポリシーが1つも無い**ため、upsert 全体が拒否される。
+
+つまり以下の2つの変更が組み合わさって生まれた不具合:
+1. `pickup_no.sql` の作業で `saveOrderToDb` を `.insert()` から
+   `.upsert(..., { onConflict: "id", ignoreDuplicates: true })` に変更した（再送の冪等性のため）
+2. `staff_role_rls.sql` で orders の UPDATE をロール限定に絞った
+
+どちらも単体では正しく、**組み合わせで壊れている**。
+DB上の最後の注文は 2026-07-31 で、それ以降の注文が1件も無いのと符合する。
+
+### 対応（天真の判断: 案1で決定・実装済み）
+
+1. **注文の INSERT を SECURITY DEFINER の RPC に移す（推奨）**
+   `orders_anon_lockdown.sql` で anon の読み取りを RPC 経由に移したのと同じやり方。
+   RLS を緩めずに冪等性も保てる。既存の設計方針と一貫する。作業量は中
+2. **anon に orders の UPDATE ポリシーを足す**
+   最小の変更だが **RLS の緩和**にあたる。金額列を書き換えられる経路を作ることになるので
+   条件を厳しく絞る必要があり、審査が難しい。非推奨
+3. **`saveOrderToDb` を素の `.insert()` に戻す**
+   すぐ直るが、pickup_no の作業で入れた「再送しても受渡番号が変わらない」冪等性を失う
+   （同じ id の再送は一意制約違反で落ちる）
+
+### テストで分かったこと（副産物）
+
+素の INSERT で注文を1件作ったところ、**`print_jobs` のトリガーは正常に発火し**、
+ニセ・プリンタが伝票を受け取り、`status='done'` / `attempts=1` まで通った。
+2回目のポーリングでは何も返らず、**二重印刷が起きないことも確認済み**。
+このテスト注文（`aa34b14c-…`・明細なし・¥100）は確認後に削除済みで、
+DB は 2026-07-31 の注文までの状態に戻してある。
+
+### 実装: `supabase/order_insert_rpc.sql` + `lib/store.ts`
+
+天真の判断で**案1（SECURITY DEFINER の RPC に移す）**を採用した。
+
+- `place_order(p_order_id, p_store_id, p_table_number, p_table_id, p_table_label,
+  p_order_type, p_total_amount, p_items jsonb)` を追加し、anon / authenticated に EXECUTE を付与
+- `lib/store.ts` の `saveOrderToDb` は `supabase.rpc("place_order", ...)` を呼ぶだけになった。
+  `derivedItemId()` は不要になったので削除（明細の冪等性はRPC側の「再送なら何もしない」で担保）
+
+RPC に移したことで副次的に得られたもの:
+
+- **注文と明細が1トランザクション**で入る。従来は orders と order_items を別々に往復して
+  いたため、途中で失敗すると**明細の無い注文**が残りえた
+- **status をクライアントに決めさせない**（従来 anon は `status='paid'` の注文を直接 INSERT できた）
+- テイクアウトの卓の正規化（`table_*` を落とす）がサーバー側に移った
+- 再送は「何もしない」で確実に冪等。受渡番号も振り直されない
+- **返り値 boolean**: `true`=今回登録した / `false`=再送で既にあった。false は失敗ではない
+
+**RLSは緩めていない。** `orders` / `order_items` の UPDATE ポリシーは一切触っていない。
+
+### 判断: 直接INSERTの経路は今回まだ塞がない
+
+`order_insert_rpc.sql` の section 3 に、`orders_insert_all` /
+`order_items_insert_all` を DROP する SQL をコメントで置いてある（**今回は実行しない**）。
+RPC 経由の注文が本番で問題なく動くことを確認してから別途実行する。
+いっしょに流すと、RPCに不具合があったときに注文が完全に通らなくなるため段階を分けた。
+
+### 判断: 失敗を Sentry に送る
+
+`placeOrder` は `saveOrderToDb` を `void` で呼ぶ（fire-and-forget）ため、
+DB保存に失敗してもお客様の画面は完了に進む。**今回の不具合が3週間気づかれなかったのは
+これが原因**なので、`console.error` に加えて `Sentry.captureException` を入れた
+（`tags.feature = "order-submit"`、orderId / orderType / 点数 / 金額を extra に付ける）。
+
+`sentry.client.config.ts` は無く client 側の初期化は未確認だが、
+`captureException` は未初期化なら無害な no-op なので入れておく。
+`app/global-error.tsx` が既に `@sentry/nextjs` を import しているため
+クライアントバンドルへの追加コストも無い。
+
+### 残っている課題（別途判断が要る）
+
+- **金額がクライアント任せ**: `total_amount` と `unit_price` をブラウザから受け取っている。
+  RPC 側で `menu_items.price` から再計算すれば改ざんできなくなるが、
+  「注文時点の単価のスナップショット」という現在の意味づけが変わるため今回は触っていない
+- **受付停止（`stores.is_accepting_orders`）の判定がクライアント側だけ**。
+  RPC 側でも弾くべきだが、これも注文確定の挙動変更にあたるため今回は触っていない
