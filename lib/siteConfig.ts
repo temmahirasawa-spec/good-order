@@ -9,18 +9,40 @@
  */
 
 /**
- * 本番の公開URL。canonical・OGP・sitemap・robots の絶対URLはすべてここから引く。
+ * 店舗ごとのURL接頭辞（例: "/yorkys-shukugawa"）。未設定なら空文字。
  *
- * 独自ドメインを当てたら `NEXT_PUBLIC_SITE_URL` を Vercel の環境変数に入れるだけで
- * 全部が切り替わる。未設定なら Vercel が自動で入れる本番URL（プレビュー環境でも
- * 本番URLを指すので canonical としては正しい）、それも無ければ既定値。
+ * 実体は `next.config.mjs` の `basePath` で、Next.js が全ページ・全アセットの
+ * URLに自動で付ける。ただし自動で付かない場所が3つあるので、そこだけこの値を
+ * 手で足す必要がある:
+ *   1. 二次元コードに埋めるURL（lib/qrCode.ts）
+ *   2. `window.location.href` による画面遷移（lib/useAdminSession.ts）
+ *   3. manifest.webmanifest の start_url とアイコンのパス（app/manifest.ts）
+ *
+ * `next/link` と `router.push` は自動で付くので、そちらは触らなくてよい。
  */
-export const siteUrl = (
+export const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || "").replace(/\/$/, "");
+
+/**
+ * アプリが載っているホスト（スキーム＋ドメイン。接頭辞は含まない）。
+ *
+ * 独自ドメインを当てたら `NEXT_PUBLIC_SITE_URL` に **ドメインだけ** を入れる。
+ * 例: `https://app.good-order.jp`（`/yorkys-shukugawa` は付けない。
+ * 付けると下の siteUrl で二重になる）。
+ * 未設定なら Vercel が自動で入れる本番URL（プレビュー環境でも本番URLを指すので
+ * canonical としては正しい）、それも無ければ既定値。
+ */
+export const siteHost = (
   process.env.NEXT_PUBLIC_SITE_URL ||
   (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
     : "https://yorkys-orderly.vercel.app")
 ).replace(/\/$/, "");
+
+/**
+ * 本番の公開URL。canonical・OGP・sitemap・robots の絶対URLはすべてここから引く。
+ * ホストに店舗の接頭辞を足したもの（例: https://app.good-order.jp/yorkys-shukugawa）。
+ */
+export const siteUrl = `${siteHost}${basePath}`;
 
 /** 店舗情報（Figma: Store Info — Half Modal 191:31 の記載値） */
 export const STORE = {

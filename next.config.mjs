@@ -1,4 +1,20 @@
 import { withSentryConfig } from "@sentry/nextjs";
+/**
+ * 店舗ごとのURL接頭辞（例: "/yorkys-shukugawa"）。
+ *
+ * 1つのドメイン app.good-order.jp の下に、店舗をパスで並べるための設定。
+ * Vercel は「1ドメイン＝1プロジェクト」なので、店舗ごとに Vercel プロジェクトと
+ * Supabase を分けたまま同じURL体系に見せるには、各プロジェクトが自分の接頭辞を
+ * 名乗る必要がある。それをこの環境変数1つで切り替える。
+ *
+ *   YORKYS本番     NEXT_PUBLIC_BASE_PATH=/yorkys-shukugawa
+ *   デモ・ローカル   未設定（＝従来どおりルート直下で動く）
+ *
+ * NEXT_PUBLIC_ を付けているのは、二次元コードのURL組み立て（lib/qrCode.ts）など
+ * ブラウザ側でも同じ値が必要なため。秘密の値ではないので公開して問題ない。
+ */
+const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || "").replace(/\/$/, "");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // ビルド成果物の出力先。既定は .next。
@@ -13,8 +29,26 @@ const nextConfig = {
   // 未指定なら従来どおり .next。next dev はこちらを使うので起動速度は変わらない。
   // Vercel が実行する `npm run build` も環境変数を渡さないので .next のまま。
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // 空文字を渡すと Next が「/」扱いで警告を出すので、値があるときだけ指定する
+  ...(basePath ? { basePath } : {}),
   async redirects() {
     return [
+      // basePath を付けると、ドメイン直下（app.good-order.jp/）は
+      // どのページにも該当せず 404 になる。店舗トップへ送り直す。
+      // basePath:false は「この source には接頭辞を自動で付けない」の意味で、
+      // これが無いと /yorkys-shukugawa/ 自身にマッチして無限ループになる。
+      // permanent:false（307）なのは、将来この位置に振り分け役のプロジェクトを
+      // 置いたときにブラウザのキャッシュが邪魔をしないようにするため。
+      ...(basePath
+        ? [
+            {
+              source: "/",
+              destination: basePath,
+              basePath: false,
+              permanent: false,
+            },
+          ]
+        : []),
       {
         // /admin/takeout（テイクアウト商品のCRUD）は /admin/menu に統合して廃止した。
         // ブックマークされている可能性があるのでリダイレクトを残す。
