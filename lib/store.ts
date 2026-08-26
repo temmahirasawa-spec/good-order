@@ -92,7 +92,11 @@ export interface CartItem {
 
 export type PlaceOrderResult =
   | { ok: true; orderId: string }
-  | { ok: false; reason: "empty" | "closed" };
+  // "failed" … DB への保存に失敗した。カートは残す（お客様がやり直せるように）。
+  //   以前はここを fire-and-forget にしていたため、保存に失敗しても
+  //   画面は「ご注文を承りました」に進み、厨房には何も届かないまま
+  //   誰も気づけなかった（2026-08-26 の監査で判明）。
+  | { ok: false; reason: "empty" | "closed" | "failed" };
 
 interface CartStore {
   items: CartItem[];
@@ -226,8 +230,31 @@ export const useCartStore = create<CartStore>()(
         };
         appendHistory(entry);
 
-        // DB は fire-and-forget 的に呼ぶ（失敗しても履歴は残る）
-        void saveOrderToDb(orderId, current, tableNumber, tableId, tableLabel, orderType, totalAmount);
+        // DB への保存は**必ず待つ**。
+        // ここを fire-and-forget にしていると、Wi-Fi の瞬断や一時的な
+        // エラーで保存に失敗しても画面は完了に進み、厨房には何も届かない。
+        // お客様は料理を待ち続け、店は注文が来ていることすら知らない、
+        // という最悪の壊れ方をする。
+        //
+        // リトライしても安全な理由: place_order は同じ p_order_id なら
+        // ON CONFLICT DO NOTHING で何もしない（supabase/order_insert_rpc.sql）。
+        // orderId は上で1回だけ採番しているので、何度呼んでも二重登録にならない。
+        let saved = false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          saved = await saveOrderToDb(
+            orderId, current, tableNumber, tableId, tableLabel, orderType, totalAmount
+          );
+          if (saved) break;
+          // 1回目の失敗は瞬断のことが多い。少し待って作り直す
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 600 * attempt));
+        }
+
+        if (!saved) {
+          // カートを空にしない。お客様が「もう一度」を押せる状態で止める。
+          // 履歴（localStorage）には既に積んであるが、DB に無い注文なので
+          // ステータス照会にも出てこない。ここで止めるのが唯一の正解。
+          return { ok: false, reason: "failed" };
+        }
 
         set({
           orderHistory: [...get().orderHistory, current],

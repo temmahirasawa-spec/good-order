@@ -6,41 +6,19 @@
 @tailwind utilities;
 
 /* ─── Halis Rounded ─────────────────────────────────────── */
-@font-face {
-  font-family: "HalisR";
-  src: url("/fonts/Ahmet Altun - HalisR-Light.otf") format("opentype");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HalisR";
-  src: url("/fonts/Ahmet Altun - HalisR-Book.otf") format("opentype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HalisR";
-  src: url("/fonts/Ahmet Altun - HalisR-Medium.otf") format("opentype");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HalisR";
-  src: url("/fonts/Ahmet Altun - HalisR-Bold.otf") format("opentype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "HalisR";
-  src: url("/fonts/Ahmet Altun - HalisR-Black.otf") format("opentype");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
+/*
+ * 実体の読み込みは lib/fonts.ts の next/font/local が行う。
+ * ここに @font-face を書いて url("/fonts/...") を直書きすると、
+ * **CSS の url() には basePath（店舗ごとのURL接頭辞）が付かない**ため
+ * 本番で404になる（2026-08-26 に実際に起きた）。
+ *
+ * next/font が生成したフォント名は CSS変数 --font-halis に入るので、
+ * それを "HalisR" という名前で受け直す。こうすることで、
+ * 既存の style={{ fontFamily: "HalisR, sans-serif" }}（12箇所）を
+ * 1つも書き換えずに済む。
+ */
+/* 実体は lib/fonts.ts の next/font/local が読み込み、CSS変数 --font-halis に入る。
+   参照側は "HalisR" ではなく var(--font-halis) を使うこと。 */
 
 /* ─── Root variables ─────────────────────────────────────── */
 :root {
@@ -137,7 +115,7 @@ body {
 
 /* ─── Utilities ──────────────────────────────────────────── */
 @layer utilities {
-  .font-halis { font-family: "HalisR", sans-serif; }
+  .font-halis { font-family: var(--font-halis), sans-serif; }
   .font-urbanist { font-family: var(--font-urbanist), system-ui, sans-serif; }
   .text-balance { text-wrap: balance; }
 

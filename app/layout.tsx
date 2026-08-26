@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, Urbanist } from "next/font/google";
 import PageTransition from "@/components/PageTransition";
-import { notoSansJP, barlow } from "@/lib/fonts";
+import { notoSansJP, barlow, halisR } from "@/lib/fonts";
 import { siteUrl, STORE, SITE_DESCRIPTION, BRAND_BG } from "@/lib/siteConfig";
 import "./globals.css";
 
@@ -101,7 +101,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja" className={`${noto.variable} ${urbanist.variable} ${notoSansJP.variable} ${barlow.variable}`}>
+    <html lang="ja" className={`${noto.variable} ${urbanist.variable} ${notoSansJP.variable} ${barlow.variable} ${halisR.variable}`}>
       <body className="min-h-screen bg-brand-bg">
         <PageTransition>{children}</PageTransition>
       </body>

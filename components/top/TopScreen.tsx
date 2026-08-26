@@ -8,6 +8,7 @@ import { resolveTable } from "@/lib/tables";
 import { useStoreVideo } from "@/lib/useStoreMedia";
 import { resolveLandingBackground } from "@/lib/storeMedia";
 import { foregroundColor } from "@/lib/backgroundColor";
+import { asset } from "@/lib/siteConfig";
 
 function TopContent() {
   const router = useRouter();
@@ -164,7 +165,7 @@ function TopContent() {
 
           {/* ロゴ。背景が明るいときは黒版に差し替える（白ロゴでは見えないため） */}
           <Image
-            src={isDark ? "/images/logo/logoSmallBlack.webp" : "/images/logo/logo.webp"}
+            src={asset(isDark ? "/images/logo/logoSmallBlack.webp" : "/images/logo/logo.webp")}
             alt="YORKYS BRUNCH"
             width={220}
             height={120}
@@ -180,7 +181,7 @@ function TopContent() {
             >
               <p
                 className={`text-[10px] tracking-[0.35em] uppercase ${light ? "text-white/50" : ""}`}
-                style={{ fontFamily: "HalisR, sans-serif", ...ink(0.5, "color") }}
+                style={{ fontFamily: "var(--font-halis), sans-serif", ...ink(0.5, "color") }}
               >
                 Takeout
               </p>
@@ -198,7 +199,7 @@ function TopContent() {
             >
               <p
                 className={`text-[10px] tracking-[0.35em] uppercase ${light ? "text-white/50" : ""}`}
-                style={{ fontFamily: "HalisR, sans-serif", ...ink(0.5, "color") }}
+                style={{ fontFamily: "var(--font-halis), sans-serif", ...ink(0.5, "color") }}
               >
                 Table
               </p>
@@ -206,7 +207,7 @@ function TopContent() {
                 <div className={`w-8 h-px ${light ? "bg-white/30" : ""}`} style={ink(0.3, "backgroundColor")} />
                 <span
                   className={`text-6xl font-light leading-none tracking-tight ${light ? "text-white" : ""}`}
-                  style={{ fontFamily: "HalisR, sans-serif" }}
+                  style={{ fontFamily: "var(--font-halis), sans-serif" }}
                 >
                   {tableDisplay ?? "—"}
                 </span>
@@ -260,7 +261,7 @@ function TopContent() {
         {/* 下部クレジット */}
         <p
           className={`text-[10px] tracking-widest ${light ? "text-white/40" : ""}`}
-          style={{ fontFamily: "HalisR, sans-serif", ...ink(0.4, "color") }}
+          style={{ fontFamily: "var(--font-halis), sans-serif", ...ink(0.4, "color") }}
         >
           POWERED BY GOOD ORDER
         </p>

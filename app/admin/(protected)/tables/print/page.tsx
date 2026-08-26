@@ -207,19 +207,19 @@ function PrintCardBody({ label, url }: { label: string; url: string }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "0.6mm" }}>
           <span
             className="font-halis"
-            style={{ fontFamily: "HalisR, sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "var(--color-text-primary)" }}
+            style={{ fontFamily: "var(--font-halis), sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "var(--color-text-primary)" }}
           >
             YORKYS
           </span>
           <span
             className="font-halis"
-            style={{ fontFamily: "HalisR, sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "var(--color-text-primary)" }}
+            style={{ fontFamily: "var(--font-halis), sans-serif", fontSize: "5.2mm", lineHeight: 1.05, letterSpacing: "0.02em", color: "var(--color-text-primary)" }}
           >
             BRUNCH
           </span>
           <span
             className="font-halis"
-            style={{ fontFamily: "HalisR, sans-serif", fontSize: "1.9mm", lineHeight: 1.2, letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}
+            style={{ fontFamily: "var(--font-halis), sans-serif", fontSize: "1.9mm", lineHeight: 1.2, letterSpacing: "0.14em", color: "var(--color-text-secondary)" }}
           >
             GOOD BRUNCH, GREAT DAY!
           </span>

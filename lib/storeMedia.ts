@@ -11,6 +11,7 @@
 import { supabase } from "./supabase";
 import { STORE_ID } from "./api";
 import type { MediaItem } from "./menu";
+import { asset } from "./siteConfig";
 import {
   DEFAULT_BACKGROUND_COLOR,
   foregroundToneFor,
@@ -57,8 +58,8 @@ export type StoreMediaMap = Record<StoreMediaSlot, StoreMedia>;
 export const STORE_MEDIA_FALLBACK: StoreMediaMap = {
   order_hero: {
     enabled: true,
-    url: "/images/hero/background.mp4",
-    posterUrl: "/images/pancake/p1.webp",
+    url: asset("/images/hero/background.mp4"),
+    posterUrl: asset("/images/pancake/p1.webp"),
     updatedAt: null,
     backgroundType: "video",
     backgroundColor: null,
@@ -66,8 +67,8 @@ export const STORE_MEDIA_FALLBACK: StoreMediaMap = {
   },
   landing_background: {
     enabled: true,
-    url: "/images/hero/background.mp4",
-    posterUrl: "/images/hero/background-poster.webp",
+    url: asset("/images/hero/background.mp4"),
+    posterUrl: asset("/images/hero/background-poster.webp"),
     updatedAt: null,
     backgroundType: "video",
     backgroundColor: null,

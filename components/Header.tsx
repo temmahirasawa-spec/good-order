@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store";
 import AppDrawer from "@/components/ui/AppDrawer";
+import { asset } from "@/lib/siteConfig";
 
 interface HeaderProps {
   mode?: "home" | "sub";
@@ -46,7 +47,7 @@ export default function Header({ mode = "home", title, titleNode, onBack }: Head
         {/* ── 左：ロゴ or 戻る ── */}
         {mode === "home" ? (
           <Image
-            src="/images/logo/logoSmallBlack.webp"
+            src={asset("/images/logo/logoSmallBlack.webp")}
             alt="YORKYS BRUNCH"
             width={96}
             height={28}
@@ -72,13 +73,13 @@ export default function Header({ mode = "home", title, titleNode, onBack }: Head
             <div className="flex items-baseline gap-1.5">
               <span
                 className="text-[10px] tracking-[0.2em] uppercase text-gray-400"
-                style={{ fontFamily: "HalisR, sans-serif" }}
+                style={{ fontFamily: "var(--font-halis), sans-serif" }}
               >
                 Table
               </span>
               <span
                 className="text-lg font-medium text-warm-700"
-                style={{ fontFamily: "HalisR, sans-serif" }}
+                style={{ fontFamily: "var(--font-halis), sans-serif" }}
               >
                 {tableNo}
               </span>

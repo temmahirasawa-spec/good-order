@@ -23,6 +23,31 @@
 export const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || "").replace(/\/$/, "");
 
 /**
+ * public/ 配下の静的ファイル（画像・動画・フォント）を指すパスに、
+ * 店舗の接頭辞を足す。
+ *
+ * **なぜ必要か**（2026-08-26 の事故）:
+ *   basePath を入れると public/ の実体は `/yorkys-shukugawa/images/...` で配信される。
+ *   ところが `next/image` は src をそのまま画像最適化APIの `url` 引数に渡すため、
+ *   `/images/...` と書いてあると最適化APIが接頭辞なしのURLを取りに行って 404 になる。
+ *   本番で実測: `?url=%2Fimages%2F...` は404、`?url=%2Fyorkys-shukugawa%2Fimages%2F...` は200。
+ *   その結果、お客様が最初に見る画面のロゴ・料理写真・背景動画が全滅していた。
+ *
+ * **使い方**: public/ を指すパスは、生の文字列で書かず必ずこれを通すこと。
+ *   <Image src={asset("/images/logo/logo.webp")} />
+ *
+ * Supabase Storage など外部URL（http で始まる）はそのまま返すので、
+ * 混在していても安全に通せる。
+ */
+export function asset(path: string): string {
+  if (!path) return path;
+  if (/^(https?:)?\/\//.test(path) || path.startsWith("data:")) return path;
+  if (!basePath) return path;
+  if (path.startsWith(`${basePath}/`)) return path;  // 二重付与を防ぐ
+  return `${basePath}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+/**
  * アプリが載っているホスト（スキーム＋ドメイン。接頭辞は含まない）。
  *
  * 独自ドメインを当てたら `NEXT_PUBLIC_SITE_URL` に **ドメインだけ** を入れる。

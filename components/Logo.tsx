@@ -17,13 +17,13 @@ export default function Logo({ size = "md", className = "" }: LogoProps) {
     <div className={`flex flex-col items-center gap-1 ${className}`}>
       <span
         className={`font-halis font-medium ${s.title} text-warm-800 leading-none`}
-        style={{ fontFamily: "HalisR, sans-serif" }}
+        style={{ fontFamily: "var(--font-halis), sans-serif" }}
       >
         YORKYS
       </span>
       <span
         className={`font-halis font-light ${s.sub} ${s.spacing} text-warm-500 uppercase leading-none`}
-        style={{ fontFamily: "HalisR, sans-serif" }}
+        style={{ fontFamily: "var(--font-halis), sans-serif" }}
       >
         Brunch
       </span>

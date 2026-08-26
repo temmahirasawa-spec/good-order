@@ -12,6 +12,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import HeaderIconButton from "@/components/ui/HeaderIconButton";
+import { asset } from "@/lib/siteConfig";
 
 export default function OrderHeader({
   variant = "open",
@@ -41,7 +42,7 @@ export default function OrderHeader({
         />
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Image
-            src="/images/logo/logoSmallBlack.webp"
+            src={asset("/images/logo/logoSmallBlack.webp")}
             alt="YORKYS BRUNCH"
             width={109}
             height={38}

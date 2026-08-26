@@ -17,6 +17,7 @@ import BackgroundColorPicker from "@/components/admin/settings/BackgroundColorPi
 import { DEFAULT_BACKGROUND_COLOR, foregroundToneFor, normalizeHex } from "@/lib/backgroundColor";
 import type { BackgroundType, StoreMedia, StoreMediaSlot } from "@/lib/storeMedia";
 import type { VideoFit } from "@/lib/videoCompression";
+import { asset } from "@/lib/siteConfig";
 
 const TYPE_TABS: { type: BackgroundType; label: string }[] = [
   { type: "color", label: "色" },
@@ -37,7 +38,7 @@ function ColorPreview({ hex }: { hex: string }) {
       style={{ backgroundColor: hex }}
     >
       <Image
-        src={tone === "dark" ? "/images/logo/logoSmallBlack.webp" : "/images/logo/logo.webp"}
+        src={asset(tone === "dark" ? "/images/logo/logoSmallBlack.webp" : "/images/logo/logo.webp")}
         alt=""
         width={96}
         height={52}
