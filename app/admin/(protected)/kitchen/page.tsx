@@ -96,7 +96,14 @@ export default function KitchenPage() {
       const { data: orderRows, error: orderErr } = await supabase
         .from("orders")
         .select("id, table_number, table_id, table_label, status, order_type, created_at, updated_at")
-        .in("status", ["pending", "preparing"])
+        // **会計済み（paid）でも、調理が終わっていなければ厨房に残す。**
+        //   以前は ["pending","preparing"] だけを拾っていたため、
+        //   テイクアウトの客が先に支払うとレジが paid にした瞬間、
+        //   まだ作っていない注文が厨房のiPadから消えた。
+        //   「お金は払ったのに商品が出てこない」に直結する
+        //   （2026-08-26 の監査で判明）。
+        //   提供済み（served）と受渡済み（picked_up）だけを除外する。
+        .not("status", "in", "(served,picked_up)")
         .order("created_at", { ascending: true });
       if (orderErr) throw orderErr;
 

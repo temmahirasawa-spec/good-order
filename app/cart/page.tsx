@@ -8,7 +8,7 @@
  *
  * カートの中身・数量変更・削除・注文確定のロジックは旧実装のまま。今回は見た目のみ差し替え。
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import HeaderIconButton from "@/components/ui/HeaderIconButton";
 import { AddToCartButton, BackButton } from "@/components/ui/Buttons";
@@ -30,6 +30,8 @@ export default function CartPage() {
   const fetchAll = useMenuDataStore((s) => s.fetchAll);
 
   const [confirming, setConfirming] = useState(false);
+  // 同一タップ内の連打を弾く。state は反映が1拍遅れるので ref と併用する
+  const submittingRef = useRef(false);
   const [screenFlash, setScreenFlash] = useState(false);
 
   useEffect(() => {
@@ -41,9 +43,21 @@ export default function CartPage() {
     "現在、ご注文の受付を一時停止しています。しばらくしてから再度お試しください。";
 
   const handleOrder = async () => {
-    if (confirming) return;
+    // 二度押し防止は**必ず最初に**行う。
+    //   以前は先に isAcceptingOrders()（ネットワーク往復）を待ってから
+    //   setConfirming(true) していたため、往復中はボタンが押せたままだった。
+    //   店の Wi-Fi が重いと「押したのに反応しない」と感じた客が二度押しし、
+    //   注文IDは押すたびに新規採番されるので**別の注文として2件入る**
+    //   （伝票2枚・料理2人前・レジで2件請求）。2026-08-26 の監査で判明。
+    //
+    //   React の state 更新は1拍遅れるので、同一タップ内の連打には効かない。
+    //   そのため useRef のフラグと併用する。
+    if (submittingRef.current || confirming) return;
+    submittingRef.current = true;
+    setConfirming(true);
 
-    // 事前チェック（受付停止中ならアニメーションを始めずに即座に知らせる）
+    // 受付停止チェック（placeOrder の中でも同じ確認をしているが、
+    // ここで先に弾くとアニメーションを始めずに済む）
     let accepting = true;
     try {
       accepting = await isAcceptingOrders();
@@ -51,20 +65,32 @@ export default function CartPage() {
       accepting = true; // fail-open
     }
     if (!accepting) {
+      submittingRef.current = false;
+      setConfirming(false);
       alert(NOT_ACCEPTING_MESSAGE);
       return;
     }
 
-    setConfirming(true);
     // 視覚演出のウェイト（ボタン沈み込み → ゴールドの光）
     await new Promise((r) => setTimeout(r, 300));
     setScreenFlash(true);
     const result = await placeOrder();
     if (!result.ok) {
-      // 事前チェック後に受付停止へ切り替わった等の稀なケース
       setScreenFlash(false);
       setConfirming(false);
-      if (result.reason === "closed") alert(NOT_ACCEPTING_MESSAGE);
+      submittingRef.current = false;
+      if (result.reason === "closed") {
+        alert(NOT_ACCEPTING_MESSAGE);
+      } else if (result.reason === "failed") {
+        // 送信できなかった。カートは残っているので、そのまま再送できる。
+        // ここで黙って完了画面に進むと、厨房に届かない注文をお客様が
+        // 待ち続けることになる（実店舗で最も起きてはいけない事故）。
+        alert(
+          "通信エラーのため、ご注文を送信できませんでした。\n" +
+          "お手数ですが、もう一度「注文を確定する」を押してください。\n" +
+          "繰り返し失敗する場合は、店員にお声がけください。"
+        );
+      }
       return;
     }
     // 白フェードの途中で遷移

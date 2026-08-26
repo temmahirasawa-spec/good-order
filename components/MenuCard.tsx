@@ -56,7 +56,7 @@ export default function MenuCard({ item }: MenuCardProps) {
       <div className="flex flex-col flex-1 min-w-0 justify-between">
         <div>
           <p className="text-[11px] text-brand-muted font-halis tracking-wide mb-0.5 truncate"
-             style={{ fontFamily: "HalisR, sans-serif" }}>
+             style={{ fontFamily: "var(--font-halis), sans-serif" }}>
             {item.nameEn}
           </p>
           <h3 className="text-sm font-medium text-brand-text leading-snug mb-1 line-clamp-2">

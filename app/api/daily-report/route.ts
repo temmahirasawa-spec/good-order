@@ -41,7 +41,15 @@ async function verifyRequest(req: Request): Promise<{ ok: boolean; via?: string 
           auth: { persistSession: false, autoRefreshToken: false },
         });
         const { data, error } = await admin.auth.getUser(token);
-        if (!error && data.user) {
+        // **ログインできているかだけでは足りない。**
+        //   このAPIは service_role キーで動くため RLS を完全に迂回し、
+        //   売上合計・客単価・人気メニュー・ピーク時間帯を平文で返す。
+        //   以前は role を見ていなかったため、Supabase でアカウントを
+        //   作れる人なら誰でも店の経営数字を取得できた（2026-08-26 の監査で判明）。
+        //   売上の閲覧は manager だけ、という既存の方針
+        //   （supabase/staff_role_rls.sql の get_sales_orders）に揃える。
+        const role = (data?.user?.app_metadata as { role?: string } | undefined)?.role;
+        if (!error && data.user && role === "manager") {
           return { ok: true, via: `user:${data.user.email ?? data.user.id}` };
         }
       } catch {

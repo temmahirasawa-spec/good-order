@@ -23,3 +23,26 @@ export const barlow = Barlow({
 // Price displays should additionally get:
 //   className="tabular-nums"
 // so digits don't shift width during quantity/price updates.
+
+// ─── HalisR（ブランドフォント）──────────────────────────────
+//
+// もともと app/globals.css の @font-face に url("/fonts/...") と直書きしていたが、
+// **CSS の url() には basePath（店舗ごとのURL接頭辞）が付かない**ため、
+// 接頭辞を導入した 2026-08-26 に本番で全ファイルが404になった。
+// next/font/local に移すと Next.js が接頭辞込みの正しいURLを生成する。
+//
+// 参照側（style={{ fontFamily: "HalisR, sans-serif" }} が12箇所）は変えずに済むよう、
+// CSS変数 --font-halis を app/globals.css の @font-face 側で受けている。
+import localFont from "next/font/local";
+
+export const halisR = localFont({
+  src: [
+    { path: "../public/fonts/Ahmet Altun - HalisR-Light.otf",   weight: "300", style: "normal" },
+    { path: "../public/fonts/Ahmet Altun - HalisR-Book.otf",    weight: "400", style: "normal" },
+    { path: "../public/fonts/Ahmet Altun - HalisR-Medium.otf",  weight: "500", style: "normal" },
+    { path: "../public/fonts/Ahmet Altun - HalisR-Bold.otf",    weight: "700", style: "normal" },
+    { path: "../public/fonts/Ahmet Altun - HalisR-Black.otf",   weight: "900", style: "normal" },
+  ],
+  variable: "--font-halis",
+  display: "swap",
+});

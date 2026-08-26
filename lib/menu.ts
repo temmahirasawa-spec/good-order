@@ -1,4 +1,5 @@
 export type Category = "food" | "drink";
+import { asset } from "@/lib/siteConfig";
 
 export type FoodSubcategory =
   | "pancake"
@@ -38,16 +39,19 @@ export interface MenuItem {
 }
 
 // ─── 実店舗写真（public/images/ 配下）────────────────────────
+// basePath（店舗ごとのURL接頭辞）を必ず通すこと。
+// 生の "/images/..." のままだと画像最適化APIが接頭辞なしのURLを取りに行き 404 になる
+// （2026-08-26 に本番でロゴ・料理写真が全滅した原因）。
 const LOCAL = {
-  p1:  "/images/pancake/p1.webp",   // プレーン（バター・メープル）
-  p2:  "/images/pancake/p2.webp",   // フルーツ&フルーツ
-  p3:  "/images/pancake/p3.webp",   // チョコ＆バナナ（アイスクリーム）
-  p4:  "/images/pancake/p4.webp",   // チョコマシュマロ（ダークソース）
-  p5:  "/images/pancake/p5.webp",   // マスカルポーネ＆エスプレッソ
-  ft1: "/images/pancake/ft1.webp",  // フレンチトースト
-  c1:  "/images/cafe/c1.webp",      // ブレンドコーヒー
-  c2:  "/images/cafe/c2.webp",      // カフェラテ（ラテアート）
-  c3:  "/images/cafe/c3.webp",      // カプチーノ（花柄ラテアート）
+  p1:  asset("/images/pancake/p1.webp"),   // プレーン（バター・メープル）
+  p2:  asset("/images/pancake/p2.webp"),   // フルーツ&フルーツ
+  p3:  asset("/images/pancake/p3.webp"),   // チョコ＆バナナ（アイスクリーム）
+  p4:  asset("/images/pancake/p4.webp"),   // チョコマシュマロ（ダークソース）
+  p5:  asset("/images/pancake/p5.webp"),   // マスカルポーネ＆エスプレッソ
+  ft1: asset("/images/pancake/ft1.webp"),  // フレンチトースト
+  c1:  asset("/images/cafe/c1.webp"),      // ブレンドコーヒー
+  c2:  asset("/images/cafe/c2.webp"),      // カフェラテ（ラテアート）
+  c3:  asset("/images/cafe/c3.webp"),      // カプチーノ（花柄ラテアート）
 };
 
 // ─── Unsplash プレースホルダー────────────────────────────────

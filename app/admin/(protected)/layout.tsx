@@ -108,7 +108,7 @@ export default function AdminProtectedLayout({
           {/* ロゴ */}
           <span
             className="text-base font-bold text-warm-700 tracking-wider shrink-0"
-            style={{ fontFamily: "HalisR, sans-serif" }}
+            style={{ fontFamily: "var(--font-halis), sans-serif" }}
           >
             YORKYS Admin
           </span>
