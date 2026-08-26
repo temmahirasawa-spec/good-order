@@ -48,6 +48,8 @@ interface FormState {
   en_size: HeadingSize;
   /** 日本語名の文字サイズ */
   jp_size: HeadingSize;
+  /** お客様側の並び。フードが先、ドリンクが後にまとまる */
+  category_type: "food" | "drink";
   display_order: number;
   image_url: string;
   tag_color: TagColor;
@@ -55,7 +57,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   name: "", slug: "", caption: "", description: "",
   // 既定値は、DB管理に移す前の見た目と同じ組み合わせ
-  en_size: "large", jp_size: "small",
+  en_size: "large", jp_size: "small", category_type: "food",
   display_order: 99, image_url: "", tag_color: "yellow",
 };
 
@@ -189,6 +191,7 @@ export default function AdminCategoriesPage() {
       description:   cat.description ?? "",
       en_size:       cat.en_size ?? "large",
       jp_size:       cat.jp_size ?? "small",
+      category_type: cat.category_type ?? "food",
       display_order: cat.display_order,
       image_url:     cat.image_url ?? "",
       tag_color:     cat.tag_color ?? "yellow",
@@ -283,6 +286,7 @@ export default function AdminCategoriesPage() {
             description:   form.description || null,
             en_size:       form.en_size,
             jp_size:       form.jp_size,
+            category_type: form.category_type,
             display_order: form.display_order,
             image_url:     form.image_url || null,
             tag_color:     form.tag_color,
@@ -308,6 +312,10 @@ export default function AdminCategoriesPage() {
           name:          form.name,
           slug:          form.slug,
           caption:       form.caption || null,
+          description:   form.description || null,
+          en_size:       form.en_size,
+          jp_size:       form.jp_size,
+          category_type: form.category_type,
           display_order: form.display_order,
           image_url:     form.image_url || null,
           tag_color:     form.tag_color,
@@ -413,6 +421,7 @@ export default function AdminCategoriesPage() {
                     slug={cat.slug}
                     thumbnailUrl={cat.image_url}
                     tagColor={cat.tag_color ?? "yellow"}
+                    categoryType={cat.category_type}
                     displayOrder={cat.display_order}
                     onEdit={() => openEdit(cat)}
                     reorder={bindingsFor(cat.id)}
@@ -483,6 +492,35 @@ export default function AdminCategoriesPage() {
                       value={form.jp_size}
                       onChange={(v) => setForm((f) => ({ ...f, jp_size: v }))}
                     />
+                  </div>
+
+                  {/* 区分（フード / ドリンク）
+                      お客様側の並びを決める。フードが先、ドリンクが後にまとまる。 */}
+                  <div className="flex flex-col gap-[var(--space-4)] w-full">
+                    <label className="type-jp-caption-bold text-text-primary">区分</label>
+                    <div className="flex gap-[var(--space-4)]">
+                      {([
+                        { value: "food",  label: "フード" },
+                        { value: "drink", label: "ドリンク" },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, category_type: opt.value }))}
+                          aria-pressed={form.category_type === opt.value}
+                          className={`h-[36px] px-[var(--space-16)] rounded-[var(--radius-sm)] border type-jp-caption-bold transition-colors ${
+                            form.category_type === opt.value
+                              ? "bg-text-primary text-surface-white border-transparent"
+                              : "bg-surface-white text-text-secondary border-border"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="type-jp-caption text-text-tertiary">
+                      お客様のメニュー画面で、フードが先・ドリンクが後にまとまって並びます。
+                    </p>
                   </div>
 
                   {/* スラッグ */}

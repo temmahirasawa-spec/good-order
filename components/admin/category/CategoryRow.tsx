@@ -22,6 +22,7 @@ export default function CategoryRow({
   slug,
   thumbnailUrl,
   tagColor,
+  categoryType,
   displayOrder,
   onEdit,
   reorder,
@@ -31,6 +32,8 @@ export default function CategoryRow({
   slug: string;
   thumbnailUrl: string | null;
   tagColor: TagColor;
+  /** 'food' | 'drink'。お客様側の並び（フード→ドリンク）に効く */
+  categoryType?: "food" | "drink";
   displayOrder: number;
   onEdit: () => void;
   /** ⠿ ドラッグ並び替えのバインディング（PCのみ）。未指定なら並び替え不可 */
@@ -85,6 +88,9 @@ export default function CategoryRow({
         </p>
         <p className="type-jp-label text-text-tertiary w-full overflow-hidden text-ellipsis whitespace-nowrap">
           {slug}
+          {categoryType === "drink" && (
+            <span className="ml-[var(--space-8)] text-text-secondary">ドリンク</span>
+          )}
         </p>
       </div>
 
