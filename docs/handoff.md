@@ -3006,3 +3006,47 @@ NEXT_PUBLIC_SITE_URL=https://app.good-order.jp/yorkys-shukugawa  ← 誤（二�
 - `manifest.webmanifest` の `start_url` と icons、`sitemap.xml` の `<loc>`、
   `robots.txt` の Disallow と Sitemap 行がすべて接頭辞込みで出力される
 - 接頭辞なし（＝デモ・ローカル）でビルドすると従来どおりルート直下で動く
+
+---
+
+## basePath を本番へ反映するときの手順（2026-08-26 に踏んだ罠）
+
+`NEXT_PUBLIC_BASE_PATH` を Vercel に追加したあと、**本番へ反映するのに何度も失敗した**。
+同じことを繰り返さないよう、原因と正しい手順を残す。
+
+### 踏んだ罠3つ
+
+1. **`NEXT_PUBLIC_` の環境変数を Sensitive で登録すると効かない**
+   `vercel env add` は既定で Sensitive（値を隠す）として保存する。しかし
+   `NEXT_PUBLIC_*` はブラウザ側のJSに埋め込む前提の値なので、Sensitive とは
+   両立しない。**`--no-sensitive` を付けて登録すること。**
+
+2. **`vercel redeploy` は「前回と同じ環境変数」を使い回す**
+   環境変数を足したあとに `vercel redeploy` しても、**追加した変数は読まれない**。
+   ビルドログには新しいビルドが走ったように出るので気づきにくい。
+
+3. **`vercel redeploy` は「そのデプロイのコミット」を再ビルドする**
+   Deployments 一覧の一番上が最新コミットとは限らない（promote や redeploy で
+   作られたデプロイが上に来る）。**古いデプロイを redeploy すると、本番が
+   その時点のコードに巻き戻る。** 実際 2026-08-26 に本番を 8/4 の状態
+   （印刷API・注文RPCが存在しない）へ巻き戻す事故を起こした。
+
+### 正しい手順
+
+環境変数を変えたら、**新しいコミットを push して自動デプロイを走らせる**のが唯一
+確実な方法。PR を作ってマージすれば、そのコミット＋最新の環境変数でビルドされる。
+
+Vercel 画面の Redeploy を使う場合は、**対象デプロイのコミットが最新か必ず確認する**
+こと（Deployments 一覧で Source 欄のコミットハッシュを見る）。
+
+### 事故ったときの戻し方
+
+正しいコミットのデプロイを探して promote すれば即座に戻せる。
+
+```
+gh api "repos/<owner>/<repo>/deployments?per_page=5" --jq '.[] | {sha, env: .environment}'
+gh api "repos/<owner>/<repo>/deployments/<id>/statuses" --jq '.[0].environment_url'
+npx vercel promote <そのURL> --yes
+```
+
+promote はビルドし直さないので数秒で完了する。
