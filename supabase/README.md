@@ -42,6 +42,7 @@ Supabase ダッシュボード → SQL Editor に1本ずつ貼って実行する
 | 23 | `store_media.sql` | トップページの動画スロット |
 | 24 | `store_display_settings.sql` | 背景タイプ（色 / 画像 / 動画）の設定。**23の後** |
 | 25 | `table_layout_guard.sql` | 席設定の保存に安全弁（全卓が一度に消えるのを防ぐ）。**6の後** |
+| 26 | `category_heading.sql` | カテゴリー見出し（説明文・英語名・サイズ）をDB管理に。**15の後** |
 
 ### 順番が特に効くところ
 
