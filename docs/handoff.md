@@ -2906,3 +2906,103 @@ Browser ペインで確認した。ペインには**スクロール後に再描�
 ### 残り
 
 フェーズ6: 実機接続（店舗・営業時間外）。開発側の作業はこれで完了。
+
+---
+
+## 独自ドメインと、店舗ごとのURL接頭辞（2026-08-24）
+
+`good-order.jp` をムームードメインで取得したことに伴う、URL体系の決定と実装。
+
+### 決めたこと
+
+| URL | 中身 |
+|---|---|
+| `good-order.jp` | GOOD ORDER の公式サイト。**まだ作っていない。DNSも未設定のまま** |
+| `app.good-order.jp/yorkys-shukugawa` | YORKYS BRUNCH 夙川店の本番（新Vercel＋新Supabase） |
+| `app.good-order.jp/demo` | 製品デモ（現行の `yorkys-orderly` を将来ここへ） |
+| `app.good-order.jp/<店名>` | 今後の導入店。店名は店側が決められる |
+
+ネームサーバーは取得時から**ムームーDNS**（`dns01/dns02.muumuu-domain.com`）。
+Vercel のネームサーバーには**移していない**。ムームーDNSのカスタム設定に
+CNAME を1行足す方式で運用する。
+
+### なぜ basePath 方式にしたか（案A）
+
+Vercel は **1ドメイン＝1プロジェクト**。`app.good-order.jp` を「デモ」と「YORKYS」の
+両方に同時に向けることはできない。それでもデモと本番はVercelプロジェクトごと
+分けたい（デモの操作が本番の売上データに混ざらないため）。この2つを両立させる
+方法を3つ比較した。
+
+| 案 | 中身 | 採否 |
+|---|---|---|
+| **A** | 各プロジェクトが `basePath` で自分の接頭辞を名乗る。`app.good-order.jp` は YORKYS プロジェクトに直接当てる | **採用** |
+| B | `app.good-order.jp` に「振り分け役」プロジェクトを置き、rewrites で各店舗へプロキシ | 見送り |
+| C | アプリ自体を多店舗対応（`app/[shop]/...`）に作り替える | 見送り |
+
+Bを見送った理由: プロキシが1枚挟まるので、厨房画面の Realtime（WebSocket）と
+Supabase Auth のCookieが正しく通るかを実機検証する必要があり、9月リオープンまでに
+検証時間が取れない。**2店舗目が入る時点でBへ移行する**。そのときも各店舗の
+`basePath` は既に入っているので、**YORKYSのURLは変わらない**。
+
+Cを見送った理由: 全ページのルーティング・全テーブルのRLS書き換えになり数週間。
+9月に間に合わない。SaaSとして数十店舗を捌く段になったら改めて検討する。
+
+**URLを先に確定させることが目的**。二次元コードは紙に刷って店に置くので、
+後からURLを変えると全部刷り直しになる。見た目や機能は後から直せるが、
+紙に焼き付いたURLは直せない。
+
+### basePath が自動で付かない4箇所（実装済み）
+
+`next/link` と `router.push` は Next.js が自動で接頭辞を付ける。付かないのは以下。
+**新しくコードを足すときはここに該当しないか確認すること。**
+
+| 場所 | 何をしたか |
+|---|---|
+| `lib/qrCode.ts` の `tableOrderUrl()` | `window.location.origin` に接頭辞を足す。ここを忘れると刷った紙が全部無効になる |
+| `lib/useAdminSession.ts` の `logout()` | `window.location.href` は Next を経由しないので手で足す |
+| `app/manifest.ts` | `start_url` と `icons[].src`。抜けるとホーム画面から起動したときだけ404 |
+| `app/robots.ts` | `disallow` のパス。robots.txt の記法はドメイン先頭からの絶対パスのため |
+
+値の出どころは環境変数 `NEXT_PUBLIC_BASE_PATH` の1つだけ。
+`next.config.mjs` と `lib/siteConfig.ts` の両方がこれを読む
+（next.config は .mjs なので TS からは import できず、環境変数が唯一の共有手段）。
+
+### `NEXT_PUBLIC_SITE_URL` の意味が変わった
+
+以前は「公開URLそのもの」だったが、**今は「ドメインだけ」を入れる**。
+店舗の接頭辞はコード側（`lib/siteConfig.ts`）が足す。
+
+```
+NEXT_PUBLIC_SITE_URL=https://app.good-order.jp        ← 正
+NEXT_PUBLIC_SITE_URL=https://app.good-order.jp/yorkys-shukugawa  ← 誤（二重になる）
+```
+
+`siteConfig.ts` のエクスポートも増えた: `siteHost`（ドメイン）/ `basePath`（接頭辞）/
+`siteUrl`（両者を繋いだもの。canonical・OGP・sitemap の出どころ。従来どおり）。
+
+### ⚠ 残っている課題
+
+1. **robots.txt がドメイン直下に置けない**
+   basePath があるので `/yorkys-shukugawa/robots.txt` に出る。検索エンジンは
+   ドメイン直下の `/robots.txt` しか読まないため、本番では事実上「robots.txt なし」。
+   `/admin` `/dev` は各ページの noindex メタで除外済みなので実害は無いが、
+   案Bへ移行して振り分け役を置いたら、そこに全店舗ぶんの robots.txt を出すこと。
+2. **`vercel.json` の cron パスに店名がハードコードされている**
+   `/yorkys-shukugawa/api/daily-report`。vercel.json は静的JSONなので環境変数で
+   分岐できない。同じリポジトリを見るデモ側では404になるため、
+   **デモ側のVercelプロジェクトでは Cron Jobs を Disable にすること**。
+   3店舗目が増えたら `vercel.ts`（環境変数で組み立てられる新方式）へ移行が必要。
+3. **本番の環境変数が2つ欠けている**（2026-08-24 時点、`yorkys-orderly`）
+   - `SUPABASE_SERVICE_ROLE_KEY` … 無いと `/api/print` が503を返し、**厨房伝票が1枚も出ない**
+   - `CRON_SECRET` … 無いとAI日報が動かない
+   新しいYORKYSプロジェクトを作るときは**必ず両方入れること**。
+
+### 検証したこと（ローカル本番ビルド、`NEXT_PUBLIC_BASE_PATH=/yorkys-shukugawa`）
+
+- `/` → `/yorkys-shukugawa` へ307リダイレクト
+- `/yorkys-shukugawa`・`/order`・`/admin/login` が200
+- 既存の `/admin/takeout` → `/admin/menu` リダイレクトも接頭辞込みで動作
+- 接頭辞なしの `/order` は404（他店舗のURLと混ざらない）
+- `manifest.webmanifest` の `start_url` と icons、`sitemap.xml` の `<loc>`、
+  `robots.txt` の Disallow と Sitemap 行がすべて接頭辞込みで出力される
+- 接頭辞なし（＝デモ・ローカル）でビルドすると従来どおりルート直下で動く

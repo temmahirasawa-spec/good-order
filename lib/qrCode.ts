@@ -11,6 +11,7 @@
  */
 
 import QRCode from "qrcode";
+import { basePath } from "@/lib/siteConfig";
 
 /** 二次元コードの誤り訂正レベル。卓上カードは汚れ・光の反射があるので M ではなく Q にしている */
 const ERROR_CORRECTION: "L" | "M" | "Q" | "H" = "Q";
@@ -21,14 +22,20 @@ const MARGIN = 1;
 /**
  * 卓の注文URLを組み立てる。
  *
- * - 卓あり: `<origin>/?t=<short_code>`
- * - テイクアウト: `<origin>/`（パラメータなし。既存の「?table が無ければテイクアウト」判定に乗る）
+ * - 卓あり: `<origin><basePath>/?t=<short_code>`
+ * - テイクアウト: `<origin><basePath>/`
+ *   （パラメータなし。既存の「?table が無ければテイクアウト」判定に乗る）
+ *
+ * `basePath` をここで足しているのは、呼び出し側が渡す `window.location.origin` が
+ * ドメインまでしか含まないため。ここを忘れると、刷った紙の二次元コードが
+ * 店舗の接頭辞を持たないURLを指し、読み取っても 404 になる。
+ * **紙に焼き付いてしまうと直せないので、この関数を必ず通すこと。**
  *
  * ラベル（?table=A1）は**埋めない**。カテゴリーのコードを変えた瞬間に
  * 印刷済みカードが全部無効になり、しかも画面にはエラーが出ないため発覚が遅れる。
  */
 export function tableOrderUrl(origin: string, shortCode: string | null): string {
-  const base = origin.replace(/\/$/, "");
+  const base = origin.replace(/\/$/, "") + basePath;
   return shortCode ? `${base}/?t=${shortCode}` : `${base}/`;
 }
 

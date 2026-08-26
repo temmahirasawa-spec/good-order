@@ -2,7 +2,7 @@
   "regions": ["hnd1"],
   "crons": [
     {
-      "path": "/api/daily-report",
+      "path": "/yorkys-shukugawa/api/daily-report",
       "schedule": "0 13 * * *"
     }
   ]

@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { parseStaffRole, type StaffRole } from "@/lib/staffRoles";
+import { basePath } from "@/lib/siteConfig";
 
 export function useAdminSession() {
   const [role, setRole] = useState<StaffRole | null>(null);
@@ -23,7 +24,9 @@ export function useAdminSession() {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/admin/login";
+    // next/link や router.push と違い、window.location は Next.js を経由しないので
+    // basePath が自動で付かない。手で足さないとログアウト後に 404 に落ちる。
+    window.location.href = `${basePath}/admin/login`;
   };
 
   return { role, email, logout };
