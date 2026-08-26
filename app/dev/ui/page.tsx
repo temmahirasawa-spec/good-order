@@ -38,6 +38,7 @@ import OrderCard, { type OrderCardItem } from "@/components/admin/kitchen/OrderC
 import TableChip from "@/components/admin/register/TableChip";
 import OrderGroupHeader from "@/components/admin/register/OrderGroupHeader";
 import BillCard, { type BillCardItem } from "@/components/admin/register/BillCard";
+import { asset } from "@/lib/siteConfig";
 import CheckoutConfirmAlert from "@/components/admin/register/CheckoutConfirmAlert";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import AdminMenuRow from "@/components/admin/menu/AdminMenuRow";
@@ -99,8 +100,11 @@ const sampleCat: ApiCategory = {
   id: "dev",
   slug: "pancake",
   name: "パンケーキ",
-  caption: null,
-  image_url: "/images/pancake/p1.webp",
+  caption: "PANCAKE",
+  description: "これがYORKYSの原点！看板メニュー",
+  en_size: "large",
+  jp_size: "small",
+  image_url: asset("/images/pancake/p1.webp"),
   display_order: 1,
   tag_color: "yellow",
 };

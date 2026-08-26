@@ -24,11 +24,22 @@ export function invalidateCategoriesCache(): void {
   catMapFullCache = null;
 }
 
+/** カテゴリー見出しの文字サイズ。既存のデザイントークンに対応する */
+export type HeadingSize = "large" | "medium" | "small";
+
 export interface ApiCategory {
   id: string;
   slug: string;
+  /** カテゴリー名（日本語）例: パンケーキ */
   name: string;
+  /** カテゴリー名（英語）例: PANCAKE */
   caption: string | null;
+  /** 説明文（40文字以内）例: これがYORKYSの原点！看板メニュー */
+  description: string | null;
+  /** 英語名の文字サイズ（既定 large） */
+  en_size: HeadingSize;
+  /** 日本語名の文字サイズ（既定 small） */
+  jp_size: HeadingSize;
   image_url: string | null;
   display_order: number;
   tag_color: TagColor;
@@ -58,7 +69,7 @@ export interface ApiMenuItem {
 export async function fetchCategories(): Promise<ApiCategory[]> {
   const { data, error } = await supabase
     .from("categories")
-    .select("id, slug, name, caption, image_url, display_order, tag_color")
+    .select("id, slug, name, caption, description, en_size, jp_size, image_url, display_order, tag_color")
     .order("display_order");
   if (error) throw error;
   return (data ?? []) as ApiCategory[];

@@ -29,27 +29,22 @@ import { useOrderPageData } from "@/hooks/useOrderPageData";
 import { useStoreVideo } from "@/lib/useStoreMedia";
 import { toMediaItems } from "@/lib/storeMedia";
 import type { MenuItem } from "@/lib/menu";
+import type { HeadingSize } from "@/lib/api";
 
 /* ── セクション構成（フード7 → ドリンク4） ── */
-const SECTION_ORDER = [
-  "pancake", "french_toast", "eggs_benedict", "sandwich",
-  "fritter", "burger", "lunch",
-  "coffee", "tea", "soft", "alcohol",
-] as const;
-
-/* ── 見出しコピー（eyebrow / EN / JP）。pancake は確定、他はドラフト承認済み文言 ── */
-const SECTION_COPY: Record<string, { eyebrow: string; en: string; jp: string }> = {
-  pancake:       { eyebrow: "これがYORKYSの原点！看板メニュー",       en: "PANCAKE",       jp: "パンケーキ" },
-  french_toast:  { eyebrow: "外はさくっ、中はとろける贅沢な一皿",     en: "FRENCH TOAST",  jp: "フレンチトースト" },
-  eggs_benedict: { eyebrow: "とろ〜りソースが自慢の、休日の主役",     en: "EGG BENEDICT",  jp: "エッグベネディクト" },
-  sandwich:      { eyebrow: "片手で頬張る、忙しい朝のご褒美",         en: "SANDWICH",      jp: "サンドイッチ" },
-  fritter:       { eyebrow: "サクッと軽い、箸が止まらない一品",       en: "FRITTER",       jp: "フリッター" },
-  burger:        { eyebrow: "ボリューム満点、がっつり派に人気",       en: "BURGER",        jp: "バーガー" },
-  lunch:         { eyebrow: "お腹も心も満たす、しっかりごはん",       en: "LUNCH",         jp: "ランチ" },
-  coffee:        { eyebrow: "豆から届ける、香り高い一杯",             en: "COFFEE",        jp: "コーヒー" },
-  tea:           { eyebrow: "ゆったり時間のお供に、香り豊かな一杯",   en: "TEA",           jp: "紅茶" },
-  soft:          { eyebrow: "食事と一緒に、すっきり爽やかに",         en: "SOFT DRINK",    jp: "ソフトドリンク" },
-  alcohol:       { eyebrow: "乾杯はここから、大人のひととき",         en: "ALCOHOL",       jp: "アルコール" },
+/* ── 見出しの文字サイズ → デザイントークン ──────────────────────
+   カテゴリーごとに管理画面から「大・中・小」を選べる。
+   新しいサイズは作らず、既存のトークンに割り当てている。
+   既定値（英語=大 / 日本語=小）は、DB管理に移す前の見た目と同じ組み合わせ。 */
+const EN_SIZE_CLASS: Record<HeadingSize, string> = {
+  large:  "type-en-display-xl",
+  medium: "type-en-display-l",
+  small:  "type-en-display-m",
+};
+const JP_SIZE_CLASS: Record<HeadingSize, string> = {
+  large:  "type-jp-heading-m",
+  medium: "type-jp-body-bold",
+  small:  "type-jp-caption-bold",
 };
 
 const BEST_SELLER = {
@@ -58,11 +53,6 @@ const BEST_SELLER = {
   en: "Best Seller",
   jp: "ベストセラー",
 };
-
-const TABS = [
-  { id: BEST_SELLER.id, label: "おすすめ" },
-  ...SECTION_ORDER.map((slug) => ({ id: slug, label: SECTION_COPY[slug].jp })),
-];
 
 const FILTER_CHIPS = [
   { id: "allergy", label: "アレルギー" },
@@ -74,12 +64,31 @@ const FILTER_CHIPS = [
 const SCROLL_OFFSET = 118;
 
 /* ── セクション見出し（Figma 54:556 実測: gap4 / jp-label + en-display-xl + jp-caption-bold） ── */
-function SectionHeading({ eyebrow, en, jp }: { eyebrow: string; en: string; jp: string }) {
+/**
+ * カテゴリーの見出し。**文言もサイズもDB（categories）から来る。**
+ * 以前はこのファイルに11カテゴリぶんをハードコードしていたため、
+ * 管理画面でカテゴリーを追加してもお客様の画面に出なかった。
+ *
+ * 説明文・英語名は未入力なら行ごと出さない（空行が空くのを避ける）。
+ */
+function SectionHeading({
+  eyebrow,
+  en,
+  jp,
+  enSize = "large",
+  jpSize = "small",
+}: {
+  eyebrow: string | null;
+  en: string | null;
+  jp: string;
+  enSize?: HeadingSize;
+  jpSize?: HeadingSize;
+}) {
   return (
     <div className="flex flex-col gap-[var(--space-4)] px-[var(--space-16)]">
-      <p className="type-jp-label text-text-secondary">{eyebrow}</p>
-      <p className="type-en-display-xl text-text-primary">{en}</p>
-      <p className="type-jp-caption-bold text-text-secondary">{jp}</p>
+      {eyebrow && <p className="type-jp-label text-text-secondary">{eyebrow}</p>}
+      {en && <p className={`${EN_SIZE_CLASS[enSize]} text-text-primary`}>{en}</p>}
+      <p className={`${JP_SIZE_CLASS[jpSize]} text-text-secondary`}>{jp}</p>
     </div>
   );
 }
@@ -130,7 +139,10 @@ function OrderContent() {
      Best Seller がOFFのときはセクション自体が無いので監視対象からも外す ── */
   useEffect(() => {
     if (loading) return;
-    const ids = [...(bestSellerEnabled ? [BEST_SELLER.id] : []), ...SECTION_ORDER];
+    const ids = [
+      ...(bestSellerEnabled ? [BEST_SELLER.id] : []),
+      ...categorySections.map((sec) => sec.category.slug),
+    ];
     const els = ids
       .map((id) => document.getElementById(`section-${id}`))
       .filter((el): el is HTMLElement => el !== null);
@@ -151,7 +163,7 @@ function OrderContent() {
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [loading, bestSellerEnabled]);
+  }, [loading, bestSellerEnabled, categorySections]);
 
   const handleTabSelect = (id: string) => {
     const el = document.getElementById(`section-${id}`);
@@ -182,8 +194,11 @@ function OrderContent() {
     onClick: () => openItemDetail(item.id),
   });
 
-  const sectionItems = (slug: string): MenuItem[] =>
-    categorySections.find((s) => s.category.slug === slug)?.items ?? [];
+  /* ── タブ。DB のカテゴリー（display_order 順）から作る ── */
+  const tabs = [
+    ...(bestSellerEnabled ? [{ id: BEST_SELLER.id, label: "おすすめ" }] : []),
+    ...categorySections.map((sec) => ({ id: sec.category.slug, label: sec.category.name })),
+  ];
 
   /* ── カルーセルカードのステッパーは「何個入れるか」の下書き ──
      カートの現在数量を直接いじる従来のグリッドと違い、
@@ -218,7 +233,7 @@ function OrderContent() {
       {/* ── ジャンプナビ（sticky・scrollspy） ── */}
       <div className="sticky top-[68px] z-30">
         <TabNav
-          tabs={bestSellerEnabled ? TABS : TABS.filter((t) => t.id !== BEST_SELLER.id)}
+          tabs={tabs}
           activeId={activeSection}
           onSelect={handleTabSelect}
         />
@@ -272,9 +287,8 @@ function OrderContent() {
             )}
 
             {/* ── Menu Section ×11（フード7 → ドリンク4） ── */}
-            {SECTION_ORDER.map((slug) => {
-              const copy = SECTION_COPY[slug];
-              const items = sectionItems(slug);
+            {categorySections.map(({ category, items }) => {
+              const slug = category.slug;
               return (
                 <section
                   key={slug}
@@ -282,7 +296,13 @@ function OrderContent() {
                   style={{ scrollMarginTop: SCROLL_OFFSET }}
                   className="pt-[40px] pb-[40px]"
                 >
-                  <SectionHeading eyebrow={copy.eyebrow} en={copy.en} jp={copy.jp} />
+                  <SectionHeading
+                    eyebrow={category.description}
+                    en={category.caption}
+                    jp={category.name}
+                    enSize={category.en_size}
+                    jpSize={category.jp_size}
+                  />
                   {items.length > 0 && (
                     <MenuCarouselM count={items.length} className="mt-[16px]">
                       {items.map((item) => (

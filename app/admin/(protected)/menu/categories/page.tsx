@@ -34,19 +34,73 @@ import CategoryRow from "@/components/admin/category/CategoryRow";
 import ColorSwatchPicker from "@/components/admin/category/ColorSwatchPicker";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import { Icon } from "@/components/Icon";
+import type { HeadingSize } from "@/lib/api";
 
 /* ── フォーム状態 ── */
 interface FormState {
   name: string;
   slug: string;
+  /** カテゴリー名（英語）。お客様側の見出しに大きく出る。例: PANCAKE */
   caption: string;
+  /** 説明文（40文字以内）。英語名の上に小さく出る */
+  description: string;
+  /** 英語名の文字サイズ */
+  en_size: HeadingSize;
+  /** 日本語名の文字サイズ */
+  jp_size: HeadingSize;
   display_order: number;
   image_url: string;
   tag_color: TagColor;
 }
 const EMPTY_FORM: FormState = {
-  name: "", slug: "", caption: "", display_order: 99, image_url: "", tag_color: "yellow",
+  name: "", slug: "", caption: "", description: "",
+  // 既定値は、DB管理に移す前の見た目と同じ組み合わせ
+  en_size: "large", jp_size: "small",
+  display_order: 99, image_url: "", tag_color: "yellow",
 };
+
+/** 説明文の上限。DB側にも CHECK 制約がある（supabase/category_heading.sql） */
+const DESCRIPTION_MAX = 40;
+
+const SIZE_OPTIONS: { value: HeadingSize; label: string }[] = [
+  { value: "large",  label: "大" },
+  { value: "medium", label: "中" },
+  { value: "small",  label: "小" },
+];
+
+/** 見出しの文字サイズを選ぶ（大・中・小）。既存のデザイントークンに対応する */
+function SizeSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: HeadingSize;
+  onChange: (v: HeadingSize) => void;
+}) {
+  return (
+    <div className="flex items-center gap-[var(--space-8)]">
+      {label && <span className="type-jp-caption text-text-tertiary">{label}</span>}
+      <div className="flex gap-[var(--space-4)]">
+        {SIZE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            aria-pressed={value === opt.value}
+            className={`h-[32px] min-w-[44px] px-[var(--space-12)] rounded-[var(--radius-sm)] border type-jp-caption-bold transition-colors ${
+              value === opt.value
+                ? "bg-text-primary text-surface-white border-transparent"
+                : "bg-surface-white text-text-secondary border-border"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /* ── 差し替えで参照されなくなったカテゴリ画像をStorageから削除する（best-effort） ── */
 async function deleteReplacedCategoryImage(
@@ -132,6 +186,9 @@ export default function AdminCategoriesPage() {
       name:          cat.name,
       slug:          cat.slug,
       caption:       cat.caption ?? "",
+      description:   cat.description ?? "",
+      en_size:       cat.en_size ?? "large",
+      jp_size:       cat.jp_size ?? "small",
       display_order: cat.display_order,
       image_url:     cat.image_url ?? "",
       tag_color:     cat.tag_color ?? "yellow",
@@ -223,6 +280,9 @@ export default function AdminCategoriesPage() {
             name:          form.name,
             slug:          form.slug,
             caption:       form.caption || null,
+            description:   form.description || null,
+            en_size:       form.en_size,
+            jp_size:       form.jp_size,
             display_order: form.display_order,
             image_url:     form.image_url || null,
             tag_color:     form.tag_color,
@@ -437,15 +497,54 @@ export default function AdminCategoriesPage() {
                     </p>
                   </div>
 
-                  {/* キャッチコピー */}
+                  {/* カテゴリ名（英語）── お客様側の見出しに大きく出る */}
                   <div className="flex flex-col gap-[var(--space-4)] w-full">
-                    <label className="type-jp-caption-bold text-text-primary">キャッチコピー</label>
-                    <textarea
+                    <label className="type-jp-caption-bold text-text-primary">カテゴリ名（英語）</label>
+                    <input
+                      type="text"
                       value={form.caption}
                       onChange={(e) => setForm((f) => ({ ...f, caption: e.target.value }))}
-                      placeholder="ふわふわの生地に豊富なトッピング"
+                      placeholder="PANCAKE"
+                      className="w-full h-[44px] bg-surface-white border border-border rounded-[var(--radius-sm)] px-[var(--space-12)] type-jp-body text-text-primary"
+                    />
+                    <SizeSelect
+                      label="文字サイズ"
+                      value={form.en_size}
+                      onChange={(v) => setForm((f) => ({ ...f, en_size: v }))}
+                    />
+                  </div>
+
+                  {/* 日本語名の文字サイズ（名前そのものは上の「カテゴリ名」で入力する） */}
+                  <div className="flex flex-col gap-[var(--space-4)] w-full">
+                    <label className="type-jp-caption-bold text-text-primary">カテゴリ名（日本語）の文字サイズ</label>
+                    <SizeSelect
+                      label=""
+                      value={form.jp_size}
+                      onChange={(v) => setForm((f) => ({ ...f, jp_size: v }))}
+                    />
+                  </div>
+
+                  {/* 説明文（40文字以内）── 英語名の上に小さく出る */}
+                  <div className="flex flex-col gap-[var(--space-4)] w-full">
+                    <div className="flex items-baseline justify-between">
+                      <label className="type-jp-caption-bold text-text-primary">説明文</label>
+                      <span
+                        className={`type-jp-caption ${
+                          form.description.length > DESCRIPTION_MAX
+                            ? "text-status-urgent"
+                            : "text-text-tertiary"
+                        }`}
+                      >
+                        {form.description.length} / {DESCRIPTION_MAX}
+                      </span>
+                    </div>
+                    <textarea
+                      value={form.description}
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="これがYORKYSの原点！看板メニュー"
                       rows={2}
-                      className="w-full h-[90px] bg-surface-white border border-border rounded-[var(--radius-sm)] p-[var(--space-12)] type-jp-body text-text-primary resize-none"
+                      maxLength={DESCRIPTION_MAX}
+                      className="w-full h-[72px] bg-surface-white border border-border rounded-[var(--radius-sm)] p-[var(--space-12)] type-jp-body text-text-primary resize-none"
                     />
                   </div>
 
