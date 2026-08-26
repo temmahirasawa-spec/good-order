@@ -104,6 +104,7 @@ const sampleCat: ApiCategory = {
   description: "これがYORKYSの原点！看板メニュー",
   en_size: "large",
   jp_size: "small",
+  category_type: "food",
   image_url: asset("/images/pancake/p1.webp"),
   display_order: 1,
   tag_color: "yellow",

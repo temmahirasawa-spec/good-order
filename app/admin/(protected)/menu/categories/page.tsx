@@ -460,7 +460,7 @@ export default function AdminCategoriesPage() {
                   {/* カテゴリ名 */}
                   <div className="flex flex-col gap-[var(--space-4)] w-full">
                     <label className="type-jp-caption-bold text-text-primary">
-                      カテゴリ名 <span className="text-status-urgent">*</span>
+                      カテゴリ名（日本語）<span className="text-status-urgent">*</span>
                     </label>
                     <input
                       type="text"
@@ -476,6 +476,12 @@ export default function AdminCategoriesPage() {
                       }}
                       placeholder="パンケーキ"
                       className="w-full h-[44px] bg-surface-white border border-border rounded-[var(--radius-sm)] px-[var(--space-12)] type-jp-body text-text-primary"
+                    />
+                    {/* 英語名と同じく、入力欄の直下に文字サイズを置く */}
+                    <SizeSelect
+                      label="文字サイズ"
+                      value={form.jp_size}
+                      onChange={(v) => setForm((f) => ({ ...f, jp_size: v }))}
                     />
                   </div>
 
@@ -511,16 +517,6 @@ export default function AdminCategoriesPage() {
                       label="文字サイズ"
                       value={form.en_size}
                       onChange={(v) => setForm((f) => ({ ...f, en_size: v }))}
-                    />
-                  </div>
-
-                  {/* 日本語名の文字サイズ（名前そのものは上の「カテゴリ名」で入力する） */}
-                  <div className="flex flex-col gap-[var(--space-4)] w-full">
-                    <label className="type-jp-caption-bold text-text-primary">カテゴリ名（日本語）の文字サイズ</label>
-                    <SizeSelect
-                      label=""
-                      value={form.jp_size}
-                      onChange={(v) => setForm((f) => ({ ...f, jp_size: v }))}
                     />
                   </div>
 
