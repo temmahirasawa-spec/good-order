@@ -16,7 +16,6 @@ import CartItemRow from "@/components/ui/CartItemRow";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
-import { isAcceptingOrders } from "@/lib/api";
 
 export default function CartPage() {
   const router = useRouter();
@@ -36,6 +35,10 @@ export default function CartPage() {
 
   useEffect(() => {
     fetchAll();
+    // 完了画面の JS を先に落としておく。モバイル回線では、注文が保存できた後の
+    // 画面遷移でチャンクを取りに行く時間が体感の大半を占めていた。
+    // カートを見ている間に済ませておけば、遷移が一瞬になる。
+    router.prefetch("/complete");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -56,25 +59,21 @@ export default function CartPage() {
     submittingRef.current = true;
     setConfirming(true);
 
-    // 受付停止チェック（placeOrder の中でも同じ確認をしているが、
-    // ここで先に弾くとアニメーションを始めずに済む）
-    let accepting = true;
-    try {
-      accepting = await isAcceptingOrders();
-    } catch {
-      accepting = true; // fail-open
-    }
-    if (!accepting) {
-      submittingRef.current = false;
-      setConfirming(false);
-      alert(NOT_ACCEPTING_MESSAGE);
-      return;
-    }
+    // 通信は**ここで即座に始める**。
+    //   以前はこの手前で isAcceptingOrders() を1回叩いていたが、それは
+    //   placeOrder の中でしている確認とまったく同じ問い合わせで、モバイル回線
+    //   では丸ごと1往復（0.3〜0.8秒）が待ち時間になっていた。受付停止の判定は
+    //   書き込み直前の placeOrder 側に一本化する（停止中は "closed" が返る）。
+    //   placeOrder が例外を投げた場合も UI が固まらないよう、ここで受け止める。
+    const pending = placeOrder().catch(
+      () => ({ ok: false, reason: "failed" }) as const
+    );
 
-    // 視覚演出のウェイト（ボタン沈み込み → ゴールドの光）
+    // 視覚演出のウェイト（ボタン沈み込み → ゴールドの光）。
+    // この 300ms は通信と**並行**に流す。直列に待つと演出の分だけ完了が遅れる。
     await new Promise((r) => setTimeout(r, 300));
     setScreenFlash(true);
-    const result = await placeOrder();
+    const result = await pending;
     if (!result.ok) {
       setScreenFlash(false);
       setConfirming(false);

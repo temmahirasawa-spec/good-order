@@ -73,9 +73,10 @@ async function saveOrderToDb(
     if (error) throw error;
     return true;
   } catch (err) {
-    // placeOrder はここを待たない（fire-and-forget）ため、失敗しても
-    // お客様の画面は完了に進む。黙って消えると厨房に注文が届かないまま
-    // 誰も気づけないので、コンソールと Sentry の両方に必ず残す。
+    // placeOrder はこの戻り値を待ち、false なら再試行 → それでも駄目なら
+    // お客様に「送信できませんでした」と出して完了画面に進めない。
+    // ただし「なぜ失敗したか」は画面には出ないので、原因を追えるよう
+    // コンソールと Sentry の両方に必ず残す。
     console.error("[saveOrderToDb] failed:", err);
     Sentry.captureException(err, {
       tags: { feature: "order-submit" },
