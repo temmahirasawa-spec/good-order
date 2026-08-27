@@ -150,10 +150,18 @@ export function useOrderPageData(): UseOrderPageDataResult {
       ...[...foodCats].sort((a, b) => a.display_order - b.display_order),
       ...[...drinkCats].sort((a, b) => a.display_order - b.display_order),
     ];
-    return orderedCats.map((category) => ({
-      category,
-      items: computeTopItemsBySubcategory(allItems, category.slug, orderCounts, SECTION_ITEM_LIMIT),
-    }));
+    return orderedCats
+      .map((category) => ({
+        category,
+        items: computeTopItemsBySubcategory(allItems, category.slug, orderCounts, SECTION_ITEM_LIMIT),
+      }))
+      // 出せる商品が1つも無いカテゴリは、見出しごと出さない。
+      //   allItems は is_available=true だけなので、全品を販売停止にすれば
+      //   そのカテゴリはお客様の画面から消える（＝終売の運用がこれで回る）。
+      //   除外しないと、見出しとタブだけが残って中身が空の区画ができる。
+      //   タブ・スクロール追従も categorySections から作っているので、
+      //   ここで落とせば両方から同時に消える。
+      .filter((section) => section.items.length > 0);
   }, [foodCats, drinkCats, allItems, orderCounts]);
 
   const handleAdd = useCallback(

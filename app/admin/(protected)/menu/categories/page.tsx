@@ -35,6 +35,10 @@ import ColorSwatchPicker from "@/components/admin/category/ColorSwatchPicker";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import { Icon } from "@/components/Icon";
 import type { HeadingSize } from "@/lib/api";
+import {
+  describeDbError,
+  CANNOT_DELETE_ORDERED_CATEGORY,
+} from "@/lib/dbError";
 
 /* ── フォーム状態 ── */
 interface FormState {
@@ -263,7 +267,7 @@ export default function AdminCategoriesPage() {
       }
       setForm((f) => ({ ...f, image_url: url }));
     } catch (err) {
-      alert("画像のアップロードに失敗しました: " + String(err));
+      alert("画像のアップロードに失敗しました。\n\n" + describeDbError(err));
     } finally {
       setImgUploading(false);
     }
@@ -325,7 +329,7 @@ export default function AdminCategoriesPage() {
       closePanel();
       await load();
     } catch (err) {
-      alert("保存に失敗しました: " + String(err));
+      alert("保存に失敗しました。\n\n" + describeDbError(err));
     } finally {
       setSaving(false);
     }
@@ -361,7 +365,7 @@ export default function AdminCategoriesPage() {
       cancelPanel();
       await load();
     } catch (err) {
-      alert("削除に失敗しました: " + String(err));
+      alert(describeDbError(err, { referenced: CANNOT_DELETE_ORDERED_CATEGORY }));
     } finally {
       setDeleting(false);
     }

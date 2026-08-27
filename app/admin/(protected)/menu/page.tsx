@@ -38,6 +38,7 @@ import MenuPreviewCard from "@/components/admin/menu/MenuPreviewCard";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import { Icon } from "@/components/Icon";
+import { describeDbError, CANNOT_DELETE_ORDERED_ITEM } from "@/lib/dbError";
 
 /* カテゴリーslugと衝突しないフィルター用の番兵。
    テイクアウトはカテゴリーではなく「提供形態」の軸なので別扱いにする。 */
@@ -283,7 +284,7 @@ export default function AdminMenuPage() {
         setTimeout(() => setCompressToast(null), 4500);
       }
     } catch (err) {
-      alert("画像のアップロードに失敗しました: " + String(err));
+      alert("画像のアップロードに失敗しました。\n\n" + describeDbError(err));
     } finally {
       setImgUploading(false);
     }
@@ -304,7 +305,7 @@ export default function AdminMenuPage() {
       // 圧縮するか確認（カスタムモーダル）
       setCompressPrompt({ file, info: { width, height, size } });
     } catch (err) {
-      alert("画像の読み込みに失敗しました: " + String(err));
+      alert("画像の読み込みに失敗しました。\n\n" + describeDbError(err));
     }
   };
 
@@ -320,7 +321,7 @@ export default function AdminMenuPage() {
         after:  result.after,
       });
     } catch (err) {
-      alert("画像の圧縮に失敗しました: " + String(err));
+      alert("画像の圧縮に失敗しました。\n\n" + describeDbError(err));
       setImgUploading(false);
     }
   };
@@ -360,7 +361,7 @@ export default function AdminMenuPage() {
       sessionUploads.current.push({ type: "video", url });
       setForm((f) => ({ ...f, media: [...f.media, { type: "video", url }] }));
     } catch (err) {
-      alert("動画のアップロードに失敗しました: " + String(err));
+      alert("動画のアップロードに失敗しました。\n\n" + describeDbError(err));
     } finally {
       setVideoUploading(false);
     }
@@ -455,7 +456,7 @@ export default function AdminMenuPage() {
       if (removed.length > 0) void deleteUploadedMedia(removed);
       await loadAll();
     } catch (err) {
-      alert("保存に失敗しました: " + String(err));
+      alert("保存に失敗しました。\n\n" + describeDbError(err));
     } finally {
       setSaving(false);
     }
@@ -476,7 +477,7 @@ export default function AdminMenuPage() {
       if (orphans.length > 0) void deleteUploadedMedia(orphans);
       await loadAll();
     } catch (err) {
-      alert("削除に失敗しました: " + String(err));
+      alert(describeDbError(err, { referenced: CANNOT_DELETE_ORDERED_ITEM }));
     } finally {
       setDeleting(false);
     }
