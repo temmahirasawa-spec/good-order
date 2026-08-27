@@ -18,8 +18,9 @@ import { loadHistory, updateHistoryPickupNo } from "@/lib/history";
 import { PICKUP_NO_LABEL, formatPickupNo } from "@/lib/pickupNo";
 
 /* 受渡番号はサーバー側のトリガーが採番するため、注文直後は少し遅れて確定する。
-   DB書き込み自体が fire-and-forget（lib/store.ts）なので、取得できるまで数秒
-   ポーリングする。取れなくても注文自体は成立しているので画面は壊さない。
+   この画面に来た時点で注文の保存自体は完了している（placeOrder が保存を待つ）。
+   番号だけが数秒遅れるので、その間は「発行中…」を出したまま数秒ポーリングする。
+   取れなくても注文は成立しているので画面は壊さない。
 
    受渡番号を出すのはテイクアウト注文のときだけ。店内注文は配膳なので
    番号で呼び出す場面がなく、行ごと出さない（採番自体は全注文で行われる）。 */
