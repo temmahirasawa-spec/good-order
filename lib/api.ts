@@ -40,6 +40,8 @@ export interface ApiCategory {
   en_size: HeadingSize;
   /** 日本語名の文字サイズ（既定 small） */
   jp_size: HeadingSize;
+  /** 'food' | 'drink'。お客様側の並び（フード→ドリンク）に使う */
+  category_type: "food" | "drink";
   image_url: string | null;
   display_order: number;
   tag_color: TagColor;
@@ -69,7 +71,7 @@ export interface ApiMenuItem {
 export async function fetchCategories(): Promise<ApiCategory[]> {
   const { data, error } = await supabase
     .from("categories")
-    .select("id, slug, name, caption, description, en_size, jp_size, image_url, display_order, tag_color")
+    .select("id, slug, name, caption, description, en_size, jp_size, category_type, image_url, display_order, tag_color")
     .order("display_order");
   if (error) throw error;
   return (data ?? []) as ApiCategory[];

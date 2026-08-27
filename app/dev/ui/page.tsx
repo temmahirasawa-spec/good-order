@@ -104,6 +104,7 @@ const sampleCat: ApiCategory = {
   description: "これがYORKYSの原点！看板メニュー",
   en_size: "large",
   jp_size: "small",
+  category_type: "food",
   image_url: asset("/images/pancake/p1.webp"),
   display_order: 1,
   tag_color: "yellow",
@@ -710,9 +711,20 @@ export default function UiGalleryPage() {
           <CategoryRow
             name="パンケーキ"
             slug="pancake"
-            thumbnailUrl="/images/pancake/p1.webp"
+            thumbnailUrl={asset("/images/pancake/p1.webp")}
             tagColor="yellow"
+            categoryType="food"
             displayOrder={1}
+            onEdit={() => {}}
+          />
+          {/* ドリンク区分は slug の右に「ドリンク」と出る */}
+          <CategoryRow
+            name="コーヒー"
+            slug="coffee"
+            thumbnailUrl={null}
+            tagColor="blue"
+            categoryType="drink"
+            displayOrder={2}
             onEdit={() => {}}
           />
           <div className="max-w-[500px]">

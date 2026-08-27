@@ -2,34 +2,22 @@
  * 店内向けホーム画面（app/order/page.tsx）の純粋な導出ロジック
  * fetch は行わない。store/API から取得済みのデータを整形するだけ。
  */
-import { DRINK_SLUGS, type ApiCategory } from "./api";
+import type { ApiCategory } from "./api";
 import type { MenuItem } from "./menu";
-
-export const FOOD_CATEGORY_SLUGS = [
-  "pancake",
-  "eggs_benedict",
-  "french_toast",
-  "sandwich",
-  "fritter",
-  "burger",
-  "lunch",
-] as const;
 
 /* ── フードカテゴリーを表示順で抽出 ── */
 export function pickFoodCategories(categories: ApiCategory[]): ApiCategory[] {
-  return FOOD_CATEGORY_SLUGS
-    .map((slug) => categories.find((c) => c.slug === slug))
-    .filter((c): c is ApiCategory => Boolean(c));
+  // **固定リストとの一致で絞らない。**
+  //   以前は FOOD_CATEGORY_SLUGS に載っている slug のカテゴリーしか返さなかったため、
+  //   管理画面で新しいカテゴリーを作っても、slug がそのリストに無ければ
+  //   お客様の画面に一切出なかった（2026-08-26 に実機で確認）。
+  //   分類は DB の category_type 列で行う。
+  return categories.filter((c) => c.category_type !== "drink");
 }
 
-/* ── ドリンクカテゴリーを抽出。サブカテゴリーが無ければ 'drink' 親カテゴリーで代替 ── */
+/* ── ドリンクカテゴリーを抽出（同じく category_type で判定する） ── */
 export function pickDrinkCategories(categories: ApiCategory[]): ApiCategory[] {
-  const subCats = DRINK_SLUGS
-    .map((slug) => categories.find((c) => c.slug === slug))
-    .filter((c): c is ApiCategory => Boolean(c));
-  if (subCats.length > 0) return subCats;
-  const umbrella = categories.find((c) => c.slug === "drink");
-  return umbrella ? [umbrella] : [];
+  return categories.filter((c) => c.category_type === "drink");
 }
 
 /* ── ヒーロー対象：'注目' or '本日のおすすめ'、足りない場合は 'おすすめ' / '限定' で補完 ── */
