@@ -197,5 +197,13 @@ B の補足文はフード「調理でき次第お持ちします」「お食事
 - 対象: `MobileOrder` ページ「注文 / SP」の Product Detail・Cart・Order Confirmed、
   「Kitchen / 厨房」の Order Card（PC・SP）、「Categories Management / カテゴリ管理」の編集パネル（PC・SP）。
 - 新部品（案Aなら Segmented Control）は `Components` ページ「04 Tags & Steppers」に置く。
-- 新部品（案B の Serving Timing Card）も同じセクションに置く。
-- 実装は 2026-09-04 に先行して完了。Figma は連携（MCP）の再認証後に起こす（design-rules の順序と逆になった経緯は `docs/handoff.md` を参照）。
+- **2026-09-04 に起こし済み。** 実装を先に完了させ、同日中に Figma を追いつかせた（順序が逆になった経緯は `docs/handoff.md`）。
+
+| 場所 | 追加したもの |
+|---|---|
+| Components / 04 Tags & Steppers | `Serving Timing Card`（State=Default / Selected）、`Segmented Control`（Selected=Left / Right）、`Serving Timing Badge`（Timing=After Meal / Default） |
+| Components / 05 Cards | `Cart Item Row (Timing)`（Cart Item Row の複製＋Segmented Control） |
+| Components / 11 Staff / Orders | `Order Item Row` に BOOLEAN `Show Timing`（既定 OFF）と末尾の隠しバッジを追加。既存インスタンスの上書きは全行一致を確認済み |
+| MobileOrder / 注文 / SP | `Product Detail — 提供タイミング`、`Cart — 提供タイミング`、`Order Confirmed — 食後` |
+| MobileOrder / Kitchen / 厨房 | PC `Template / Kitchen — 提供タイミング 1180x820`、SP `Kitchen — 提供タイミング — Mobile 390` |
+| MobileOrder / Categories Management | PC `Template / Categories Management — 提供タイミング 1180x820`、SP `Category Editing — 提供タイミング — Mobile 390` |

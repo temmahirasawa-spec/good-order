@@ -3182,14 +3182,29 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 `docs/share/2026-09-04-serving-timing.html`。1ファイルで完結（写真は埋め込み）。
 何が変わるか・お客様の3ステップ・店舗側の変化・Q&A・変更点一覧。画面はHTMLで再現したもので、実機のスクリーンショットではない。
 
+## Figma（同日中に追いついた）
+
+セッション中に Figma 連携がつながったので、実装の後追いで起こした。作ったものの一覧は
+`docs/specs/serving-timing.md` の 10 章。スクリーンショットは
+`.claude/verification/2026-09-04-serving-timing/figma-*.png`。`npm run design:figma` は
+「構造・パディング 全ページ問題なし / 新しい違反なし・増えた違反なし」で通っている。
+
+判断と注意:
+- **共通部品 `Order Item Row` に子を足した**（design-rules 6）。末尾に隠しバッジを追加し、
+  BOOLEAN `Show Timing` で出す形にしたので、既存インスタンスには影響しない。
+  変更前後で Kitchen の PC / SP の全行（20行）の文言を突き合わせ、一致を確認した
+- `Cart Item Row` は触らず、`Cart Item Row (Timing)` を別部品として置いた
+- Segmented Control の内側余白は **space/4**（3px はスペーシングのスケールに無い）。実装側も `p-[var(--space-4)]` に揃えた
+- 「食後」チップの文字は **JP/Caption Bold**（12px）。実装側も `type-jp-caption-bold` に揃えた
+- Product Detail の提供タイミング枠は Intro の中に paddingTop 12 で入れ、本文との距離を実装（mt-24）と同じ 24 にした
+- `npm run design:figma` を通すために、**自分の作業以外の既存の構造違反も直した**:
+  Components ページの浮いていた `Frame 3` → 新設 `99 未整理` セクションへ / `00 Foundations` の下パディング 97→100（下のセクションを 3px ずつ押し下げ）/
+  Brand Guideline ページの浮いていた `Frame 1` → `99_ARCHIVE` へ移動（消していない）
+- Order Confirmed の `Order Item Row`（原本と複製）の上下パディングを 10→12（space/12）にした。行は高さ固定 50 なので見た目は変わらない。
+  複製で件数が倍になり「増えた違反」で落ちたため、原本ごと返済した
+
 ## 残り（このセッションで終わらなかったもの）
 
-1. **Figma に起こす**（design-rules 4 の完了条件まで）。対象:
-   - `MobileOrder` ページ「注文 / SP」: Product Detail に選択カード（フード / ドリンク）、Cart に セグメント、Order Confirmed に「食後」の印
-   - 「Kitchen / 厨房」PC・SP: Order Card の品目行に提供タイミング
-   - 「Categories Management / カテゴリ管理」PC・SP: 編集パネルのトグル
-   - `Components` ページ「04 Tags & Steppers」に **Segmented Control** と **Serving Timing Card** を追加
-     （追加したら下のセクションを押し下げる。`npm run design:figma` を通す）
-2. **スクリーンショット**（PC 1400 / SP 390）: `/order?item=<パンケーキのID>`、`/cart`、`/complete`、`/admin/kitchen`、`/admin/menu/categories`、`/dev/ui`。
+1. **スクリーンショット**（PC 1400 / SP 390）: `/order?item=<パンケーキのID>`、`/cart`、`/complete`、`/admin/kitchen`、`/admin/menu/categories`、`/dev/ui`。
    `npm run dev` が止まっていたため未撮影。天真に起動してもらってから撮る
-3. **PR 作成**（スクリーンショットを本文に載せてから）。マージは天真。マージ前に SQL
+2. **PR 作成**（スクリーンショットを本文に載せてから）。マージは天真。マージ前に SQL
