@@ -3235,3 +3235,45 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 - `feat/serving-timing` ブランチには PR #54 と同じ内容のコミット（`bee884a`）が残っている。PR #54 がマージされたら消してよい
 - 別タスク: お客様画面のカテゴリータグが英字スラッグのまま出る不具合（spawn_task 済み）
 - 未使用の Supabase プロジェクト `good-order-yorkys-shukugawa`（MICRO）を残すか消すかの判断（天真）
+
+---
+
+# 提供タイミング・伝票2枚出し: マージ後の状態と引き継ぎ（2026-09-04 夕方）
+
+## マージ済み（本番反映済み）
+
+| PR | 内容 |
+|---|---|
+| #53 | 提供タイミング（でき次第・先出し・食後）の指定と、FOOD/DRINK 混在時の伝票2枚出し（本体） |
+| #54 | カート行のセグメントを行の内側いっぱいの幅に置く（天真が Figma で確定した構造） |
+| #55 | セグメントの帯が横にすべるアニメーション（CSS のみ） |
+
+本番（app.good-order.jp/yorkys-shukugawa）に #55 まで載っていることを、公開 CSS に `segment__thumb` が
+含まれることで確認した。SQL（`supabase/serving_timing.sql`）は天真が本番（`good-order` = ref
+`oiropkuvaenebmlicrac`）へ適用済み。Supabase の2プロジェクトの正体は本ファイル上部の記録と
+`good-order-yorkys-shukugawa`（MICRO）が未使用である点を参照。
+
+## 未マージ
+
+- **PR #56** `fix/cart-row-stable-key`: 「#55 のアニメーションが反映されない」の原因修正。
+  本番で実際にタップして帯の位置を時系列で読んだところ、タップ直後に帯の要素が消えていた。
+  カート行の React key に提供タイミングを含めていたため、切り替えた瞬間に行が丸ごと作り直されていた。
+  行に `lineId` を振って key にする。`npm run check` 済み。**dev サーバーが止まっていたため実機では未確認。**
+  マージ後に本番の `/cart` でタップして帯がすべれば OK。すべらなければ次を疑う:
+  端末の「視差効果を減らす」設定（OS 設定で transition が 0 になる）／ 古いタブ（完全リロード）。
+- **PR #52** `fix/category-label-from-db`: お客様画面のカテゴリータグが英字スラッグのまま出る不具合（別セッションの成果）。天真がレビュー・マージ
+- **PR #51** `docs/next-session-handoff`: 前セッションの引き継ぎ文書。マージ時に本ファイルが競合したら両方残す
+
+## 検証の手段（次のセッション向け）
+
+- お客様側のスクショ: `node scripts/screenshot-pages.mjs <出力先>`（dev サーバーが必要。CSS が当たるまで待って撮る）。
+  `SHOT_ORIGIN=https://app.good-order.jp` は basePath が違うので未対応（スクリプト内のパスに `/yorkys-shukugawa` を足せば動く）
+- 本番でのアニメーション検証は、同じ CDP の手で「タップ後の `.segment__thumb` の computed transform を時系列で読む」。
+  途中の matrix が読めれば動いている。要素が消える（空文字）なら行が作り直されている
+- 管理画面のスクショはログインが要る。AI はパスワードを入力しないので、天真がログインした Browser ペインで見るか Figma で代用
+
+## 注意
+
+- `.claude/launch.json`（Browser ペインの dev 起動設定）は未コミット。ペイン管理の dev サーバーが CSS/JS を 404 で返し始めたら
+  `preview_stop` → `preview_start name=dev` で復旧（`npm run check` を dev 中に回した直後に起きた）
+- `feat/serving-timing` ブランチに #54 と同じ内容のコミットが残っている。消してよい
