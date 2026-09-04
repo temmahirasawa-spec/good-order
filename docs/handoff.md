@@ -3203,8 +3203,29 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 - Order Confirmed の `Order Item Row`（原本と複製）の上下パディングを 10→12（space/12）にした。行は高さ固定 50 なので見た目は変わらない。
   複製で件数が倍になり「増えた違反」で落ちたため、原本ごと返済した
 
-## 残り（このセッションで終わらなかったもの）
+## 仕上げ（同日）
 
-1. **スクリーンショット**（PC 1400 / SP 390）: `/order?item=<パンケーキのID>`、`/cart`、`/complete`、`/admin/kitchen`、`/admin/menu/categories`、`/dev/ui`。
-   `npm run dev` が止まっていたため未撮影。天真に起動してもらってから撮る
-2. **PR 作成**（スクリーンショットを本文に載せてから）。マージは天真。マージ前に SQL
+- **PR #53** を作成（`feat/serving-timing` → `main`）。マージは天真
+- **SQL は天真が本番（`good-order` / `oiropkuvaenebmlicrac`）に実行済み**なのを本番データで確認した
+  （`categories.serving_timing_choice` と、ドリンク・アルコールの `category_type='drink'` が入っている）
+- お客様側（商品詳細・カート・完了・履歴）と `/dev/ui` の実機スクリーンショット（PC 1400 / SP 390）は
+  `.claude/verification/2026-09-04-serving-timing/*-pc-1400.png` / `*-sp-390.png`。
+  管理画面はログインが要るため天真の指示で省略し、PR には Figma のフレームを載せた
+- **スクリーンショットの撮り方（Playwright MCP が繋がらない環境用）**: Playwright のキャッシュにある
+  `chrome-headless-shell` を DevTools Protocol で操作するスクリプトを使った（`localStorage` に
+  カートの中身を先に入れてから撮る）。スクリプトは scratchpad に置いたもので、リポジトリには入れていない。
+  同じ手を使うなら: `~/Library/Caches/ms-playwright/chromium_headless_shell-*/…/chrome-headless-shell --remote-debugging-port=9333`
+  を起動し、`/json/new` でタブを作って `Page.navigate` → `Runtime.evaluate` で seed → `Page.captureScreenshot`
+- **dev サーバーが壊れていた**: HTML は 200 なのに CSS・JS・フォントがすべて 404（`.next/static` が空）。
+  Browser ペインが管理していたサーバーだったので `preview_stop` → `preview_start name=dev` で立て直した。
+  `npm run check`（`next build`）を dev サーバーと同時に走らせたのが原因の可能性がある。
+  **同時に走らせない**か、走らせたあとは dev を再起動すること
+- 2つの Supabase プロジェクトの正体: **`good-order`（NANO、`oiropkuvaenebmlicrac`）が本番**。
+  `good-order-yorkys-shukugawa`（MICRO、`kugmyzvhwzphmuicdken`）は未使用。名前と実態が逆なので注意。
+  本番サイトのJSに埋め込まれた接続先と `.env.local` の両方で確認した
+
+## 残り
+
+- PR #53 のマージ（天真）。マージ後、店舗の実機でパンケーキ＋ドリンクを注文して伝票が2枚出ることを確認する
+- 別タスク: お客様画面のカテゴリータグが英字スラッグのまま出る不具合（spawn_task 済み）
+- 未使用の Supabase プロジェクト `good-order-yorkys-shukugawa`（MICRO）を残すか消すかの判断（天真）
