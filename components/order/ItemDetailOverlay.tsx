@@ -30,7 +30,7 @@ import { AddToCartButton } from "@/components/ui/Buttons";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
-import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import { resolveCategoryLabel, resolveTagColor } from "@/lib/categoryLabels";
 import { computeRelatedItems } from "@/lib/orderHome";
 import { ITEM_PARAM, openItemDetail, stripItemParam, takePushedByApp } from "@/lib/itemOverlay";
 import type { MenuItem } from "@/lib/menu";
@@ -107,7 +107,7 @@ function OverlayContent() {
     }, CLOSE_ANIM_MS);
   };
 
-  const label = item ? SUBCATEGORY_LABEL[item.subcategory] ?? item.subcategory : "";
+  const label = item ? resolveCategoryLabel(categories, item.subcategory) : "";
   const color = item ? resolveTagColor(categories, item.subcategory) : "yellow";
   const subImage = item?.images?.[1] ?? null;
   const hasVideo = (item?.media ?? []).some((m) => m.type === "video");

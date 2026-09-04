@@ -18,8 +18,8 @@ import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useMenuDataStore } from "@/lib/menuDataStore";
-import { SUBCATEGORY_LABEL, SUBCATEGORY_EN_LABEL } from "@/lib/categoryLabels";
-import type { MenuItem, Subcategory } from "@/lib/menu";
+import { resolveCategoryLabel, resolveCategoryEnLabel } from "@/lib/categoryLabels";
+import type { MenuItem } from "@/lib/menu";
 
 const FILTER_CHIPS = [
   { id: "allergy", label: "アレルギー" },
@@ -45,6 +45,7 @@ function GridSkeleton() {
 export default function CategoryListingPage() {
   const { category } = useParams<{ category: string }>();
 
+  const categories    = useMenuDataStore((s) => s.categories);
   const allMenuItems  = useMenuDataStore((s) => s.menuItems);
   const storeLoading  = useMenuDataStore((s) => s.loading);
   const loadedAt      = useMenuDataStore((s) => s.loadedAt);
@@ -74,8 +75,9 @@ export default function CategoryListingPage() {
     [allMenuItems, category]
   );
 
-  const enLabel = SUBCATEGORY_EN_LABEL[category as Subcategory] ?? category?.toUpperCase() ?? "";
-  const jpLabel = SUBCATEGORY_LABEL[category] ?? category;
+  // 見出しは DB（categories.caption / name）を正とし、読めない間だけ辞書で埋める
+  const enLabel = resolveCategoryEnLabel(categories, category);
+  const jpLabel = resolveCategoryLabel(categories, category);
 
   const qtyOf = (id: string) => cartItems.find((ci) => ci.item.id === id)?.quantity ?? 0;
   const cardHandlers = (item: MenuItem) => ({

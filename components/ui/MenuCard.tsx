@@ -14,7 +14,7 @@ import CategoryTag from "@/components/ui/CategoryTag";
 import QuantityStepper from "@/components/ui/QuantityStepper";
 import QuantityStepperS from "@/components/ui/QuantityStepperS";
 import { AddToCartButtonS } from "@/components/ui/Buttons";
-import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import { resolveCategoryLabel, resolveTagColor } from "@/lib/categoryLabels";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 
 export interface MenuCardProps {
@@ -96,7 +96,7 @@ function CardBody({
   nameClassName,
 }: MenuCardProps & { nameClassName: string }) {
   const categories = useMenuDataStore((s) => s.categories);
-  const label = SUBCATEGORY_LABEL[item.subcategory] ?? item.subcategory;
+  const label = resolveCategoryLabel(categories, item.subcategory);
   const color = resolveTagColor(categories, item.subcategory);
   return (
     <>
@@ -159,7 +159,7 @@ export function MenuCardM({
   onAddToCart: () => void;
 }) {
   const categories = useMenuDataStore((s) => s.categories);
-  const label = SUBCATEGORY_LABEL[item.subcategory] ?? item.subcategory;
+  const label = resolveCategoryLabel(categories, item.subcategory);
   const color = resolveTagColor(categories, item.subcategory);
   return (
     <div className={`flex flex-col gap-[var(--space-8)] items-start w-[200px] shrink-0 ${className}`}>

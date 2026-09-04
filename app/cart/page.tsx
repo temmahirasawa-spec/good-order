@@ -15,7 +15,7 @@ import { AddToCartButton, BackButton } from "@/components/ui/Buttons";
 import CartItemRow from "@/components/ui/CartItemRow";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
-import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import { resolveCategoryLabel, resolveTagColor } from "@/lib/categoryLabels";
 
 export default function CartPage() {
   const router = useRouter();
@@ -161,7 +161,7 @@ export default function CartPage() {
               <CartItemRow
                 key={ci.item.id}
                 image={ci.item.image}
-                categoryLabel={SUBCATEGORY_LABEL[ci.item.subcategory] ?? ci.item.subcategory}
+                categoryLabel={resolveCategoryLabel(categories, ci.item.subcategory)}
                 categoryColor={resolveTagColor(categories, ci.item.subcategory)}
                 name={ci.item.name}
                 price={ci.item.price}

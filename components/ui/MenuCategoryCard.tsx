@@ -8,8 +8,7 @@
  */
 import Link from "next/link";
 import type { ApiCategory } from "@/lib/api";
-import { SUBCATEGORY_EN_LABEL } from "@/lib/categoryLabels";
-import type { Subcategory } from "@/lib/menu";
+import { resolveCategoryEnLabel } from "@/lib/categoryLabels";
 
 export default function MenuCategoryCard({
   category,
@@ -24,7 +23,8 @@ export default function MenuCategoryCard({
   onClick?: () => void;
   className?: string;
 }) {
-  const en = SUBCATEGORY_EN_LABEL[category.slug as Subcategory] ?? category.slug.toUpperCase();
+  // 英語名は管理画面で付けた caption が正。未入力なら辞書→スラッグ大文字化で埋める
+  const en = resolveCategoryEnLabel([category], category.slug);
   const sizeClass = size === "small" ? "w-[114px] shrink-0" : "w-full";
   const body = (
     <span

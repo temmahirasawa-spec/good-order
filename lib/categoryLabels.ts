@@ -1,6 +1,11 @@
 /**
- * サブカテゴリ（= categories.slug）の表示名辞書。
+ * サブカテゴリ（= categories.slug）の表示名辞書と、その解決ヘルパー。
  * 一覧ページ・カード内カテゴリタグ・メニュー画面カテゴリカードで共通利用する。
+ *
+ * 表示名の正は DB（categories.name / caption）で、管理画面から変えられる。
+ * 下の辞書はリデザイン当初の11カテゴリぶんの固定値で、いまは
+ * 「DB からまだ読めていない一瞬」と「古いデータ」のためのフォールバック。
+ * 画面側は辞書を直接引かず、resolveCategoryLabel / resolveCategoryEnLabel を通すこと。
  */
 import type { Subcategory } from "./menu";
 import type { ApiCategory } from "./api";
@@ -56,6 +61,34 @@ export const SUBCATEGORY_TAG_COLOR: Record<string, TagColor> = {
   soft:          "purple",
   alcohol:       "gray",
 };
+
+/* ── カテゴリ表示名（日本語）の解決: DB（categories.name）優先、
+ *   見つからなければ SUBCATEGORY_LABEL、それも無ければスラッグそのまま ──
+ * 本番の categories は辞書に無いスラッグ（frenchtoast / brekkie / acaibowl …）を
+ * 使っているため、辞書だけに頼ると英字のスラッグがそのまま画面に出ていた。 */
+export function resolveCategoryLabel(
+  categories: Pick<ApiCategory, "slug" | "name">[],
+  subcategorySlug: string
+): string {
+  const name = categories.find((c) => c.slug === subcategorySlug)?.name?.trim();
+  if (name) return name;
+  return SUBCATEGORY_LABEL[subcategorySlug] ?? subcategorySlug;
+}
+
+/* ── カテゴリ表示名（英語）の解決: DB（categories.caption）優先、
+ *   見つからなければ SUBCATEGORY_EN_LABEL、それも無ければスラッグを大文字化 ──
+ * caption は管理画面で未入力にできる（null / 空）。その場合は辞書→大文字化の順で
+ * 埋めるので、英語名が空欄のまま出ることはない。 */
+export function resolveCategoryEnLabel(
+  categories: Pick<ApiCategory, "slug" | "caption">[],
+  subcategorySlug: string
+): string {
+  const caption = categories.find((c) => c.slug === subcategorySlug)?.caption?.trim();
+  if (caption) return caption;
+  return (
+    SUBCATEGORY_EN_LABEL[subcategorySlug as Subcategory] ?? subcategorySlug.toUpperCase()
+  );
+}
 
 /* ── カテゴリタグ色の解決: DB（categories.tag_color）優先、
  *   見つからなければ SUBCATEGORY_TAG_COLOR にフォールバック ── */

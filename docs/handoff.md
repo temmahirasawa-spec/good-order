@@ -3111,3 +3111,56 @@ tea           ゆったり時間のお供に、香り豊かな一杯
 soft          食事と一緒に、すっきり爽やかに
 alcohol       乾杯はここから、大人のひととき
 ```
+
+---
+
+## カテゴリー表示名を DB 優先にする（2026-09-04）
+
+### 何が問題だったか
+
+`/order` のセクション見出しは PR #48 で DB 管理に移したが、次の5箇所は
+まだ `lib/categoryLabels.ts` の固定辞書 `SUBCATEGORY_LABEL` / `SUBCATEGORY_EN_LABEL` を
+直接引いていた。
+
+- カード内のカテゴリータグ（`MenuCard` / `MenuCardM` / `RecommendCard`）
+- 商品詳細のタグ（`ItemDetailOverlay`）
+- カート行のタグ（`app/cart`）
+- カテゴリー一覧ページの見出し（`app/order/[category]`、英語名は `SUBCATEGORY_EN_LABEL`）
+- Menu 画面のカテゴリーカードの英語名（`MenuCategoryCard`）
+
+辞書はリデザイン当初の11スラッグしか知らない。本番の `categories` は
+`pancake / frenchtoast / brekkie / eggsbenedict / hamburger / frenchflies / acaibowl /
+salad / pizza / pasta / rice / kids / drink / alcohol` の14件で、辞書に無いものは
+`SUBCATEGORY_LABEL[slug] ?? slug` の右側に落ちて**英字のスラッグがそのまま画面に出ていた**
+（例: タグに「frenchtoast」）。
+
+### 直した形
+
+`resolveTagColor` と同じ考え方で、DB を優先し辞書は保険にする共通ヘルパーを
+`lib/categoryLabels.ts` に足し、上の5箇所（＋ `/dev/ui`）をすべて置き換えた。
+
+| ヘルパー | 優先順 |
+|---|---|
+| `resolveCategoryLabel(categories, slug)` | `categories.name` → `SUBCATEGORY_LABEL` → スラッグそのまま |
+| `resolveCategoryEnLabel(categories, slug)` | `categories.caption` → `SUBCATEGORY_EN_LABEL` → スラッグを大文字化 |
+
+`categories` は `useMenuDataStore` の `categories`（＝ `fetchCategories()` の結果）を渡す。
+画面側で辞書を直接引く箇所は無くした（`grep "SUBCATEGORY_LABEL\["` が
+`lib/categoryLabels.ts` 以外で 0 件）。
+
+### 判断
+
+- **辞書は消していない。** ストアがまだ空の一瞬（初回読み込み中）と古いデータのための
+  フォールバックとして残す。`SUBCATEGORY_TAG_COLOR` と同じ扱い
+- `caption` が未入力（null / 空）のとき、カテゴリー一覧の英語見出しと Menu 画面カードの
+  英語名は辞書 → スラッグ大文字化で埋める（従来どおり、空欄にはしない）。
+  `/order` のセクション見出しは PR #48 の判断どおり「caption が空なら行ごと出さない」の
+  ままで、こちらは変えていない
+- `name` / `caption` は trim してから採用する（空白だけの値を表示名にしない）
+
+### 残っている関連課題（今回は触っていない）
+
+- `app/order/menu/page.tsx`（Menu 画面）は `FOOD_ORDER` / `DRINK_ORDER` に旧11スラッグが
+  固定で書かれている。本番の14スラッグでは `pancake` と `alcohol` しか一致せず、
+  カテゴリーカードがほぼ並ばない。`/order` と同じく DB の `category_type` と
+  `display_order` から組み立てる必要がある（別PRで対応）
