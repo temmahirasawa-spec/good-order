@@ -99,9 +99,16 @@ export interface CartItem {
    * カート画面が初期値で埋め直す。同じ商品でもこの値が違えば別の行になる。
    */
   servingTiming?: ServingTiming | null;
+  /**
+   * 行の識別子（React の key 用）。行を作ったときに1回だけ振り、提供タイミングを変えても変わらない。
+   * key に提供タイミングを含めると、切り替えた瞬間に行が丸ごと作り直されて
+   * セグメントの帯がすべるアニメーションが一度も再生されない（2026-09-04 に本番で確認）。
+   * 移行前に保存されたカートには無いので、読み込み時（persist の merge）に振り直す。
+   */
+  lineId?: string;
 }
 
-/** カートの行を識別するキー（商品ID ＋ 提供タイミング） */
+/** カートの行を識別するキー（商品ID ＋ 提供タイミング）。同じ行への合流判定に使う */
 const lineKeyOf = (ci: CartItem) => cartLineKey(ci.item.id, ci.servingTiming);
 
 /**
@@ -123,8 +130,13 @@ function mergeLine(
 ): CartItem[] {
   const key = cartLineKey(item.id, timing);
   const idx = items.findIndex((i) => lineKeyOf(i) === key);
-  if (idx === -1) return [...items, { item, quantity: qty, servingTiming: timing }];
+  if (idx === -1) return [...items, { item, quantity: qty, servingTiming: timing, lineId: generateUuid() }];
   return items.map((i, n) => (n === idx ? { ...i, quantity: i.quantity + qty } : i));
+}
+
+/** 移行前に保存されたカート（lineId が無い行）に識別子を振る */
+function withLineIds(items: CartItem[]): CartItem[] {
+  return items.map((ci) => (ci.lineId ? ci : { ...ci, lineId: generateUuid() }));
 }
 
 export type PlaceOrderResult =
@@ -343,6 +355,11 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "orderly-cart",
+      // LocalStorage から戻すときに、行の識別子が無い行（移行前の保存分）へ振る
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<CartStore>;
+        return { ...current, ...p, items: withLineIds(Array.isArray(p.items) ? p.items : current.items) };
+      },
       partialize: (state) => ({
         items: state.items,
         tableNumber: state.tableNumber,

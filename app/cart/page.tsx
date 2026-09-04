@@ -190,7 +190,9 @@ export default function CartPage() {
               const type = servingCategoryType(categories, ci.item);
               return (
                 <CartItemRow
-                  key={cartLineKey(ci.item.id, timing)}
+                  // key は行の識別子。提供タイミングを含めると切り替えた瞬間に行が作り直され、
+                  // セグメントの帯がすべるアニメーションが出ない（lib/store.ts の lineId 参照）
+                  key={ci.lineId ?? cartLineKey(ci.item.id, timing)}
                   image={ci.item.image}
                   categoryLabel={SUBCATEGORY_LABEL[ci.item.subcategory] ?? ci.item.subcategory}
                   categoryColor={resolveTagColor(categories, ci.item.subcategory)}
