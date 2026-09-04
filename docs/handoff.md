@@ -3111,3 +3111,85 @@ tea           ゆったり時間のお供に、香り豊かな一杯
 soft          食事と一緒に、すっきり爽やかに
 alcohol       乾杯はここから、大人のひととき
 ```
+
+---
+
+# 提供タイミングの指定と、伝票の2枚出し（2026-09-04・実装済み、PR前）
+
+仕様は `docs/specs/serving-timing.md`（確定版）。ブランチ `feat/serving-timing`。
+天真の3つの依頼「FOOD と DRINK 両方の注文は伝票を2枚」「パンケーキ・フレンチトーストは
+でき次第 / 食後」「DRINK は先出し / 食後」を、1つの仕組み「提供タイミング」＋「2枚出し」にまとめた。
+
+## 進め方（design-rules との関係）
+
+1. 先に操作の流れを文章で出し、選択UIの器を3案（A セグメント / B 説明つきカード / C チップ）
+   **HTMLのたたき台**で比較して天真の決定を取った（`.claude/verification/2026-09-04-serving-timing/`）。
+   Figma 連携（MCP）がこのセッションでは未認証で書けなかったため、Figma の代わりに HTML で出した。
+2. 決定: **商品詳細は B（フードの補足は「調理でき次第お持ちします」）、カートは A**、
+   伝票・厨房・完了画面・管理画面はたたき台どおり。
+3. 天真の指示で **Figma と実装の両方を進める**ことになり、実装を先に完了させた。
+   セッション内で Figma を再接続してもらったが、**MCP のツールがこのセッションには現れなかった**
+   （ToolSearch / ListPlugins とも空）。**Figma は新しいセッションで着手すること**（下記「残り」）。
+
+## 実装の要点
+
+| 場所 | 中身 |
+|---|---|
+| `lib/servingTiming.ts`（新規） | 文言・初期値・対象判定・カート行キーを1か所に。他はすべてここを見る |
+| `lib/store.ts` | `CartItem.servingTiming`。行の同一性は「商品ID＋タイミング」（`cartLineKey`）。`addItem` は省略時に初期値を自動で入れる（`menuDataStore` のカテゴリーから引く）。`decrementItem` / `setServingTiming` を追加 |
+| `components/ui/ServingTimingCards.tsx`（新規） | 商品詳細の選択カード（案B）。Option Card 180:167 を土台に説明文とラジオを足した |
+| `components/ui/SegmentedControl.tsx`（新規） | カート行の切替（案A）。**Figma に無い新規部品**。高さ44 |
+| `components/ui/ServingTimingBadge.tsx`（新規） | 読み取り表示。「食後」は墨チップ、初期値は薄い文字。厨房・完了・履歴で共用 |
+| `lib/receipt.ts` | `receiptCopies()` で枚数を決め、`buildReceiptXml()` が1ジョブの中で伝票を N 回組み立てる。見出しは「厨房伝票 1/2」「ドリンク伝票 2/2」。明細の下に提供タイミング（食後は黒帯・倍高） |
+| `supabase/serving_timing.sql`（新規） | `categories.serving_timing_choice` / `order_items.serving_timing` / `place_order` と `claim_print_job` の差し替え / 初期データ |
+| 管理画面「カテゴリ管理」 | 「区分」の下にトグル「提供タイミングをお客様が選べる」 |
+| `app/history/page.tsx` | 再注文の `MenuItem` を `rowToMenuItem` で作るようにした（従来は category/subcategory が "food"/"pancake" 決め打ちで、**再注文した商品のタグが全部「パンケーキ」になっていた**。副次的に修正） |
+
+## 判断: 2枚出しは「1ジョブで2回組み立てる」
+
+ジョブを2つにすると `print_jobs.order_id` の UNIQUE（二重印刷の機構的防止）を崩すことになる。
+1つの `<epos-print>` の中で伝票を2回組み立てて2回 `<cut>` すれば、刷り直しも1操作で2枚出る。
+ニセ・プリンタ（`node scripts/fake-printer.mjs --render`）で2枚・黒帯・右揃えの見出しを確認済み。
+
+## 判断: 値は3値（asap / first / after_meal）で持つ
+
+「標準 / 食後」の2値にすると、後でカテゴリーの区分を変えたときに過去の注文・伝票の意味が変わる。
+NULL は「選択対象外」（テイクアウト・対象外カテゴリー・移行前の注文）。
+
+## 本番データで分かったこと（重要）
+
+**本番のカテゴリーは全14件が「フード」区分だった。「ドリンク」（slug `drink`）「アルコール」（`alcohol`）も。**
+このままだと 2枚出しもドリンクの「先出し / 食後」も一度も効かない。
+`supabase/serving_timing.sql` の初期データ（2-a）でこの2件をドリンク区分に直す。
+天真には報告済み。管理画面「カテゴリ管理」の「区分」からいつでも変えられる。
+
+slug も想定と違った（`frenchtoast` であって `french_toast` ではない）。初期データは slug と名前の両方で拾う。
+
+## ⚠ 流す順番: SQL → マージ
+
+アプリ側は新しい列（`categories.serving_timing_choice` / `order_items.serving_timing`）を前提に SELECT する。
+**SQL を流す前にマージすると、お客様側のカテゴリー取得と厨房画面の明細取得が「列が無い」で失敗する。**
+SQL だけ先に流してもアプリは壊れない。手順: (1) SQL Editor で `serving_timing.sql` を実行 → (2) PR をマージ。
+
+## 副次的に見つけた別件（未対応）
+
+お客様画面のカテゴリータグ・見出しは `SUBCATEGORY_LABEL[slug] ?? slug` で、
+本番の新しいカテゴリー（`brekkie` `hamburger` `frenchtoast` 等）は**英字のスラッグのまま表示**されている。
+DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せるべき。別タスクにした（spawn_task で提案済み）。
+
+## 洋輔さんへの共有資料
+
+`docs/share/2026-09-04-serving-timing.html`。1ファイルで完結（写真は埋め込み）。
+何が変わるか・お客様の3ステップ・店舗側の変化・Q&A・変更点一覧。画面はHTMLで再現したもので、実機のスクリーンショットではない。
+
+## 残り（このセッションで終わらなかったもの）
+
+1. **Figma に起こす**（design-rules 4 の完了条件まで）。対象:
+   - `MobileOrder` ページ「注文 / SP」: Product Detail に選択カード（フード / ドリンク）、Cart に セグメント、Order Confirmed に「食後」の印
+   - 「Kitchen / 厨房」PC・SP: Order Card の品目行に提供タイミング
+   - 「Categories Management / カテゴリ管理」PC・SP: 編集パネルのトグル
+   - `Components` ページ「04 Tags & Steppers」に **Segmented Control** と **Serving Timing Card** を追加
+     （追加したら下のセクションを押し下げる。`npm run design:figma` を通す）
+2. **スクリーンショット**（PC 1400 / SP 390）: `/order?item=<パンケーキのID>`、`/cart`、`/complete`、`/admin/kitchen`、`/admin/menu/categories`、`/dev/ui`。
+   `npm run dev` が止まっていたため未撮影。天真に起動してもらってから撮る
+3. **PR 作成**（スクリーンショットを本文に載せてから）。マージは天真。マージ前に SQL
