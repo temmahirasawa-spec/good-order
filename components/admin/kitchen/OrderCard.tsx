@@ -133,8 +133,9 @@ export default function OrderCard({
                 <span className="type-jp-heading-s text-text-primary">{item.name}</span>
                 <span className="font-en font-semibold text-text-secondary">×{item.quantity}</span>
                 <ServingTimingBadge timing={item.servingTiming} />
+                {/* オプションは幅 140px で末尾省略（Figma の Order Item Row と同じ）。長い組み合わせでも状態バッジを押し出さない */}
                 {item.options && item.options.length > 0 && (
-                  <span className="type-jp-caption text-text-secondary truncate max-w-[180px]">
+                  <span className="type-jp-caption text-text-secondary truncate max-w-[140px]">
                     {item.options.map((o) => `＋${o}`).join(" ")}
                   </span>
                 )}
