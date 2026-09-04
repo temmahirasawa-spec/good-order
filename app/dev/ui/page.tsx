@@ -55,7 +55,7 @@ import ColorSwatchPicker from "@/components/admin/category/ColorSwatchPicker";
 import PickupCard, { type PickupItem } from "@/components/admin/takeout/PickupCard";
 import { useCartStore } from "@/lib/store";
 import { menuItems, type MenuItem } from "@/lib/menu";
-import { SUBCATEGORY_LABEL } from "@/lib/categoryLabels";
+import { resolveCategoryLabel } from "@/lib/categoryLabels";
 import type { ApiCategory, ApiMediaItem } from "@/lib/api";
 
 const ICONS: IconName[] = [
@@ -455,14 +455,18 @@ export default function UiGalleryPage() {
       </Section>
 
       <Section title="MenuCategoryCard (Large x2 / Small x3)">
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          英語名は DB の caption を優先。caption が空なら辞書（eggs_benedict → EGG BENEDICT）、
+          辞書にも無いスラッグ（acaibowl）はスラッグの大文字化で埋まる
+        </p>
         <div className="grid grid-cols-2 gap-[8px] mb-[8px]">
           <MenuCategoryCard category={sampleCat} size="large" href="/order/pancake" />
-          <MenuCategoryCard category={{ ...sampleCat, slug: "eggs_benedict", name: "エッグベネディクト" }} size="large" href="/order/eggs_benedict" />
+          <MenuCategoryCard category={{ ...sampleCat, slug: "eggs_benedict", name: "エッグベネディクト", caption: null }} size="large" href="/order/eggs_benedict" />
         </div>
         <div className="flex gap-[8px]">
-          <MenuCategoryCard category={{ ...sampleCat, slug: "fritter", name: "フリッター" }} size="small" href="/order/fritter" />
-          <MenuCategoryCard category={{ ...sampleCat, slug: "burger", name: "バーガー" }} size="small" href="/order/burger" />
-          <MenuCategoryCard category={{ ...sampleCat, slug: "lunch", name: "ランチ" }} size="small" href="/order/lunch" />
+          <MenuCategoryCard category={{ ...sampleCat, slug: "fritter", name: "フリッター", caption: "FRITTER" }} size="small" href="/order/fritter" />
+          <MenuCategoryCard category={{ ...sampleCat, slug: "frenchtoast", name: "フレンチトースト", caption: "FRENCH TOAST" }} size="small" href="/order/frenchtoast" />
+          <MenuCategoryCard category={{ ...sampleCat, slug: "acaibowl", name: "アサイーボウル", caption: null }} size="small" href="/order/acaibowl" />
         </div>
       </Section>
 
@@ -516,7 +520,7 @@ export default function UiGalleryPage() {
         <div className="flex flex-col gap-[12px]">
           <CartItemRow
             image={sampleItem.image}
-            categoryLabel={SUBCATEGORY_LABEL[sampleItem.subcategory] ?? sampleItem.subcategory}
+            categoryLabel={resolveCategoryLabel([sampleCat], sampleItem.subcategory)}
             categoryColor="yellow"
             name={sampleItem.name}
             price={sampleItem.price}
