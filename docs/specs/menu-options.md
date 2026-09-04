@@ -146,6 +146,24 @@
 
 ---
 
+## 10. Figma（2026-09-04 に起こし済み）
+
+| 場所 | 追加したもの |
+|---|---|
+| Components / 04 Tags & Steppers | `Option Row`（Type=Checkbox / Radio × State=Default / Selected、358×52、下に境界線。Label / Price のテキストプロパティ） |
+| Components / 05 Cards | `Cart Item Row (Options)`（商品名の下に「＋アボカド ＋ゆで卵」） |
+| Components / 11 Staff / Orders | `Order Item Row` に BOOLEAN `Show Options` と TEXT `Options`（末尾の隠しテキスト、幅 140・末尾省略）。既存インスタンスの上書きは全行一致を確認 |
+| MobileOrder / 注文 / SP | `Product Detail — オプション`（グリーンサラダボウル、12行）、`Cart — オプション`、`Order Confirmed — オプション` |
+| MobileOrder / Kitchen / 厨房 | PC `Template / Kitchen — オプション 1180x820`、SP `Kitchen — オプション — Mobile 390` |
+| MobileOrder / Menu Management / メニュー管理 | PC `Template / Menu Management — オプション 1180x820`、SP `Menu Item Editing — オプション — Mobile 390`（トグル ON の状態。見出し・選び方・項目の編集） |
+
+`npm run design:figma`: 構造・パディング 全ページ問題なし、新しい違反なし。
+返済したもの: Menu Management の「Actions」itemSpacing 10 → space/12（原本と複製）。
+実装との対応: `components/ui/OptionRow.tsx` / `CartItemRow.tsx`（optionsLabel）/ `admin/kitchen/OrderCard.tsx`（options、幅 140）/
+`app/admin/(protected)/menu/page.tsx`（オプションの設定）。
+
+---
+
 ## 9. 決めてほしいこと（2026-09-04 に天真が決定した記録）
 
 1. **お客様側の器**: **A 詳細の中に一覧**

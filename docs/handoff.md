@@ -3277,3 +3277,44 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 - `.claude/launch.json`（Browser ペインの dev 起動設定）は未コミット。ペイン管理の dev サーバーが CSS/JS を 404 で返し始めたら
   `preview_stop` → `preview_start name=dev` で復旧（`npm run check` を dev 中に回した直後に起きた）
 - `feat/serving-timing` ブランチに #54 と同じ内容のコミットが残っている。消してよい
+
+
+---
+
+# メニューのオプション（トッピング）（2026-09-04・実装済み、PR 待ち）
+
+仕様は `docs/specs/menu-options.md`（確定版・Figma の記録つき）。ブランチ `feat/menu-options`。
+天真の3案からの決定は **A（商品詳細の中に一覧）**、無料は「0円」、選び方（複数選択／1つだけ）は
+商品ごとに管理画面で設定、他は提案どおり。進め方は Figma → SQL → 実装 → PR（規約どおりの順）。
+
+## 実装の要点
+
+| 場所 | 中身 |
+|---|---|
+| `lib/menuOptions.ts`（新規） | 型・文言（「0円」「＋名前」）・行キー・初期選択（1つだけは最初の項目）を1か所に |
+| `lib/menuDataStore.ts` | `menuOptions`（商品ID → 表示中のオプション）を categories / menu_items と一緒に読む。失敗しても一覧は出す |
+| `lib/store.ts` | `CartItem.options`。行の同一性は「商品＋提供タイミング＋オプションの組み合わせ」。`lineUnitPrice()` がオプション込みの単価。カート画面の行操作は `removeLine / updateLineQuantity / setServingTiming(line, to)`（行そのもので識別） |
+| `components/ui/OptionRow.tsx`（新規） | `OptionRow`（チェック／ラジオ）と `MenuOptionPicker`（見出し＋「複数選べます／1つ選べます」＋行） |
+| `ItemDetailOverlay` | 説明文の下に一覧（提供タイミングの上）。下部バーは「カートに入れる ¥1,100」のように金額が変わる |
+| 一覧からの直接投入 | 対象商品は `openItemDetail` を開く（ホーム・カテゴリー・テイクアウト・`useOrderPageData.handleAdd`） |
+| `lib/receipt.ts` | 品名の下に「＋名前」を同じ大きさで1行ずつ（提供タイミングの上） |
+| 厨房 | `order_item_options(name)` を JOIN。`OrderCard` は数量の横に小さく、幅 140 で末尾省略（Figma の部品と同じ） |
+| 管理画面「メニュー管理」 | 「オプション」トグル（既定 OFF）→ 見出し・選び方・項目（名前・価格・表示・並び替え・削除・追加）。保存は商品と一緒に差分で反映（`syncOptions`） |
+| `supabase/menu_item_options.sql`（新規） | 列3つ・表2つ・`place_order` / `claim_print_job` の差し替え・グリーンサラダボウルの12種 |
+
+## 判断
+
+- **単価はオプション込みで `order_items.unit_price` に保存する。** 既存の合計・消費税・売上集計（unit_price × quantity）をそのまま効かせるため。内訳は `order_item_options`（名前・価格のスナップショット）
+- **オプションの価格はサーバー側で引き直す。** お客様側は ID だけ送る（`options: [{option_id}]`）。商品に属さない／非表示のオプションは注文ごと拒否
+- 1つだけ（ラジオ）は最初の項目が選ばれた状態で開く（未選択で注文できないより迷わない）。天真未確認の AI 判断
+- 厨房画面のオプションは品名の**横**（数量の右）に小さく。下に1行にすると共通部品 `Order Item Row` の構造を作り替える必要があり（design-rules 6 のリスク）、末尾に隠しテキストを足す形にした。長い組み合わせは幅 140 で省略し、全部は伝票で読む
+
+## ⚠ 流す順番: SQL → マージ
+
+`supabase/menu_item_options.sql` を本番（`good-order` = oiropkuvaenebmlicrac）で先に流す。アプリ側は新しい列・表を前提に読む。
+
+## 残り
+
+- PR 作成 → 天真がレビュー・マージ（SQL を先に）。マージ後、本番のグリーンサラダボウルでトッピングを選んで注文し、伝票に「＋アボカド」が出ることを確認する
+- 実機スクリーンショットは撮っていない（天真の指示で不要。Figma のフレームを `.claude/verification/2026-09-04-menu-options/figma-*.png` に保存）
+- 洋輔さん向けの共有資料は今回は作っていない（依頼なし）。必要なら `docs/share/2026-09-04-serving-timing.html` と同じ形で
