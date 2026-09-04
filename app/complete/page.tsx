@@ -14,7 +14,8 @@ import ChefSmileIllustration from "@/components/ChefSmileIllustration";
 import { AddToCartButton } from "@/components/ui/Buttons";
 import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
 import { cartLineKey } from "@/lib/servingTiming";
-import { useCartStore } from "@/lib/store";
+import { formatSelectedOptions, optionsKey, optionsTotal } from "@/lib/menuOptions";
+import { useCartStore, lineUnitPrice } from "@/lib/store";
 import { fetchOrderStatuses } from "@/lib/api";
 import { loadHistory, updateHistoryPickupNo } from "@/lib/history";
 import { PICKUP_NO_LABEL, formatPickupNo } from "@/lib/pickupNo";
@@ -42,7 +43,7 @@ export default function CompletePage() {
 
   const lastOrder  = orderHistory[orderHistory.length - 1] ?? [];
   const totalItems = lastOrder.reduce((s, i) => s + i.quantity, 0);
-  const totalPrice = lastOrder.reduce((s, i) => s + i.item.price * i.quantity, 0);
+  const totalPrice = lastOrder.reduce((s, i) => s + lineUnitPrice(i) * i.quantity, 0);
 
   useEffect(() => {
     if (!lastOrderId) return;
@@ -127,25 +128,30 @@ export default function CompletePage() {
             </div>
 
             <div className="flex flex-col">
-              {lastOrder.map(({ item, quantity, servingTiming }) => (
+              {lastOrder.map(({ item, quantity, servingTiming, options }) => (
                 <div
-                  key={cartLineKey(item.id, servingTiming)}
+                  key={cartLineKey(item.id, servingTiming, optionsKey(options))}
                   className="flex items-center justify-between gap-[var(--space-8)] px-[var(--space-24)] py-[10px]"
                 >
-                  <p className="flex-1 min-w-0 type-jp-body text-text-primary">
-                    {item.name}
-                    {/* 「食後」だけ添える。初期値（でき次第・先出し）は再掲しない（仕様 3-4） */}
-                    <ServingTimingBadge
-                      timing={servingTiming}
-                      showDefault={false}
-                      className="ml-[var(--space-8)] align-middle"
-                    />
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="type-jp-body text-text-primary">
+                      {item.name}
+                      {/* 「食後」だけ添える。初期値（でき次第・先出し）は再掲しない（仕様 3-4） */}
+                      <ServingTimingBadge
+                        timing={servingTiming}
+                        showDefault={false}
+                        className="ml-[var(--space-8)] align-middle"
+                      />
+                    </p>
+                    {options && options.length > 0 && (
+                      <p className="type-jp-caption text-text-secondary">{formatSelectedOptions(options)}</p>
+                    )}
+                  </div>
                   <p className="shrink-0 w-[32px] type-jp-caption text-text-secondary text-right">
                     ×{quantity}
                   </p>
                   <p className="shrink-0 w-[70px] type-en-price-m !font-medium text-text-secondary text-right">
-                    ¥{(item.price * quantity).toLocaleString()}
+                    ¥{((item.price + optionsTotal(options)) * quantity).toLocaleString()}
                   </p>
                 </div>
               ))}

@@ -34,6 +34,7 @@ export default function CartItemRow({
   onDecrement,
   onRemove,
   servingTiming,
+  optionsLabel,
 }: {
   image: string;
   categoryLabel: string;
@@ -46,6 +47,8 @@ export default function CartItemRow({
   onRemove: () => void;
   /** 提供タイミングを選べる商品のときだけ渡す。無ければ従来どおりの行 */
   servingTiming?: CartRowServingTiming;
+  /** 選んだオプション（「＋アボカド ＋ゆで卵」）。無ければ出さない。価格はオプション込みで渡す */
+  optionsLabel?: string;
 }) {
   return (
     <div
@@ -69,6 +72,11 @@ export default function CartItemRow({
             <p className="w-full type-jp-heading-s text-text-primary whitespace-nowrap overflow-hidden text-ellipsis">
               {name}
             </p>
+            {optionsLabel && (
+              <p className="w-full type-jp-caption text-text-secondary whitespace-nowrap overflow-hidden text-ellipsis">
+                {optionsLabel}
+              </p>
+            )}
             <div className="w-full flex items-center justify-between h-[36px]">
               <span className="type-en-price-m text-text-primary tabular-nums">
                 ¥{price.toLocaleString()}

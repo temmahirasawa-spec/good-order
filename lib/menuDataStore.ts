@@ -12,6 +12,7 @@ import { supabase } from "./supabase";
 import type { MenuItem } from "./menu";
 import {
   fetchCategories,
+  fetchMenuItemOptions,
   MENU_ITEM_COLUMNS,
   primeCategoriesCache,
   rowToMenuItem,
@@ -19,12 +20,15 @@ import {
   type ApiCategory,
   type ApiMenuItem,
 } from "./api";
+import type { MenuOption } from "./menuOptions";
 
 const TTL_MS = 30_000;
 
 interface MenuDataState {
   categories: ApiCategory[];
   menuItems: MenuItem[];         // is_available=true のアイテム（店内 + テイクアウト）
+  /** 商品ID → 表示中のオプション（docs/specs/menu-options.md）。無い商品はキー自体が無い */
+  menuOptions: Record<string, MenuOption[]>;
   loadedAt: number | null;
   loading: boolean;
   error: string | null;
@@ -42,6 +46,7 @@ let refCount = 0;
 export const useMenuDataStore = create<MenuDataState>((set, get) => ({
   categories: [],
   menuItems: [],
+  menuOptions: {},
   loadedAt: null,
   loading: false,
   error: null,
@@ -55,14 +60,23 @@ export const useMenuDataStore = create<MenuDataState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       // categories と menu_items を並列で取得
-      const [cats, rowsRes] = await Promise.all([
+      const [cats, rowsRes, optionRows] = await Promise.all([
         fetchCategories(),
         supabase
           .from("menu_items")
           .select(MENU_ITEM_COLUMNS)
           .eq("is_available", true)
           .order("display_order"),
+        // オプションの取得に失敗しても一覧は出す（オプション無しとして扱う）
+        fetchMenuItemOptions().catch((e) => {
+          console.warn("[menuDataStore] fetchMenuItemOptions failed:", e);
+          return [];
+        }),
       ]);
+      const menuOptions: Record<string, MenuOption[]> = {};
+      for (const o of optionRows) {
+        (menuOptions[o.menu_item_id] ??= []).push({ id: o.id, name: o.name, price: o.price });
+      }
 
       // api.ts のモジュールキャッシュにも同じ結果を入れて、以降の buildCatMap 呼び出しを節約
       primeCategoriesCache(cats.map((c) => ({ id: c.id, slug: c.slug })));
@@ -74,6 +88,7 @@ export const useMenuDataStore = create<MenuDataState>((set, get) => ({
       set({
         categories: cats,
         menuItems: items,
+        menuOptions,
         loadedAt: Date.now(),
         loading: false,
       });

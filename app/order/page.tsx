@@ -24,6 +24,8 @@ import { MenuCarouselM, MenuCarouselWide } from "@/components/ui/MenuCarousel";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
+import { useMenuDataStore } from "@/lib/menuDataStore";
+import { hasSelectableOptions } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useOrderPageData } from "@/hooks/useOrderPageData";
 import { useStoreVideo } from "@/lib/useStoreMedia";
@@ -121,6 +123,9 @@ function OrderContent() {
   const cartItems      = useCartStore((s) => s.items);
   const addItem        = useCartStore((s) => s.addItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const menuOptions    = useMenuDataStore((s) => s.menuOptions);
+  /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる（docs/specs/menu-options.md 3-2） */
+  const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
 
   const { loading, bestSellerItems, bestSellerEnabled, categorySections } = useOrderPageData();
 
@@ -189,7 +194,7 @@ function OrderContent() {
     cartItems.find((ci) => ci.item.id === id)?.quantity ?? 0;
   const cardHandlers = (item: MenuItem) => ({
     quantity: qtyOf(item.id),
-    onIncrement: () => addItem(item, 1),
+    onIncrement: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1)),
     onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
     onClick: () => openItemDetail(item.id),
   });
@@ -213,7 +218,7 @@ function OrderContent() {
     quantity: draftOf(item.id),
     onIncrement: () => bumpDraft(item.id, 1),
     onDecrement: () => bumpDraft(item.id, -1),
-    onAddToCart: () => addItem(item, draftOf(item.id)),
+    onAddToCart: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, draftOf(item.id))),
     onClick: () => openItemDetail(item.id),
   });
 

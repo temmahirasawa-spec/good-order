@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
+import { hasSelectableOptions } from "@/lib/menuOptions";
+import { openItemDetail } from "@/lib/itemOverlay";
 import Header from "@/components/Header";
 import ItemModal from "@/components/ItemModal";
 import FloatingStaffCall from "@/components/FloatingStaffCall";
@@ -35,6 +37,7 @@ export default function TakeoutMenuPage() {
 
   /* ── 共有ストアから取得（takeout のみフィルタ） ── */
   const allMenuItems  = useMenuDataStore((s) => s.menuItems);
+  const menuOptions   = useMenuDataStore((s) => s.menuOptions);
   const storeLoading  = useMenuDataStore((s) => s.loading);
   const storeLoaded   = useMenuDataStore((s) => s.loadedAt);
   const fetchAll      = useMenuDataStore((s) => s.fetchAll);
@@ -55,6 +58,11 @@ export default function TakeoutMenuPage() {
   const loading = storeLoading && !storeLoaded;
 
   const handleDirectAdd = (item: MenuItem) => {
+    // オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる
+    if (hasSelectableOptions(item, menuOptions[item.id] ?? [])) {
+      openItemDetail(item.id);
+      return;
+    }
     addItem(item);
     setAddedId(item.id);
     setTimeout(() => setAddedId(null), 700);

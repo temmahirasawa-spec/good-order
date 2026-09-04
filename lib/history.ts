@@ -7,6 +7,7 @@
  */
 
 import type { ServingTiming } from "./servingTiming";
+import type { SelectedOption } from "./menuOptions";
 
 const KEY = "yorkys_order_history";
 const MAX = 30;
@@ -19,6 +20,8 @@ export interface HistoryItemSnapshot {
   unitPrice: number;
   /** 提供タイミング（でき次第 / 先出し / 食後）。選択対象外は null。移行前の履歴には無い */
   servingTiming?: ServingTiming | null;
+  /** 選んだオプション（名前・価格のスナップショット）。unitPrice はオプション込み */
+  options?: SelectedOption[];
 }
 
 export interface HistoryEntry {

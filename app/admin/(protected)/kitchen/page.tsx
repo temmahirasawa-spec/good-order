@@ -119,7 +119,8 @@ export default function KitchenPage() {
         .select(`
           id, order_id, menu_item_id, quantity,
           cooking_status, serving_timing, updated_at,
-          menu_items (name, is_takeout)
+          menu_items (name, is_takeout),
+          order_item_options (name)
         `)
         .in("order_id", orderIds);
       if (itemErr) throw itemErr;
@@ -464,6 +465,7 @@ export default function KitchenPage() {
                     cookingStatus: i.cookingStatus,
                     isTakeoutItem: i.isTakeoutItem,
                     servingTiming: i.servingTiming,
+                    options: i.options,
                   }));
                   return (
                     <OrderCard

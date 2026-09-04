@@ -36,6 +36,10 @@ export interface MenuItem {
   calories?: number | null;
   servingTimeMin?: number | null;
   isTakeout?: boolean;
+  /** オプション（トッピング）の設定。docs/specs/menu-options.md。項目そのものは menuDataStore.menuOptions */
+  optionsEnabled?: boolean;
+  optionsHeading?: string;
+  optionsSelectMode?: "multiple" | "single";
 }
 
 // ─── 実店舗写真（public/images/ 配下）────────────────────────

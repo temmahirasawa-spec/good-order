@@ -12,7 +12,7 @@ export const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
 /* ── menu_items 取得時の共通カラム定義 ── */
 export const MENU_ITEM_COLUMNS =
-  "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_available, display_order";
+  "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_available, display_order, options_enabled, options_heading, options_select_mode";
 
 /* ── buildCatMap のモジュールキャッシュ（TTL 30秒） ── */
 const CAT_CACHE_TTL_MS = 30_000;
@@ -67,6 +67,44 @@ export interface ApiMenuItem {
   is_available: boolean;
   is_takeout: boolean;
   display_order: number;
+  /** オプション（トッピング）の設定（supabase/menu_item_options.sql）。古い取得列には無いので optional */
+  options_enabled?: boolean;
+  options_heading?: string | null;
+  options_select_mode?: string | null;
+}
+
+/** 商品に設定されたオプション1件（menu_item_options） */
+export interface ApiMenuItemOption {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  price: number;
+  display_order: number;
+  is_available: boolean;
+}
+
+/* ── 表示中のオプションを全商品ぶん取得（お客様側。小さい表なので1回で読む） ── */
+export async function fetchMenuItemOptions(): Promise<ApiMenuItemOption[]> {
+  const { data, error } = await supabase
+    .from("menu_item_options")
+    .select("id, menu_item_id, name, price, display_order, is_available")
+    .eq("is_available", true)
+    .order("display_order")
+    .order("created_at");
+  if (error) throw error;
+  return (data ?? []) as ApiMenuItemOption[];
+}
+
+/* ── 1商品のオプションを非表示も含めて取得（管理画面の編集用） ── */
+export async function fetchMenuItemOptionsForItem(menuItemId: string): Promise<ApiMenuItemOption[]> {
+  const { data, error } = await supabase
+    .from("menu_item_options")
+    .select("id, menu_item_id, name, price, display_order, is_available")
+    .eq("menu_item_id", menuItemId)
+    .order("display_order")
+    .order("created_at");
+  if (error) throw error;
+  return (data ?? []) as ApiMenuItemOption[];
 }
 
 /* ── カテゴリー一覧（display_order 順） ── */
@@ -131,6 +169,9 @@ function toMenuItem(
     calories?: number | null;
     serving_time_min?: number | null;
     is_takeout?: boolean | null;
+    options_enabled?: boolean | null;
+    options_heading?: string | null;
+    options_select_mode?: string | null;
   },
   catMap: Record<string, string>
 ): MenuItem {
@@ -170,6 +211,9 @@ function toMenuItem(
     calories: row.calories ?? null,
     servingTimeMin: row.serving_time_min ?? null,
     isTakeout: row.is_takeout ?? false,
+    optionsEnabled: row.options_enabled ?? false,
+    optionsHeading: row.options_heading || "トッピング",
+    optionsSelectMode: row.options_select_mode === "single" ? "single" : "multiple",
   };
 }
 

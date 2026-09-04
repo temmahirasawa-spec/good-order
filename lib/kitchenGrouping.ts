@@ -14,6 +14,8 @@ export interface KitchenItem {
   isTakeoutItem: boolean;
   /** 提供タイミング（でき次第 / 先出し / 食後）。選択対象外・移行前の注文は null */
   servingTiming: ServingTiming | null;
+  /** 選んだオプション（トッピング）の名前。無ければ空 */
+  options: string[];
   /** 楽観ロック用。DBから取得した値をそのまま保持し、再フォーマットしないこと */
   updatedAt: string;
 }
@@ -91,6 +93,8 @@ export function groupOrdersByTable(
         cookingStatus: (it.cooking_status ?? "pending") as CookingStatus,
         isTakeoutItem: Boolean(it.menu_items?.is_takeout),
         servingTiming: normalizeServingTiming(it.serving_timing),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        options: ((it.order_item_options ?? []) as any[]).map((o) => String(o?.name ?? "")).filter(Boolean),
         updatedAt: it.updated_at,
       })),
     });
