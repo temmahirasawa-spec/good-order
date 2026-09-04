@@ -582,6 +582,18 @@ button:disabled:active,
   place-items: center;
 }
 .count .is-leaving  { animation: roll-out var(--motion-roll) var(--ease-out) forwards; }
+
+/* ── セグメント切替（components/ui/SegmentedControl.tsx）────────────
+   選択の帯（thumb）を transform だけで選んだ位置まですべらせる。
+   色が切り替わるだけだと「押した」感が薄いため。動かすのは transform と
+   color だけで、レイアウトは触らない（連打してもカクつかない）。
+   ライブラリは使わない。OS のモーション軽減設定では上の規則で止まる。 */
+.segment__thumb { transition: transform var(--motion-state) var(--ease-out); }
+.segment__item {
+  transition:
+    color var(--motion-state) var(--ease-out),
+    transform var(--motion-release) var(--ease-out);
+}
 .count .is-entering { animation: roll-in  var(--motion-roll) var(--ease-out) forwards; }
 
 @keyframes roll-out {
