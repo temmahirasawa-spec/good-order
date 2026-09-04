@@ -906,8 +906,10 @@ export default function AdminMenuPage() {
                         ariaLabel="オプション"
                       />
                     </div>
+                    {/* ON で開く設定は薄いグレーの枠で束ねる（天真の決定 2026-09-04・案B）。
+                        小見出しの文字は小さくしない。「オプションの中身」であることを枠で伝える */}
                     {form.options_enabled && (
-                      <div className="flex flex-col gap-[var(--space-12)] w-full">
+                      <div className="flex flex-col gap-[var(--space-12)] w-full bg-bg-secondary rounded-[var(--radius-md)] p-[var(--space-16)]">
                         <div className="flex flex-col gap-[var(--space-4)] w-full">
                           <label className="type-jp-caption-bold text-text-primary">お客様に見せる見出し</label>
                           <input
@@ -920,7 +922,8 @@ export default function AdminMenuPage() {
                         </div>
                         <div className="flex flex-col gap-[var(--space-4)] w-full">
                           <label className="type-jp-caption-bold text-text-primary">選び方</label>
-                          <div className="flex gap-[var(--space-4)]">
+                          {/* 枠の中は幅が狭いので、入り切らなければ2段に折り返す */}
+                          <div className="flex flex-wrap gap-[var(--space-4)]">
                             {([
                               { value: "multiple", label: "複数選択（チェック）" },
                               { value: "single",   label: "1つだけ（ラジオ）" },
