@@ -3264,6 +3264,17 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 - **PR #52** `fix/category-label-from-db`: お客様画面のカテゴリータグが英字スラッグのまま出る不具合（別セッションの成果）。天真がレビュー・マージ
 - **PR #51** `docs/next-session-handoff`: 前セッションの引き継ぎ文書。マージ時に本ファイルが競合したら両方残す
 
+## 次の依頼: メニューのオプション（トッピング）── 仕様案を出して天真の決定待ち
+
+グリーンサラダボウル（本番 `17bc4c4d-…`、880円）に12種のトッピングを付けられるようにし、
+どの商品にも管理画面から設定できる汎用機能にする。ブランチ `feat/menu-options`（PR 未作成）に
+仕様案 `docs/specs/menu-options.md` と、お客様側3案（A 詳細の中 / B 半モーダル / C 全画面）＋共通部分の
+たたき台 `.claude/verification/2026-09-04-menu-options/` を置いた。決めてほしいことは仕様案の 9 章
+（器・無料の見せ方・選び方・見出し・カードからの直接投入・カートでの変更・レジ明細・伝票の印字・文言）。
+決まったら 提供タイミングと同じ順（Figma → SQL `supabase/menu_item_options.sql` → 実装 → PR）で進める。
+データの要点: 行の単価はオプション込みで `order_items.unit_price` に保存（既存の金額計算がそのまま効く）、
+内訳は `order_item_options`（名前・価格のスナップショット）、価格はサーバー側（`place_order`）で引き直す。
+
 ## 検証の手段（次のセッション向け）
 
 - お客様側のスクショ: `node scripts/screenshot-pages.mjs <出力先>`（dev サーバーが必要。CSS が当たるまで待って撮る）。
