@@ -3193,7 +3193,10 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 - **共通部品 `Order Item Row` に子を足した**（design-rules 6）。末尾に隠しバッジを追加し、
   BOOLEAN `Show Timing` で出す形にしたので、既存インスタンスには影響しない。
   変更前後で Kitchen の PC / SP の全行（20行）の文言を突き合わせ、一致を確認した
-- `Cart Item Row` は触らず、`Cart Item Row (Timing)` を別部品として置いた
+- `Cart Item Row` は触らず、`Cart Item Row (Timing)` を別部品として置いた。
+  **その後、天真が構造を作り直した**（セグメントを情報の列の中ではなく、画像＋情報のブロックの下に
+  行の内側いっぱいの幅で置く。上のブロックとの間隔 space/16、画像は上揃え）。天真のフレームを
+  そのままコンポーネント化して私のものと差し替え、カートのインスタンスと実装（`CartItemRow.tsx`）も同じ構造に揃えた
 - Segmented Control の内側余白は **space/4**（3px はスペーシングのスケールに無い）。実装側も `p-[var(--space-4)]` に揃えた
 - 「食後」チップの文字は **JP/Caption Bold**（12px）。実装側も `type-jp-caption-bold` に揃えた
 - Product Detail の提供タイミング枠は Intro の中に paddingTop 12 で入れ、本文との距離を実装（mt-24）と同じ 24 にした
@@ -3226,6 +3229,9 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 
 ## 残り
 
-- PR #53 のマージ（天真）。マージ後、店舗の実機でパンケーキ＋ドリンクを注文して伝票が2枚出ることを確認する
+- **PR #53 は 2026-09-04 に天真がマージ済み**（main の `d497adb`）。カート行の構造差し替え（天真が Figma で確定した形）は
+  マージ後に出た差分なので **PR #54**（`refactor/cart-row-timing-layout`）に分けた。マージは天真
+- マージ後、店舗の実機でパンケーキ＋ドリンクを注文して伝票が2枚出ることを確認する
+- `feat/serving-timing` ブランチには PR #54 と同じ内容のコミット（`bee884a`）が残っている。PR #54 がマージされたら消してよい
 - 別タスク: お客様画面のカテゴリータグが英字スラッグのまま出る不具合（spawn_task 済み）
 - 未使用の Supabase プロジェクト `good-order-yorkys-shukugawa`（MICRO）を残すか消すかの判断（天真）
