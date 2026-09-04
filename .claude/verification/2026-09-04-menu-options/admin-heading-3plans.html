@@ -1,0 +1,69 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>管理画面 オプション設定の見出し 3案</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Barlow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--t1:#1A1A1A;--t2:#646464;--t3:#999999;--border:#DDDDDD;--divider:#EDEDED;--bg2:#F5F5F5;--accent:#FAC03D;--jp:'Noto Sans JP',sans-serif;--en:'Barlow',sans-serif}
+*{box-sizing:border-box} body{margin:0;background:#E6E6E6;font-family:var(--jp);color:var(--t1)}
+.sheet{padding:28px 32px;width:1300px} h1{font:700 20px/1.3 var(--jp);margin:0 0 4px} .note{font:500 13px/1.6 var(--jp);color:var(--t2);margin:0 0 20px}
+.row3{display:flex;gap:24px;align-items:flex-start} .colw{width:396px;flex:0 0 396px}
+.plan{font:700 13px/1.2 var(--jp);margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap} .plan b{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--t1);color:#fff;align-items:center;justify-content:center;font:700 13px var(--en)} .plan small{flex-basis:100%;font:500 11px/1.4 var(--jp);color:var(--t2)} .plan .rec{font:700 11px var(--jp);color:#996B00;border:1px solid #996B00;border-radius:9999px;padding:2px 8px}
+.card{background:#fff;border:1px solid #cfcfcf;border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:20px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:16px} .col{display:flex;flex-direction:column;gap:4px;min-width:0}
+.t14b{font:700 14px/1.6 var(--jp)} .t12b{font:700 12px/1.5 var(--jp)} .t12{font:500 12px/1.5 var(--jp)} .gray{color:var(--t3)}
+.sub-gray{font:700 12px/1.5 var(--jp);color:var(--t2)} .sub-black{font:700 12px/1.5 var(--jp);color:var(--t1)} .sub-small{font:500 11px/1.4 var(--jp);letter-spacing:.02em;color:var(--t2)}
+.stack{display:flex;flex-direction:column;gap:12px} .stack.panel{background:var(--bg2);border-radius:12px;padding:16px}
+.field{display:flex;flex-direction:column;gap:4px}
+.input{height:44px;border:1px solid var(--border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font:500 14px var(--jp);background:#fff}
+.seg{display:flex;gap:4px} .seg div{height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;font:700 12px var(--jp);color:var(--t2);background:#fff} .seg div.on{background:var(--t1);color:#fff;border-color:transparent}
+.toggle{width:40px;height:22px;border-radius:9999px;background:var(--accent);position:relative;flex:0 0 40px} .toggle:after{content:"";position:absolute;top:2px;left:20px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)} .toggle.sm{transform:scale(.8)}
+.opt{display:flex;gap:8px;align-items:center} .opt .grip{color:var(--t3);width:14px} .opt .name{flex:1} .opt .price{width:72px;justify-content:flex-end} .opt .del{color:var(--t3);font-size:12px}
+.add{height:40px;border:1px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font:700 13px var(--jp);color:var(--t2)}
+</style></head><body><div class="sheet">
+<h1>管理画面「オプション」の小見出し ── 文字を小さくしない3案</h1>
+<p class="note">中身は同じで、「お客様に見せる見出し」「選び方」「項目」の扱い（器）だけを変えています。今の実装は 12px 太字の黒（C の前の状態）。</p>
+<div class="row3">
+<div class="colw"><p class="plan"><b>A</b>親を一段上げる <span class="rec">AI推奨</span><small>「オプション」を 14px 太字にし、小見出しは 12px 太字のまま色をグレーに。小さくせずに上下関係を作る</small></p>
+<div class="card">
+  <div class="row"><div class="col"><div class="t12b">公開する（注文画面に表示されます）</div></div><div class="toggle"></div></div>
+  <div class="row"><div class="col"><div class="t14b">オプション</div><div class="t12 gray">トッピングなど、お客様が追加で選べるものを設定します</div></div><div class="toggle"></div></div>
+  <div class="stack">
+    <div class="field"><div class="sub-gray">お客様に見せる見出し</div><div class="input">トッピング</div></div>
+    <div class="field"><div class="sub-gray">選び方</div><div class="seg"><div class="on">複数選択（チェック）</div><div>1つだけ（ラジオ）</div></div><div class="t12 gray">複数選択はいくつでも（0個でも可）、1つだけは必ず1つ選びます。</div></div>
+    <div class="field"><div class="sub-gray">項目 <span class="t12 gray" style="font-weight:500">名前・価格（空欄＝0円）・表示・並び替え</span></div>
+      <div class="opt"><span class="grip">⠿</span><div class="input name">アボカド</div><div class="input price">120</div><div class="toggle sm"></div><span class="del">🗑</span></div>
+      <div class="opt"><span class="grip">⠿</span><div class="input name">ゆで卵</div><div class="input price">100</div><div class="toggle sm"></div><span class="del">🗑</span></div>
+      <div class="add">＋ オプションを追加</div>
+    </div>
+  </div>
+  <div class="field"><div class="t12b">表示順</div><div class="input">99</div></div>
+</div></div>
+<div class="colw"><p class="plan"><b>B</b>枠で束ねる<small>ON で開く設定を薄いグレーの枠に入れる。小見出しは今のまま（12px 太字の黒）。「オプションの中身」だと枠で伝える</small></p>
+<div class="card">
+  <div class="row"><div class="col"><div class="t12b">公開する（注文画面に表示されます）</div></div><div class="toggle"></div></div>
+  <div class="row"><div class="col"><div class="t12b">オプション</div><div class="t12 gray">トッピングなど、お客様が追加で選べるものを設定します</div></div><div class="toggle"></div></div>
+  <div class="stack panel">
+    <div class="field"><div class="sub-black">お客様に見せる見出し</div><div class="input">トッピング</div></div>
+    <div class="field"><div class="sub-black">選び方</div><div class="seg"><div class="on">複数選択（チェック）</div><div>1つだけ（ラジオ）</div></div><div class="t12 gray">複数選択はいくつでも（0個でも可）、1つだけは必ず1つ選びます。</div></div>
+    <div class="field"><div class="sub-black">項目 <span class="t12 gray" style="font-weight:500">名前・価格（空欄＝0円）・表示・並び替え</span></div>
+      <div class="opt"><span class="grip">⠿</span><div class="input name">アボカド</div><div class="input price">120</div><div class="toggle sm"></div><span class="del">🗑</span></div>
+      <div class="opt"><span class="grip">⠿</span><div class="input name">ゆで卵</div><div class="input price">100</div><div class="toggle sm"></div><span class="del">🗑</span></div>
+      <div class="add">＋ オプションを追加</div>
+    </div>
+  </div>
+  <div class="field"><div class="t12b">表示順</div><div class="input">99</div></div>
+</div></div>
+<div class="colw"><p class="plan"><b>C</b>小見出しを 11px に<small>いちばん小さいトークン（JP/Label 11px）を使う。比較用。管理画面は iPad でも使うので読みにくさの心配がある</small></p>
+<div class="card">
+  <div class="row"><div class="col"><div class="t12b">公開する（注文画面に表示されます）</div></div><div class="toggle"></div></div>
+  <div class="row"><div class="col"><div class="t12b">オプション</div><div class="t12 gray">トッピングなど、お客様が追加で選べるものを設定します</div></div><div class="toggle"></div></div>
+  <div class="stack">
+    <div class="field"><div class="sub-small">お客様に見せる見出し</div><div class="input">トッピング</div></div>
+    <div class="field"><div class="sub-small">選び方</div><div class="seg"><div class="on">複数選択（チェック）</div><div>1つだけ（ラジオ）</div></div><div class="t12 gray">複数選択はいくつでも（0個でも可）、1つだけは必ず1つ選びます。</div></div>
+    <div class="field"><div class="sub-small">項目 <span class="t12 gray" style="font-weight:500">名前・価格（空欄＝0円）・表示・並び替え</span></div>
+      <div class="opt"><span class="grip">⠿</span><div class="input name">アボカド</div><div class="input price">120</div><div class="toggle sm"></div><span class="del">🗑</span></div>
+      <div class="opt"><span class="grip">⠿</span><div class="input name">ゆで卵</div><div class="input price">100</div><div class="toggle sm"></div><span class="del">🗑</span></div>
+      <div class="add">＋ オプションを追加</div>
+    </div>
+  </div>
+  <div class="field"><div class="t12b">表示順</div><div class="input">99</div></div>
+</div></div>
+</div></div></body></html>

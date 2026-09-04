@@ -73,7 +73,8 @@ export default function CartItemRow({
               {name}
             </p>
             {optionsLabel && (
-              <p className="w-full type-jp-caption text-text-secondary whitespace-nowrap overflow-hidden text-ellipsis">
+              /* 2行まで見せて、それ以上は末尾を省略（天真の決定 2026-09-04。1行省略だと3つ目から読めない） */
+              <p className="w-full type-jp-caption text-text-secondary line-clamp-2 break-all">
                 {optionsLabel}
               </p>
             )}
