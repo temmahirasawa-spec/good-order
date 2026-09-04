@@ -3,7 +3,8 @@
 /**
  * 提供タイミングの選択カード（商品詳細用。docs/specs/serving-timing.md の案B）
  *
- * Figma: Option Card 180:167 を土台に、説明文の行と選択状態（ラジオ）を足したもの。
+ * Figma: Components / 04 Tags & Steppers / Serving Timing Card（2026-09-04 追加）。
+ * Option Card 180:167 を土台に、説明文の行と選択状態（ラジオ）を足したもの。
  * 白地＋枠線＋角丸12・パディング20・先頭要素とラベルの間隔16 は Option Card と同じ。
  * 選択中は枠線を text-primary にして内側にもう1本重ね、2px 相当に見せる
  * （border 幅を変えるとカードの高さが動くため、内側の影で太らせる）。

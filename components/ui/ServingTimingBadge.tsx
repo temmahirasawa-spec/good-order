@@ -6,6 +6,7 @@
  * 紙と画面で見え方を揃えている。厨房画面（Order Card）・完了画面・注文履歴で共用。
  *
  * showDefault=false のときは「食後」だけ出す（完了画面・履歴の決定: 初期値は再掲しない）。
+ * Figma: Components / 04 Tags & Steppers / Serving Timing Badge（2026-09-04 追加）。
  */
 import { SERVING_TIMING_LABEL, type ServingTiming } from "@/lib/servingTiming";
 
@@ -22,7 +23,7 @@ export default function ServingTimingBadge({
   if (timing === "after_meal") {
     return (
       <span
-        className={`inline-flex items-center rounded-[var(--radius-full)] bg-surface-ink px-[var(--space-8)] py-[2px] type-jp-label !font-bold text-text-inverse whitespace-nowrap ${className}`}
+        className={`inline-flex items-center rounded-[var(--radius-full)] bg-surface-ink px-[var(--space-8)] py-[2px] type-jp-caption-bold text-text-inverse whitespace-nowrap ${className}`}
       >
         {SERVING_TIMING_LABEL[timing]}
       </span>
