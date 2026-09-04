@@ -7,8 +7,9 @@ import FloatingStaffCall from "@/components/FloatingStaffCall";
 import CartButton from "@/components/CartButton";
 import { supabase } from "@/lib/supabase";
 import { loadHistory, updateHistoryStatus, updateHistoryPickupNo, type HistoryEntry } from "@/lib/history";
-import { MENU_ITEM_COLUMNS, fetchCategories, fetchOrderStatuses, rowToMenuItem, type ApiMenuItem } from "@/lib/api";
+import { MENU_ITEM_COLUMNS, fetchCategories, fetchMenuItemOptions, fetchOrderStatuses, rowToMenuItem, type ApiMenuItem } from "@/lib/api";
 import { defaultServingTimingFor } from "@/lib/servingTiming";
+import { formatSelectedOptions, type SelectedOption } from "@/lib/menuOptions";
 import { PICKUP_NO_LABEL, formatPickupNo } from "@/lib/pickupNo";
 import { useCartStore, type CartItem } from "@/lib/store";
 import RippleButton from "@/components/RippleButton";
@@ -120,14 +121,17 @@ export default function HistoryPage() {
     const ids = entry.items.map((i) => i.menuItemId).filter(Boolean);
     if (ids.length === 0) return;
     try {
-      const [{ data }, cats] = await Promise.all([
+      const [{ data }, cats, currentOptions] = await Promise.all([
         supabase
           .from("menu_items")
           .select(MENU_ITEM_COLUMNS)
           .in("id", ids)
           .eq("is_available", true),
         fetchCategories(),
+        // 履歴のオプションは、今も表示中のものだけ引き継ぐ（消えたものは落とす。価格は今の値）
+        fetchMenuItemOptions().catch(() => []),
       ]);
+      const optionById = new Map(currentOptions.map((o) => [o.id, o]));
       const catMap = Object.fromEntries(cats.map((c) => [c.id, c.slug]));
       const menuById = new Map<string, ApiMenuItem>();
       ((data ?? []) as ApiMenuItem[]).forEach((r) => menuById.set(r.id, r));
@@ -146,6 +150,14 @@ export default function HistoryPage() {
           quantity: it.quantity,
           // 履歴に残した提供タイミングを引き継ぐ。無ければ今の区分の初期値（選べない商品は null）
           servingTiming: it.servingTiming ?? defaultServingTimingFor(cats, m, orderType),
+          options: (it.options ?? [])
+            .map((o): SelectedOption | null => {
+              const cur = optionById.get(o.optionId);
+              return cur && cur.menu_item_id === m.id
+                ? { optionId: cur.id, name: cur.name, price: cur.price }
+                : null;
+            })
+            .filter((o): o is SelectedOption => o !== null),
         });
       }
       if (cartItems.length === 0) {
@@ -313,6 +325,7 @@ function OrderCard({
         {sample.map((it, i) => (
           <span key={i}>
             {it.name}
+            {it.options && it.options.length > 0 && `（${formatSelectedOptions(it.options)}）`}
             {it.servingTiming === "after_meal" && "（食後）"}
             {" × "}
             {it.quantity}

@@ -115,6 +115,11 @@ export function defaultServingTimingFor(
  * 同じ商品でも提供タイミングが違えば別の行（仕様 3-3）。
  * null と undefined（移行前に保存されたカート）は同じ行として扱う。
  */
-export function cartLineKey(itemId: string, timing?: ServingTiming | null): string {
-  return `${itemId}::${timing ?? ""}`;
+export function cartLineKey(
+  itemId: string,
+  timing?: ServingTiming | null,
+  /** 選んだオプションのキー（lib/menuOptions.ts の optionsKey）。組み合わせが違えば別の行 */
+  optionsKeyStr?: string
+): string {
+  return `${itemId}::${timing ?? ""}::${optionsKeyStr ?? ""}`;
 }

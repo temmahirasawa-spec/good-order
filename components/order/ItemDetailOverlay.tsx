@@ -28,6 +28,7 @@ import { RecommendCarousel } from "@/components/ui/MenuCarousel";
 import { Video9x16 } from "@/components/ui/VideoBlock";
 import { AddToCartButton } from "@/components/ui/Buttons";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
+import MenuOptionPicker from "@/components/ui/OptionRow";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
@@ -42,10 +43,21 @@ import {
   servingTimingOptions,
   type ServingTiming,
 } from "@/lib/servingTiming";
+import {
+  OPTIONS_HEADING_DEFAULT,
+  defaultSelection,
+  hasSelectableOptions,
+  normalizeSelectMode,
+  optionsTotal,
+  toSelected,
+  type MenuOption,
+} from "@/lib/menuOptions";
 import type { MenuItem } from "@/lib/menu";
 
 /* .page-slide-out-right（app/globals.css）のアニメ時間と合わせる */
 const CLOSE_ANIM_MS = 260;
+/* セレクタが毎回新しい配列を返すと再描画が止まらないので、空は共有の定数にする */
+const EMPTY_OPTIONS: MenuOption[] = [];
 
 export default function ItemDetailOverlay() {
   return (
@@ -72,9 +84,12 @@ function OverlayContent() {
   const [draftQty, setDraftQty] = useState(1);
   /* 提供タイミングの下書き。null は「区分の初期値のまま」 */
   const [draftTiming, setDraftTiming] = useState<ServingTiming | null>(null);
+  /* オプション（トッピング）の下書き。null は「初期選択のまま」（1つだけの商品は最初の項目、複数選択は空） */
+  const [draftOptionIds, setDraftOptionIds] = useState<string[] | null>(null);
   const openedByPushRef = useRef(false);
 
   const item = itemId ? allMenuItems.find((m) => m.id === itemId) ?? null : null;
+  const itemOptions = useMenuDataStore((s) => (itemId ? s.menuOptions[itemId] : undefined) ?? EMPTY_OPTIONS);
 
   const related = useMemo<MenuItem[]>(
     () => (item ? computeRelatedItems(allMenuItems, item, Infinity) : []),
@@ -87,11 +102,22 @@ function OverlayContent() {
   const timingType = item ? servingCategoryType(categories, item) : "food";
   const selectedTiming: ServingTiming = draftTiming ?? defaultServingTiming(timingType);
 
+  /* オプション（docs/specs/menu-options.md、案A）。対象商品のときだけ一覧を出す */
+  const optionsSelectable = item ? hasSelectableOptions(item, itemOptions) : false;
+  const optionsMode = normalizeSelectMode(item?.optionsSelectMode);
+  const selectedOptionIds =
+    draftOptionIds ?? defaultSelection(optionsMode, itemOptions).map((o) => o.optionId);
+  const selectedOptions = itemOptions
+    .filter((o) => selectedOptionIds.includes(o.id))
+    .map(toSelected);
+  const unitPriceWithOptions = (item?.price ?? 0) + optionsTotal(selectedOptions);
+
   /* 開くたびに数量を1へ戻し、この開き方が history.back() で閉じられるかを覚える */
   useEffect(() => {
     if (!itemId) return;
     setDraftQty(1);
     setDraftTiming(null);
+    setDraftOptionIds(null);
     setClosing(false);
     openedByPushRef.current = takePushedByApp() || openedByPushRef.current;
   }, [itemId]);
@@ -193,6 +219,18 @@ function OverlayContent() {
                   )}
                 </div>
 
+                {/* ── オプション（対象商品のみ。案A: 説明文の下にチェック一覧） ── */}
+                {optionsSelectable && (
+                  <MenuOptionPicker
+                    className="px-[var(--space-16)] mt-[var(--space-24)]"
+                    heading={item.optionsHeading || OPTIONS_HEADING_DEFAULT}
+                    mode={optionsMode}
+                    options={itemOptions}
+                    selectedIds={selectedOptionIds}
+                    onChange={setDraftOptionIds}
+                  />
+                )}
+
                 {/* ── 提供タイミング（対象商品のみ。案B: 説明つきカード） ── */}
                 {timingSelectable && (
                   <section className="flex flex-col gap-[var(--space-8)] px-[var(--space-16)] mt-[var(--space-24)]">
@@ -270,11 +308,23 @@ function OverlayContent() {
                   onIncrement={() => setDraftQty((q) => q + 1)}
                   onDecrement={() => setDraftQty((q) => Math.max(1, q - 1))}
                 />
-                {/* 幅は AddToCartButton 側が w-full なのでラッパーで持つ */}
-                <div className="w-[154px] shrink-0">
+                {/* 幅は AddToCartButton 側が w-full なのでラッパーで持つ。
+                    オプションのある商品は金額つき（「カートに入れる ¥1,100」）なので少し広げる */}
+                <div className={`shrink-0 ${optionsSelectable ? "w-[190px]" : "w-[154px]"}`}>
                   <AddToCartButton
-                    label="カートに入れる"
-                    onClick={() => addItem(item, draftQty, timingSelectable ? selectedTiming : null)}
+                    label={
+                      optionsSelectable
+                        ? `カートに入れる ¥${(unitPriceWithOptions * draftQty).toLocaleString()}`
+                        : "カートに入れる"
+                    }
+                    onClick={() =>
+                      addItem(
+                        item,
+                        draftQty,
+                        timingSelectable ? selectedTiming : null,
+                        optionsSelectable ? selectedOptions : []
+                      )
+                    }
                   />
                 </div>
               </div>

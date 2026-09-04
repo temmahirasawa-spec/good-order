@@ -18,6 +18,7 @@ import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useMenuDataStore } from "@/lib/menuDataStore";
+import { hasSelectableOptions } from "@/lib/menuOptions";
 import { SUBCATEGORY_LABEL, SUBCATEGORY_EN_LABEL } from "@/lib/categoryLabels";
 import type { MenuItem, Subcategory } from "@/lib/menu";
 
@@ -55,6 +56,9 @@ export default function CategoryListingPage() {
   const cartItems      = useCartStore((s) => s.items);
   const addItem        = useCartStore((s) => s.addItem);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const menuOptions    = useMenuDataStore((s) => s.menuOptions);
+  /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる */
+  const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
 
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -80,7 +84,7 @@ export default function CategoryListingPage() {
   const qtyOf = (id: string) => cartItems.find((ci) => ci.item.id === id)?.quantity ?? 0;
   const cardHandlers = (item: MenuItem) => ({
     quantity: qtyOf(item.id),
-    onIncrement: () => addItem(item, 1),
+    onIncrement: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1)),
     onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
     onClick: () => openItemDetail(item.id),
   });

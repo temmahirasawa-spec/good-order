@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
+import { hasSelectableOptions } from "@/lib/menuOptions";
+import { openItemDetail } from "@/lib/itemOverlay";
 import { fetchRecentOrderItemCounts, type ApiCategory } from "@/lib/api";
 import { fetchBestSellerSetting, type BestSellerSetting } from "@/lib/bestSellers";
 import {
@@ -59,6 +61,7 @@ export function useOrderPageData(): UseOrderPageDataResult {
   /* ── 共有ストアから取得（categories + menuItems を 1 回 fetch で共有） ── */
   const categories = useMenuDataStore((s) => s.categories);
   const allMenuItems = useMenuDataStore((s) => s.menuItems);
+  const menuOptions = useMenuDataStore((s) => s.menuOptions);
   const storeLoading = useMenuDataStore((s) => s.loading);
   const storeLoaded = useMenuDataStore((s) => s.loadedAt);
   const fetchAll = useMenuDataStore((s) => s.fetchAll);
@@ -166,11 +169,16 @@ export function useOrderPageData(): UseOrderPageDataResult {
 
   const handleAdd = useCallback(
     (item: MenuItem) => {
+      // オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる
+      if (hasSelectableOptions(item, menuOptions[item.id] ?? [])) {
+        openItemDetail(item.id);
+        return;
+      }
       addItem(item);
       setAddedId(item.id);
       setTimeout(() => setAddedId(null), 700);
     },
-    [addItem]
+    [addItem, menuOptions]
   );
 
   return {

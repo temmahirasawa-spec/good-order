@@ -28,6 +28,8 @@ export interface OrderCardItem {
   isTakeoutItem: boolean;
   /** 提供タイミング。伝票と同じく「食後」は墨のチップ、初期値は薄い文字で出す */
   servingTiming?: ServingTiming | null;
+  /** 選んだオプション（トッピング）の名前。数量の横に「＋アボカド ＋ゆで卵」と小さく出す */
+  options?: string[];
 }
 
 const STATUS_MAP: Record<CookingStatus, StatusBadgeState> = {
@@ -131,6 +133,12 @@ export default function OrderCard({
                 <span className="type-jp-heading-s text-text-primary">{item.name}</span>
                 <span className="font-en font-semibold text-text-secondary">×{item.quantity}</span>
                 <ServingTimingBadge timing={item.servingTiming} />
+                {/* オプションは幅 140px で末尾省略（Figma の Order Item Row と同じ）。長い組み合わせでも状態バッジを押し出さない */}
+                {item.options && item.options.length > 0 && (
+                  <span className="type-jp-caption text-text-secondary truncate max-w-[140px]">
+                    {item.options.map((o) => `＋${o}`).join(" ")}
+                  </span>
+                )}
               </span>
               <StatusBadge state={STATUS_MAP[item.cookingStatus]} />
             </button>

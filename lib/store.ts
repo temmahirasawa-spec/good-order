@@ -7,6 +7,7 @@ import { appendHistory, type HistoryEntry } from "./history";
 import { isAcceptingOrders } from "./api";
 import { useMenuDataStore } from "./menuDataStore";
 import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
+import { optionsKey, optionsTotal, type SelectedOption } from "./menuOptions";
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
@@ -68,9 +69,12 @@ async function saveOrderToDb(
       p_items: items.map((ci) => ({
         menu_item_id:   ci.item.id,
         quantity:       ci.quantity,
+        // 商品そのものの価格。オプションの価格はサーバー側（place_order）が DB から引いて足す
         unit_price:     ci.item.price,
         // 提供タイミング（supabase/serving_timing.sql）。選べない商品は null
         serving_timing: ci.servingTiming ?? null,
+        // 選んだオプション（supabase/menu_item_options.sql）。ID だけ送り、名前と価格はサーバー側で確定する
+        options:        (ci.options ?? []).map((o) => ({ option_id: o.optionId })),
       })),
     });
 
@@ -106,10 +110,17 @@ export interface CartItem {
    * 移行前に保存されたカートには無いので、読み込み時（persist の merge）に振り直す。
    */
   lineId?: string;
+  /** 選んだオプション（トッピング）。無ければ空。組み合わせが違えば別の行 */
+  options?: SelectedOption[];
 }
 
-/** カートの行を識別するキー（商品ID ＋ 提供タイミング）。同じ行への合流判定に使う */
-const lineKeyOf = (ci: CartItem) => cartLineKey(ci.item.id, ci.servingTiming);
+/** カートの行を識別するキー（商品ID ＋ 提供タイミング ＋ オプションの組み合わせ）。同じ行への合流判定に使う */
+const lineKeyOf = (ci: CartItem) => cartLineKey(ci.item.id, ci.servingTiming, optionsKey(ci.options));
+
+/** 行の単価（商品の価格 ＋ 選んだオプションの合計）。画面の表示と合計はこれを使う */
+export function lineUnitPrice(ci: CartItem): number {
+  return ci.item.price + optionsTotal(ci.options);
+}
 
 /**
  * 商品の提供タイミングの初期値を引く。
@@ -126,11 +137,14 @@ function mergeLine(
   items: CartItem[],
   item: MenuItem,
   qty: number,
-  timing: ServingTiming | null
+  timing: ServingTiming | null,
+  options: SelectedOption[]
 ): CartItem[] {
-  const key = cartLineKey(item.id, timing);
+  const key = cartLineKey(item.id, timing, optionsKey(options));
   const idx = items.findIndex((i) => lineKeyOf(i) === key);
-  if (idx === -1) return [...items, { item, quantity: qty, servingTiming: timing, lineId: generateUuid() }];
+  if (idx === -1) {
+    return [...items, { item, quantity: qty, servingTiming: timing, options, lineId: generateUuid() }];
+  }
   return items.map((i, n) => (n === idx ? { ...i, quantity: i.quantity + qty } : i));
 }
 
@@ -165,8 +179,13 @@ interface CartStore {
   setTableRef: (id: string | null, label: string | null) => void;
   setOrderType: (type: "dine_in" | "takeout") => void;
   setTakeoutMode: (flag: boolean) => void;
-  /** servingTiming を省略すると、その商品の初期値（選べない商品は null）で入る */
-  addItem: (item: MenuItem, qty?: number, servingTiming?: ServingTiming | null) => void;
+  /** servingTiming を省略すると、その商品の初期値（選べない商品は null）で入る。options を省略すると無し */
+  addItem: (
+    item: MenuItem,
+    qty?: number,
+    servingTiming?: ServingTiming | null,
+    options?: SelectedOption[]
+  ) => void;
   addItems: (entries: CartItem[]) => void;
   /** servingTiming を省略すると、その商品の行を全部消す */
   removeItem: (id: string, servingTiming?: ServingTiming | null) => void;
@@ -174,8 +193,11 @@ interface CartStore {
   updateQuantity: (id: string, quantity: number, servingTiming?: ServingTiming | null) => void;
   /** 一覧のステッパー「−」用。その商品の最後の行から1つ減らす */
   decrementItem: (id: string) => void;
+  /** カート画面の行操作。行は「商品＋提供タイミング＋オプション」の組で識別する */
+  removeLine: (line: CartItem) => void;
+  updateLineQuantity: (line: CartItem, quantity: number) => void;
   /** カート行の提供タイミングを変える。移動先に同じ行があれば数量を合流させる */
-  setServingTiming: (id: string, from: ServingTiming | null, to: ServingTiming) => void;
+  setServingTiming: (line: CartItem, to: ServingTiming) => void;
   clearCart: () => void;
   placeOrder: () => Promise<PlaceOrderResult>;
 
@@ -201,10 +223,10 @@ export const useCartStore = create<CartStore>()(
       setOrderType: (type) => set({ orderType: type }),
       setTakeoutMode: (flag) => set({ isTakeoutMode: flag }),
 
-      addItem: (item, qty = 1, servingTiming) => {
+      addItem: (item, qty = 1, servingTiming, options = []) => {
         const timing =
           servingTiming === undefined ? resolveDefaultTiming(item, get().orderType) : servingTiming;
-        set({ items: mergeLine(get().items, item, qty, timing) });
+        set({ items: mergeLine(get().items, item, qty, timing, options) });
       },
 
       addItems: (entries) => {
@@ -214,9 +236,23 @@ export const useCartStore = create<CartStore>()(
             e.servingTiming === undefined
               ? resolveDefaultTiming(e.item, get().orderType)
               : e.servingTiming;
-          next = mergeLine(next, e.item, e.quantity, timing);
+          next = mergeLine(next, e.item, e.quantity, timing, e.options ?? []);
         }
         set({ items: next });
+      },
+
+      removeLine: (line) => {
+        const key = lineKeyOf(line);
+        set({ items: get().items.filter((i) => lineKeyOf(i) !== key) });
+      },
+
+      updateLineQuantity: (line, quantity) => {
+        if (quantity <= 0) {
+          get().removeLine(line);
+          return;
+        }
+        const key = lineKeyOf(line);
+        set({ items: get().items.map((i) => (lineKeyOf(i) === key ? { ...i, quantity } : i)) });
       },
 
       removeItem: (id, servingTiming) => {
@@ -249,11 +285,13 @@ export const useCartStore = create<CartStore>()(
         get().updateQuantity(id, target.quantity - 1, target.servingTiming ?? null);
       },
 
-      setServingTiming: (id, from, to) => {
+      setServingTiming: (line, to) => {
         const items = get().items;
-        const source = items.find((i) => lineKeyOf(i) === cartLineKey(id, from));
+        const source = items.find((i) => lineKeyOf(i) === lineKeyOf(line));
         if (!source || (source.servingTiming ?? null) === to) return;
-        const dest = items.find((i) => lineKeyOf(i) === cartLineKey(id, to));
+        const dest = items.find(
+          (i) => lineKeyOf(i) === cartLineKey(source.item.id, to, optionsKey(source.options))
+        );
         if (dest) {
           // 移動先に同じ商品の行が既にあれば数量を合流させる（同じ行が2本にならないように）
           set({
@@ -286,7 +324,7 @@ export const useCartStore = create<CartStore>()(
         const tableLabel  = get().tableLabel;
         const orderType   = get().orderType;
 
-        const subtotal = current.reduce((s, i) => s + i.item.price * i.quantity, 0);
+        const subtotal = current.reduce((s, i) => s + lineUnitPrice(i) * i.quantity, 0);
         const totalAmount = Math.floor(subtotal * 1.1);
         const orderId = generateUuid();
 
@@ -305,8 +343,10 @@ export const useCartStore = create<CartStore>()(
             name: ci.item.name,
             image: ci.item.image || null,
             quantity: ci.quantity,
-            unitPrice: ci.item.price,
+            // オプション込みの単価（伝票・レジと同じ見え方）
+            unitPrice: lineUnitPrice(ci),
             servingTiming: ci.servingTiming ?? null,
+            options: ci.options ?? [],
           })),
         };
         appendHistory(entry);
@@ -351,7 +391,7 @@ export const useCartStore = create<CartStore>()(
         get().items.reduce((sum, i) => sum + i.quantity, 0),
 
       totalPrice: () =>
-        get().items.reduce((sum, i) => sum + i.item.price * i.quantity, 0),
+        get().items.reduce((sum, i) => sum + lineUnitPrice(i) * i.quantity, 0),
     }),
     {
       name: "orderly-cart",

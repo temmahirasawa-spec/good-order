@@ -36,6 +36,9 @@ import MenuPreviewCard from "@/components/admin/menu/MenuPreviewCard";
 /* ベストセラー設定は表示設定（/admin/display）の「ベストセラー」タブに移設した。
    この画面からは扱わないので、関連の import と state はここには無い。 */
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
+import ReorderButtons from "@/components/admin/ReorderButtons";
+import { fetchMenuItemOptionsForItem } from "@/lib/api";
+import { OPTIONS_ADD_LABEL, OPTIONS_HEADING_DEFAULT, normalizeSelectMode, type OptionSelectMode } from "@/lib/menuOptions";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import { Icon } from "@/components/Icon";
 import { describeDbError, CANNOT_DELETE_ORDERED_ITEM } from "@/lib/dbError";
@@ -64,11 +67,26 @@ interface FormState {
   is_available: boolean;
   is_takeout: boolean;
   display_order: string;
+  /** オプション（トッピング）。docs/specs/menu-options.md。既定 OFF */
+  options_enabled: boolean;
+  options_heading: string;
+  options_select_mode: OptionSelectMode;
+  options: OptionDraft[];
 }
+/** 編集中のオプション1行。id が null なら未保存の新規行 */
+interface OptionDraft {
+  key: string;
+  id: string | null;
+  name: string;
+  price: string;   // 空欄 = 0円
+  is_available: boolean;
+}
+const newOptionKey = () => `opt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const EMPTY_FORM: FormState = {
   category_id: "", name: "", description: "", price: "",
   media: [], tag: "",
   is_available: true, is_takeout: false, display_order: "99",
+  options_enabled: false, options_heading: OPTIONS_HEADING_DEFAULT, options_select_mode: "multiple", options: [],
 };
 
 /* ── DB カラムから MediaItem[] を構築（media_order 優先・legacy fallback） ── */
@@ -128,7 +146,7 @@ export default function AdminMenuPage() {
         supabase
           .from("menu_items")
           .select(
-            "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, is_available, is_takeout, display_order"
+            "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, is_available, is_takeout, display_order, options_enabled, options_heading, options_select_mode"
           )
           .order("display_order")
           .then(({ data }) => data ?? []),
@@ -217,6 +235,7 @@ export default function AdminMenuPage() {
 
   const openCreate = () => {
     setEditItem(null);
+    deletedOptionIds.current = [];
     resetStorageBookkeeping();
     const isTakeoutFilter = filterSlug === TAKEOUT_FILTER;
     setForm({
@@ -242,8 +261,69 @@ export default function AdminMenuPage() {
       is_available:    item.is_available,
       is_takeout:      item.is_takeout,
       display_order:   String(item.display_order),
+      options_enabled:     item.options_enabled ?? false,
+      options_heading:     item.options_heading || OPTIONS_HEADING_DEFAULT,
+      options_select_mode: normalizeSelectMode(item.options_select_mode),
+      options:             [],
     });
+    deletedOptionIds.current = [];
     setPanelOpen(true);
+    // オプションの一覧は別表なので、パネルを開いてから読む（非表示のものも含める）
+    fetchMenuItemOptionsForItem(item.id)
+      .then((rows) => {
+        setForm((f) => ({
+          ...f,
+          options: rows.map((r) => ({
+            key: r.id, id: r.id, name: r.name, price: r.price ? String(r.price) : "", is_available: r.is_available,
+          })),
+        }));
+      })
+      .catch((err) => console.warn("[admin/menu] オプションの取得に失敗:", err));
+  };
+
+  /* ── オプションの編集 ── */
+  const deletedOptionIds = useRef<string[]>([]);
+  const updateOptionDraft = (key: string, patch: Partial<OptionDraft>) =>
+    setForm((f) => ({ ...f, options: f.options.map((o) => (o.key === key ? { ...o, ...patch } : o)) }));
+  const addOptionDraft = () =>
+    setForm((f) => ({ ...f, options: [...f.options, { key: newOptionKey(), id: null, name: "", price: "", is_available: true }] }));
+  const removeOptionDraft = (key: string) =>
+    setForm((f) => {
+      const target = f.options.find((o) => o.key === key);
+      if (target?.id) deletedOptionIds.current.push(target.id);
+      return { ...f, options: f.options.filter((o) => o.key !== key) };
+    });
+  const moveOptionDraft = (index: number, delta: number) =>
+    setForm((f) => {
+      const next = [...f.options];
+      const to = index + delta;
+      if (to < 0 || to >= next.length) return f;
+      const [moved] = next.splice(index, 1);
+      next.splice(to, 0, moved);
+      return { ...f, options: next };
+    });
+
+  /** 商品の保存後に、オプションの追加・変更・削除をまとめて反映する（差分だけ） */
+  const syncOptions = async (menuItemId: string) => {
+    const deleted = deletedOptionIds.current;
+    if (deleted.length > 0) {
+      const { error } = await supabase.from("menu_item_options").delete().in("id", deleted);
+      if (error) throw error;
+    }
+    // 名前が空の行は保存しない（入力途中の空行を残さない）
+    const drafts = form.options.filter((o) => o.name.trim().length > 0);
+    for (let i = 0; i < drafts.length; i++) {
+      const o = drafts[i];
+      const row = { name: o.name.trim(), price: Math.max(0, parseInt(o.price) || 0), is_available: o.is_available, display_order: i };
+      if (o.id) {
+        const { error } = await supabase.from("menu_item_options").update(row).eq("id", o.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("menu_item_options").insert({ ...row, menu_item_id: menuItemId });
+        if (error) throw error;
+      }
+    }
+    deletedOptionIds.current = [];
   };
 
   /* 保存せずに閉じる（×・キャンセル・背景クリック）。
@@ -429,24 +509,33 @@ export default function AdminMenuPage() {
         is_available:      form.is_available,
         is_takeout:        form.is_takeout,
         display_order:     parseInt(form.display_order) || 99,
+        // オプション（トッピング）の設定。項目そのものは保存後に syncOptions で別表へ
+        options_enabled:     form.options_enabled,
+        options_heading:     form.options_heading.trim() || OPTIONS_HEADING_DEFAULT,
+        options_select_mode: form.options_select_mode,
       };
 
+      let menuItemId: string;
       if (editItem) {
         const { error } = await supabase
           .from("menu_items")
           .update(payload)
           .eq("id", editItem.id);
         if (error) throw error;
+        menuItemId = editItem.id;
       } else {
         const { data: store } = await supabase.from("stores").select("id").single();
         if (!store) throw new Error("店舗データが見つかりません");
 
-        const { error } = await supabase.from("menu_items").insert({
-          ...payload,
-          store_id: store.id,
-        });
+        const { data: created, error } = await supabase
+          .from("menu_items")
+          .insert({ ...payload, store_id: store.id })
+          .select("id")
+          .single();
         if (error) throw error;
+        menuItemId = created.id;
       }
+      await syncOptions(menuItemId);
 
       // DBが新しいメディア一覧を指したので、外されたぶんを Storage から消す。
       // 保存より前にやるとキャンセル時に参照だけが残るため、必ずこの順番で。
@@ -799,6 +888,119 @@ export default function AdminMenuPage() {
                       onClick={() => setForm((f) => ({ ...f, is_takeout: !f.is_takeout }))}
                       ariaLabel="テイクアウト対象にする"
                     />
+                  </div>
+
+                  {/* オプション（トッピング）。docs/specs/menu-options.md 4-4
+                      既定は OFF で設定は隠れている。ON にすると見出し・選び方・項目の編集が開く */}
+                  <div className="flex flex-col gap-[var(--space-12)] w-full">
+                    <div className="flex items-center justify-between gap-[var(--space-16)] w-full">
+                      <div className="flex flex-col gap-[var(--space-4)] min-w-0">
+                        <p className="type-jp-caption-bold text-text-primary">オプション</p>
+                        <p className="type-jp-caption text-text-tertiary">
+                          トッピングなど、お客様が追加で選べるものを設定します
+                        </p>
+                      </div>
+                      <ToggleSwitch
+                        on={form.options_enabled}
+                        onClick={() => setForm((f) => ({ ...f, options_enabled: !f.options_enabled }))}
+                        ariaLabel="オプション"
+                      />
+                    </div>
+                    {form.options_enabled && (
+                      <div className="flex flex-col gap-[var(--space-12)] w-full">
+                        <div className="flex flex-col gap-[var(--space-4)] w-full">
+                          <label className="type-jp-caption-bold text-text-primary">お客様に見せる見出し</label>
+                          <input
+                            type="text"
+                            value={form.options_heading}
+                            placeholder={OPTIONS_HEADING_DEFAULT}
+                            onChange={(e) => setForm((f) => ({ ...f, options_heading: e.target.value }))}
+                            className="w-full h-[44px] bg-surface-white border border-border rounded-[var(--radius-sm)] px-[var(--space-12)] type-jp-body text-text-primary"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-[var(--space-4)] w-full">
+                          <label className="type-jp-caption-bold text-text-primary">選び方</label>
+                          <div className="flex gap-[var(--space-4)]">
+                            {([
+                              { value: "multiple", label: "複数選択（チェック）" },
+                              { value: "single",   label: "1つだけ（ラジオ）" },
+                            ] as const).map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setForm((f) => ({ ...f, options_select_mode: opt.value }))}
+                                aria-pressed={form.options_select_mode === opt.value}
+                                className={`h-[36px] px-[var(--space-16)] rounded-[var(--radius-sm)] border type-jp-caption-bold transition-colors ${
+                                  form.options_select_mode === opt.value
+                                    ? "bg-text-primary text-surface-white border-transparent"
+                                    : "bg-surface-white text-text-secondary border-border"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="type-jp-caption text-text-tertiary">
+                            複数選択はいくつでも（0個でも可）、1つだけは必ず1つ選びます。
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-[var(--space-8)] w-full">
+                          <p className="type-jp-caption-bold text-text-primary">
+                            項目
+                            <span className="ml-[var(--space-8)] type-jp-caption text-text-tertiary">
+                              名前・価格（空欄＝0円）・表示・並び替え
+                            </span>
+                          </p>
+                          {form.options.map((o, i) => (
+                            <div key={o.key} className="flex items-center gap-[var(--space-8)] w-full">
+                              <ReorderButtons
+                                onMoveUp={() => moveOptionDraft(i, -1)}
+                                onMoveDown={() => moveOptionDraft(i, 1)}
+                                disableUp={i === 0}
+                                disableDown={i === form.options.length - 1}
+                                label={o.name || "オプション"}
+                              />
+                              <input
+                                type="text"
+                                value={o.name}
+                                placeholder="名前"
+                                onChange={(e) => updateOptionDraft(o.key, { name: e.target.value })}
+                                className="flex-1 min-w-0 h-[44px] bg-surface-white border border-border rounded-[var(--radius-sm)] px-[var(--space-12)] type-jp-body text-text-primary"
+                              />
+                              <input
+                                type="number"
+                                min={0}
+                                value={o.price}
+                                placeholder="0"
+                                onChange={(e) => updateOptionDraft(o.key, { price: e.target.value })}
+                                aria-label="価格（円）"
+                                className="w-[96px] h-[44px] bg-surface-white border border-border rounded-[var(--radius-sm)] px-[var(--space-12)] type-jp-body text-text-primary text-right"
+                              />
+                              <ToggleSwitch
+                                on={o.is_available}
+                                onClick={() => updateOptionDraft(o.key, { is_available: !o.is_available })}
+                                ariaLabel="お客様に表示する"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeOptionDraft(o.key)}
+                                aria-label="このオプションを削除"
+                                className="btn-icon flex items-center justify-center w-[36px] h-[36px] shrink-0 rounded-full"
+                              >
+                                <Icon name="trash" className="w-4 h-4 text-text-tertiary" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={addOptionDraft}
+                            className="h-[40px] w-full border border-dashed border-border rounded-[var(--radius-sm)] type-jp-caption-bold text-text-secondary"
+                          >
+                            {OPTIONS_ADD_LABEL}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* 表示順 */}

@@ -23,6 +23,8 @@ import SegmentedControl from "@/components/ui/SegmentedControl";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
 import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
 import { SERVING_TIMING_TITLE, servingTimingOptions, type ServingTiming } from "@/lib/servingTiming";
+import MenuOptionPicker from "@/components/ui/OptionRow";
+import type { MenuOption } from "@/lib/menuOptions";
 import MenuCategoryCard from "@/components/ui/MenuCategoryCard";
 import SeeMoreButton from "@/components/ui/SeeMoreButton";
 import { AddToCartButton, CartButton, BackButton, LinkButton } from "@/components/ui/Buttons";
@@ -381,6 +383,45 @@ function ServingTimingDemo() {
   );
 }
 
+/* ── オプション（docs/specs/menu-options.md）のデモ。選択状態を持つ ── */
+const SAMPLE_OPTIONS: MenuOption[] = [
+  { id: "o1", name: "アボカド", price: 120 },
+  { id: "o2", name: "ゆで卵", price: 100 },
+  { id: "o3", name: "無添加ロースハム", price: 200 },
+  { id: "o4", name: "ドレッシング別添え", price: 0 },
+];
+function MenuOptionsDemo() {
+  const [multi, setMulti]   = useState<string[]>(["o1", "o2"]);
+  const [single, setSingle] = useState<string[]>(["o1"]);
+  return (
+    <div className="flex flex-col gap-[24px]">
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">複数選択（チェック）。無料は「0円」</p>
+        <MenuOptionPicker heading="トッピング" mode="multiple" options={SAMPLE_OPTIONS} selectedIds={multi} onChange={setMulti} />
+      </div>
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">1つだけ（ラジオ）</p>
+        <MenuOptionPicker heading="サイズ" mode="single" options={SAMPLE_OPTIONS.slice(0, 3)} selectedIds={single} onChange={setSingle} />
+      </div>
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">カート行（商品名の下にオプション、単価は込み）</p>
+        <CartItemRow
+          image={sampleItem.image}
+          categoryLabel="サラダ"
+          categoryColor="teal"
+          name="グリーンサラダボウル"
+          price={1100}
+          quantity={1}
+          optionsLabel="＋アボカド ＋ゆで卵"
+          onIncrement={() => {}}
+          onDecrement={() => {}}
+          onRemove={() => {}}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function UiGalleryPage() {
   const [qty, setQty] = useState(0);
   const [qty2, setQty2] = useState(2);
@@ -614,6 +655,10 @@ export default function UiGalleryPage() {
 
       <Section title="提供タイミング（ServingTimingCards / SegmentedControl / ServingTimingBadge）">
         <ServingTimingDemo />
+      </Section>
+
+      <Section title="オプション（MenuOptionPicker / OptionRow）">
+        <MenuOptionsDemo />
       </Section>
 
       <Section title="BottomViewCartBar">

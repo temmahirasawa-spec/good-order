@@ -35,6 +35,8 @@ export interface ReceiptItem {
   servingTiming?: ServingTiming | null;
   /** 商品の区分。2枚出しの判定に使う。無ければ food 扱い */
   categoryType?: "food" | "drink" | null;
+  /** 選んだオプション（supabase/menu_item_options.sql）。品名の下に「＋名前」を1行ずつ */
+  options?: { name: string; price: number }[] | null;
 }
 
 /** supabase の claim_print_job() が返す JSON と同じ形 */
@@ -256,6 +258,13 @@ function ticketXml(job: ReceiptJob, copy: ReceiptCopy): string[] {
       x.push(`<text x="${ITEM_NAME_X}"/>`);
       x.push(`<text>${esc(line)}&#10;</text>`);
     });
+    // オプション（トッピング）: 品名と同じ大きさで「＋名前」を1行ずつ（天真の決定）
+    for (const opt of item.options ?? []) {
+      wrapByWidth(`＋${opt.name}`, ITEM_NAME_HALF_WIDTHS).forEach((line) => {
+        x.push(`<text x="${ITEM_NAME_X}"/>`);
+        x.push(`<text>${esc(line)}&#10;</text>`);
+      });
+    }
     x.push(`<text width="1" height="1" em="false"/>`);
 
     // 提供タイミング（選んだ明細だけ）。品名と同じ左端・同じ倍高で、厨房から読める大きさにする。

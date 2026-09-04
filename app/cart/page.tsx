@@ -13,7 +13,8 @@ import { useRouter } from "next/navigation";
 import HeaderIconButton from "@/components/ui/HeaderIconButton";
 import { AddToCartButton, BackButton } from "@/components/ui/Buttons";
 import CartItemRow from "@/components/ui/CartItemRow";
-import { useCartStore } from "@/lib/store";
+import { useCartStore, lineUnitPrice } from "@/lib/store";
+import { formatSelectedOptions, optionsKey } from "@/lib/menuOptions";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
 import {
@@ -27,8 +28,8 @@ import {
 export default function CartPage() {
   const router = useRouter();
   const items = useCartStore((s) => s.items);
-  const updateQuantity = useCartStore((s) => s.updateQuantity);
-  const removeItem = useCartStore((s) => s.removeItem);
+  const updateLineQuantity = useCartStore((s) => s.updateLineQuantity);
+  const removeLine = useCartStore((s) => s.removeLine);
   const setServingTiming = useCartStore((s) => s.setServingTiming);
   const orderType = useCartStore((s) => s.orderType);
   const totalPrice = useCartStore((s) => s.totalPrice());
@@ -58,11 +59,7 @@ export default function CartPage() {
     if (categories.length === 0) return;
     for (const ci of items) {
       if (ci.servingTiming == null && canChooseServingTiming(categories, ci.item, orderType)) {
-        setServingTiming(
-          ci.item.id,
-          null,
-          defaultServingTiming(servingCategoryType(categories, ci.item))
-        );
+        setServingTiming(ci, defaultServingTiming(servingCategoryType(categories, ci.item)));
       }
     }
   }, [categories, items, orderType, setServingTiming]);
@@ -192,16 +189,18 @@ export default function CartPage() {
                 <CartItemRow
                   // key は行の識別子。提供タイミングを含めると切り替えた瞬間に行が作り直され、
                   // セグメントの帯がすべるアニメーションが出ない（lib/store.ts の lineId 参照）
-                  key={ci.lineId ?? cartLineKey(ci.item.id, timing)}
+                  key={ci.lineId ?? cartLineKey(ci.item.id, timing, optionsKey(ci.options))}
                   image={ci.item.image}
                   categoryLabel={SUBCATEGORY_LABEL[ci.item.subcategory] ?? ci.item.subcategory}
                   categoryColor={resolveTagColor(categories, ci.item.subcategory)}
                   name={ci.item.name}
-                  price={ci.item.price}
+                  /* 単価はオプション込み（docs/specs/menu-options.md 4-3） */
+                  price={lineUnitPrice(ci)}
                   quantity={ci.quantity}
-                  onIncrement={() => updateQuantity(ci.item.id, ci.quantity + 1, timing)}
-                  onDecrement={() => updateQuantity(ci.item.id, ci.quantity - 1, timing)}
-                  onRemove={() => removeItem(ci.item.id, timing)}
+                  optionsLabel={ci.options && ci.options.length > 0 ? formatSelectedOptions(ci.options) : undefined}
+                  onIncrement={() => updateLineQuantity(ci, ci.quantity + 1)}
+                  onDecrement={() => updateLineQuantity(ci, ci.quantity - 1)}
+                  onRemove={() => removeLine(ci)}
                   servingTiming={
                     selectable
                       ? {
@@ -210,7 +209,7 @@ export default function CartPage() {
                             value: o.value,
                             label: o.label,
                           })),
-                          onChange: (next) => setServingTiming(ci.item.id, timing, next),
+                          onChange: (next) => setServingTiming(ci, next),
                         }
                       : undefined
                   }
