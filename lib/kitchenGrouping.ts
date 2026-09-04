@@ -1,6 +1,7 @@
 /**
  * 厨房画面用：注文をテーブル単位（テイクアウトは個別）にグループ化する
  */
+import { normalizeServingTiming, type ServingTiming } from "./servingTiming";
 
 export type CookingStatus = "pending" | "cooking" | "done";
 
@@ -11,6 +12,8 @@ export interface KitchenItem {
   quantity: number;
   cookingStatus: CookingStatus;
   isTakeoutItem: boolean;
+  /** 提供タイミング（でき次第 / 先出し / 食後）。選択対象外・移行前の注文は null */
+  servingTiming: ServingTiming | null;
   /** 楽観ロック用。DBから取得した値をそのまま保持し、再フォーマットしないこと */
   updatedAt: string;
 }
@@ -87,6 +90,7 @@ export function groupOrdersByTable(
         quantity: it.quantity ?? 0,
         cookingStatus: (it.cooking_status ?? "pending") as CookingStatus,
         isTakeoutItem: Boolean(it.menu_items?.is_takeout),
+        servingTiming: normalizeServingTiming(it.serving_timing),
         updatedAt: it.updated_at,
       })),
     });

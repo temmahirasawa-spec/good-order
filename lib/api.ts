@@ -45,6 +45,8 @@ export interface ApiCategory {
   image_url: string | null;
   display_order: number;
   tag_color: TagColor;
+  /** お客様が提供タイミング（でき次第 / 先出し / 食後）を選べるカテゴリーか（supabase/serving_timing.sql） */
+  serving_timing_choice: boolean;
 }
 
 export type ApiMediaItem = { type: "image" | "video"; url: string };
@@ -71,7 +73,7 @@ export interface ApiMenuItem {
 export async function fetchCategories(): Promise<ApiCategory[]> {
   const { data, error } = await supabase
     .from("categories")
-    .select("id, slug, name, caption, description, en_size, jp_size, category_type, image_url, display_order, tag_color")
+    .select("id, slug, name, caption, description, en_size, jp_size, category_type, image_url, display_order, tag_color, serving_timing_choice")
     .order("display_order");
   if (error) throw error;
   return (data ?? []) as ApiCategory[];

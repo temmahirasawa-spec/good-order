@@ -3,11 +3,23 @@
 /**
  * カート画面の1商品行（Step3-F、Figma: Cart Item Row 364:2243）
  * 画像80×80 + カテゴリタグ/商品名(1行省略)/価格+数量ステッパー、右上に削除アイコン。
+ *
+ * 提供タイミングを選べる商品では、価格・数量の下にセグメント切替（案A、
+ * docs/specs/serving-timing.md）を1本足す。行が縦に伸びるので、そのときだけ
+ * 画像を上揃えにする（中央揃えのままだと画像が宙に浮いて見える）。
  */
 import Image from "next/image";
 import { Icon } from "@/components/Icon";
 import CategoryTag, { type TagColor } from "@/components/ui/CategoryTag";
 import QuantityStepper from "@/components/ui/QuantityStepper";
+import SegmentedControl, { type SegmentedOption } from "@/components/ui/SegmentedControl";
+import { SERVING_TIMING_TITLE, type ServingTiming } from "@/lib/servingTiming";
+
+export interface CartRowServingTiming {
+  value: ServingTiming;
+  options: SegmentedOption<ServingTiming>[];
+  onChange: (value: ServingTiming) => void;
+}
 
 export default function CartItemRow({
   image,
@@ -19,6 +31,7 @@ export default function CartItemRow({
   onIncrement,
   onDecrement,
   onRemove,
+  servingTiming,
 }: {
   image: string;
   categoryLabel: string;
@@ -29,10 +42,14 @@ export default function CartItemRow({
   onIncrement: () => void;
   onDecrement: () => void;
   onRemove: () => void;
+  /** 提供タイミングを選べる商品のときだけ渡す。無ければ従来どおりの行 */
+  servingTiming?: CartRowServingTiming;
 }) {
   return (
     <div
-      className="relative flex gap-[var(--space-12)] items-center p-[var(--space-16)] w-full bg-surface-white rounded-[var(--radius-lg)]"
+      className={`relative flex gap-[var(--space-12)] p-[var(--space-16)] w-full bg-surface-white rounded-[var(--radius-lg)] ${
+        servingTiming ? "items-start" : "items-center"
+      }`}
       style={{ boxShadow: "var(--shadow-card)" }}
     >
       <div className="relative shrink-0 w-[80px] h-[80px] rounded-[var(--radius-md)] overflow-hidden bg-bg-tertiary">
@@ -52,6 +69,15 @@ export default function CartItemRow({
           </span>
           <QuantityStepper count={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
         </div>
+        {servingTiming && (
+          <SegmentedControl
+            className="w-full mt-[var(--space-8)]"
+            ariaLabel={`${name}の${SERVING_TIMING_TITLE}`}
+            options={servingTiming.options}
+            value={servingTiming.value}
+            onChange={servingTiming.onChange}
+          />
+        )}
       </div>
 
       <button

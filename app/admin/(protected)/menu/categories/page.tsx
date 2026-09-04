@@ -33,6 +33,7 @@ import TopBar from "@/components/admin/TopBar";
 import CategoryRow from "@/components/admin/category/CategoryRow";
 import ColorSwatchPicker from "@/components/admin/category/ColorSwatchPicker";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
+import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import { Icon } from "@/components/Icon";
 import type { HeadingSize } from "@/lib/api";
 import {
@@ -54,6 +55,8 @@ interface FormState {
   jp_size: HeadingSize;
   /** お客様側の並び。フードが先、ドリンクが後にまとまる */
   category_type: "food" | "drink";
+  /** お客様が提供タイミング（でき次第 / 先出し / 食後）を選べるか（docs/specs/serving-timing.md） */
+  serving_timing_choice: boolean;
   display_order: number;
   image_url: string;
   tag_color: TagColor;
@@ -62,6 +65,7 @@ const EMPTY_FORM: FormState = {
   name: "", slug: "", caption: "", description: "",
   // 既定値は、DB管理に移す前の見た目と同じ組み合わせ
   en_size: "large", jp_size: "small", category_type: "food",
+  serving_timing_choice: false,
   display_order: 99, image_url: "", tag_color: "yellow",
 };
 
@@ -196,6 +200,7 @@ export default function AdminCategoriesPage() {
       en_size:       cat.en_size ?? "large",
       jp_size:       cat.jp_size ?? "small",
       category_type: cat.category_type ?? "food",
+      serving_timing_choice: cat.serving_timing_choice ?? false,
       display_order: cat.display_order,
       image_url:     cat.image_url ?? "",
       tag_color:     cat.tag_color ?? "yellow",
@@ -291,6 +296,7 @@ export default function AdminCategoriesPage() {
             en_size:       form.en_size,
             jp_size:       form.jp_size,
             category_type: form.category_type,
+            serving_timing_choice: form.serving_timing_choice,
             display_order: form.display_order,
             image_url:     form.image_url || null,
             tag_color:     form.tag_color,
@@ -320,6 +326,7 @@ export default function AdminCategoriesPage() {
           en_size:       form.en_size,
           jp_size:       form.jp_size,
           category_type: form.category_type,
+          serving_timing_choice: form.serving_timing_choice,
           display_order: form.display_order,
           image_url:     form.image_url || null,
           tag_color:     form.tag_color,
@@ -525,6 +532,27 @@ export default function AdminCategoriesPage() {
                     <p className="type-jp-caption text-text-tertiary">
                       お客様のメニュー画面で、フードが先・ドリンクが後にまとまって並びます。
                     </p>
+                  </div>
+
+                  {/* 提供タイミング（docs/specs/serving-timing.md）
+                      ON にすると、お客様がこのカテゴリーの商品で提供タイミングを選べる。
+                      選択肢の文言は上の区分で決まる（lib/servingTiming.ts） */}
+                  <div className="flex items-center justify-between gap-[var(--space-16)] w-full">
+                    <div className="flex flex-col gap-[var(--space-4)] min-w-0">
+                      <label className="type-jp-caption-bold text-text-primary">
+                        提供タイミングをお客様が選べる
+                      </label>
+                      <p className="type-jp-caption text-text-tertiary">
+                        フードは「でき次第 / 食後」、ドリンクは「先出し / 食後」から選べるようになります。
+                      </p>
+                    </div>
+                    <ToggleSwitch
+                      on={form.serving_timing_choice}
+                      onClick={() =>
+                        setForm((f) => ({ ...f, serving_timing_choice: !f.serving_timing_choice }))
+                      }
+                      ariaLabel="提供タイミングをお客様が選べる"
+                    />
                   </div>
 
                   {/* スラッグ */}

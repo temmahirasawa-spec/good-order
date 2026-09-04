@@ -27,12 +27,21 @@ import RecommendCard from "@/components/ui/RecommendCard";
 import { RecommendCarousel } from "@/components/ui/MenuCarousel";
 import { Video9x16 } from "@/components/ui/VideoBlock";
 import { AddToCartButton } from "@/components/ui/Buttons";
+import ServingTimingCards from "@/components/ui/ServingTimingCards";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
 import { computeRelatedItems } from "@/lib/orderHome";
 import { ITEM_PARAM, openItemDetail, stripItemParam, takePushedByApp } from "@/lib/itemOverlay";
+import {
+  SERVING_TIMING_TITLE,
+  canChooseServingTiming,
+  defaultServingTiming,
+  servingCategoryType,
+  servingTimingOptions,
+  type ServingTiming,
+} from "@/lib/servingTiming";
 import type { MenuItem } from "@/lib/menu";
 
 /* .page-slide-out-right（app/globals.css）のアニメ時間と合わせる */
@@ -54,12 +63,15 @@ function OverlayContent() {
   const categories   = useMenuDataStore((s) => s.categories);
   const allMenuItems = useMenuDataStore((s) => s.menuItems);
   const addItem      = useCartStore((s) => s.addItem);
+  const orderType    = useCartStore((s) => s.orderType);
   const totalItems   = useCartStore((s) => s.totalItems());
   const setOverlay   = useUiStore((s) => s.setOverlay);
 
   const [closing, setClosing] = useState(false);
   /* ステッパーは「何個入れるか」の下書き。0個追加は意味がないので下限は1 */
   const [draftQty, setDraftQty] = useState(1);
+  /* 提供タイミングの下書き。null は「区分の初期値のまま」 */
+  const [draftTiming, setDraftTiming] = useState<ServingTiming | null>(null);
   const openedByPushRef = useRef(false);
 
   const item = itemId ? allMenuItems.find((m) => m.id === itemId) ?? null : null;
@@ -69,10 +81,17 @@ function OverlayContent() {
     [allMenuItems, item]
   );
 
+  /* 提供タイミング（docs/specs/serving-timing.md）。対象商品のときだけ選択カードを出す。
+     下書きが無ければ区分の初期値（フード=でき次第 / ドリンク=先出し）を選択済みにする */
+  const timingSelectable = item ? canChooseServingTiming(categories, item, orderType) : false;
+  const timingType = item ? servingCategoryType(categories, item) : "food";
+  const selectedTiming: ServingTiming = draftTiming ?? defaultServingTiming(timingType);
+
   /* 開くたびに数量を1へ戻し、この開き方が history.back() で閉じられるかを覚える */
   useEffect(() => {
     if (!itemId) return;
     setDraftQty(1);
+    setDraftTiming(null);
     setClosing(false);
     openedByPushRef.current = takePushedByApp() || openedByPushRef.current;
   }, [itemId]);
@@ -174,6 +193,18 @@ function OverlayContent() {
                   )}
                 </div>
 
+                {/* ── 提供タイミング（対象商品のみ。案B: 説明つきカード） ── */}
+                {timingSelectable && (
+                  <section className="flex flex-col gap-[var(--space-8)] px-[var(--space-16)] mt-[var(--space-24)]">
+                    <p className="type-jp-caption-bold text-text-secondary">{SERVING_TIMING_TITLE}</p>
+                    <ServingTimingCards
+                      options={servingTimingOptions(timingType)}
+                      value={selectedTiming}
+                      onChange={setDraftTiming}
+                    />
+                  </section>
+                )}
+
                 {/* ── Sub Image（2枚目の画像がある場合のみ・300×300中央） ── */}
                 {subImage && (
                   <div className="flex justify-center mt-[40px]">
@@ -243,7 +274,7 @@ function OverlayContent() {
                 <div className="w-[154px] shrink-0">
                   <AddToCartButton
                     label="カートに入れる"
-                    onClick={() => addItem(item, draftQty)}
+                    onClick={() => addItem(item, draftQty, timingSelectable ? selectedTiming : null)}
                   />
                 </div>
               </div>

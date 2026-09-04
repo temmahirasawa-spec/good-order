@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation";
 import OrderHeader from "@/components/ui/OrderHeader";
 import ChefSmileIllustration from "@/components/ChefSmileIllustration";
 import { AddToCartButton } from "@/components/ui/Buttons";
+import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
+import { cartLineKey } from "@/lib/servingTiming";
 import { useCartStore } from "@/lib/store";
 import { fetchOrderStatuses } from "@/lib/api";
 import { loadHistory, updateHistoryPickupNo } from "@/lib/history";
@@ -125,13 +127,19 @@ export default function CompletePage() {
             </div>
 
             <div className="flex flex-col">
-              {lastOrder.map(({ item, quantity }) => (
+              {lastOrder.map(({ item, quantity, servingTiming }) => (
                 <div
-                  key={item.id}
+                  key={cartLineKey(item.id, servingTiming)}
                   className="flex items-center justify-between gap-[var(--space-8)] px-[var(--space-24)] py-[10px]"
                 >
                   <p className="flex-1 min-w-0 type-jp-body text-text-primary">
                     {item.name}
+                    {/* 「食後」だけ添える。初期値（でき次第・先出し）は再掲しない（仕様 3-4） */}
+                    <ServingTimingBadge
+                      timing={servingTiming}
+                      showDefault={false}
+                      className="ml-[var(--space-8)] align-middle"
+                    />
                   </p>
                   <p className="shrink-0 w-[32px] type-jp-caption text-text-secondary text-right">
                     ×{quantity}

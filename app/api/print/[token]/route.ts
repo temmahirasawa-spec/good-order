@@ -36,6 +36,7 @@ import {
   describePrintFailure,
   describePrinterStatus,
   parsePrintResult,
+  receiptCopies,
   type ReceiptJob,
 } from "@/lib/receipt";
 
@@ -137,7 +138,7 @@ async function handleGetRequest(
   const xml = buildPrintRequest(buildReceiptXml(job));
 
   console.info(
-    `[print] 伝票を送出: job=${job.jobId} ${job.orderType} ${job.tableLabel ?? `#${job.pickupNo}`} ${job.items.length}品`
+    `[print] 伝票を送出: job=${job.jobId} ${job.orderType} ${job.tableLabel ?? `#${job.pickupNo}`} ${job.items.length}品 ${receiptCopies(job).length}枚`
   );
 
   return new NextResponse(xml, {
