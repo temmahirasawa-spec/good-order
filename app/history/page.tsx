@@ -7,7 +7,8 @@ import FloatingStaffCall from "@/components/FloatingStaffCall";
 import CartButton from "@/components/CartButton";
 import { supabase } from "@/lib/supabase";
 import { loadHistory, updateHistoryStatus, updateHistoryPickupNo, type HistoryEntry } from "@/lib/history";
-import { fetchOrderStatuses } from "@/lib/api";
+import { MENU_ITEM_COLUMNS, fetchCategories, fetchOrderStatuses, rowToMenuItem, type ApiMenuItem } from "@/lib/api";
+import { defaultServingTimingFor } from "@/lib/servingTiming";
 import { PICKUP_NO_LABEL, formatPickupNo } from "@/lib/pickupNo";
 import { useCartStore, type CartItem } from "@/lib/store";
 import RippleButton from "@/components/RippleButton";
@@ -119,33 +120,33 @@ export default function HistoryPage() {
     const ids = entry.items.map((i) => i.menuItemId).filter(Boolean);
     if (ids.length === 0) return;
     try {
-      const { data } = await supabase
-        .from("menu_items")
-        .select("id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout")
-        .in("id", ids)
-        .eq("is_available", true);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const menuById = new Map<string, any>();
-      (data ?? []).forEach((r) => menuById.set(r.id, r));
+      const [{ data }, cats] = await Promise.all([
+        supabase
+          .from("menu_items")
+          .select(MENU_ITEM_COLUMNS)
+          .in("id", ids)
+          .eq("is_available", true),
+        fetchCategories(),
+      ]);
+      const catMap = Object.fromEntries(cats.map((c) => [c.id, c.slug]));
+      const menuById = new Map<string, ApiMenuItem>();
+      ((data ?? []) as ApiMenuItem[]).forEach((r) => menuById.set(r.id, r));
 
       const cartItems: CartItem[] = [];
       for (const it of entry.items) {
         const row = menuById.get(it.menuItemId);
         if (!row) continue;
-        const m: MenuItem = {
-          id: row.id,
-          category: "food",
-          subcategory: "pancake",
-          name: row.name,
-          nameEn: "",
-          description: row.description ?? "",
-          price: row.price,
-          image: row.image_url ?? it.image ?? "",
-          video: row.video_url ?? null,
-          tag: row.tag ?? undefined,
-          isTakeout: Boolean(row.is_takeout),
-        };
-        cartItems.push({ item: m, quantity: it.quantity });
+        // 以前は category / subcategory を "food" / "pancake" に決め打ちしていたため、
+        // 再注文した商品のカテゴリタグが全部「パンケーキ」になり、提供タイミングの
+        // 対象判定もできなかった。一覧と同じ変換（rowToMenuItem）を通す
+        const m: MenuItem = rowToMenuItem(row, catMap);
+        if (!m.image && it.image) m.image = it.image;
+        cartItems.push({
+          item: m,
+          quantity: it.quantity,
+          // 履歴に残した提供タイミングを引き継ぐ。無ければ今の区分の初期値（選べない商品は null）
+          servingTiming: it.servingTiming ?? defaultServingTimingFor(cats, m, orderType),
+        });
       }
       if (cartItems.length === 0) {
         alert("再注文できる商品が見つかりませんでした（販売終了の可能性）");
@@ -311,7 +312,10 @@ function OrderCard({
       <div className="text-xs text-gray-600 leading-relaxed mb-3">
         {sample.map((it, i) => (
           <span key={i}>
-            {it.name} × {it.quantity}
+            {it.name}
+            {it.servingTiming === "after_meal" && "（食後）"}
+            {" × "}
+            {it.quantity}
             {i < sample.length - 1 ? "、" : ""}
           </span>
         ))}

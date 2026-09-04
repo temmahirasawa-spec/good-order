@@ -16,7 +16,9 @@
  */
 import { Icon } from "@/components/Icon";
 import StatusBadge, { type StatusBadgeState } from "@/components/admin/StatusBadge";
+import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
 import type { CookingStatus } from "@/lib/kitchenGrouping";
+import type { ServingTiming } from "@/lib/servingTiming";
 
 export interface OrderCardItem {
   orderItemId: string;
@@ -24,6 +26,8 @@ export interface OrderCardItem {
   quantity: number;
   cookingStatus: CookingStatus;
   isTakeoutItem: boolean;
+  /** 提供タイミング。伝票と同じく「食後」は墨のチップ、初期値は薄い文字で出す */
+  servingTiming?: ServingTiming | null;
 }
 
 const STATUS_MAP: Record<CookingStatus, StatusBadgeState> = {
@@ -126,6 +130,7 @@ export default function OrderCard({
                 )}
                 <span className="type-jp-heading-s text-text-primary">{item.name}</span>
                 <span className="font-en font-semibold text-text-secondary">×{item.quantity}</span>
+                <ServingTimingBadge timing={item.servingTiming} />
               </span>
               <StatusBadge state={STATUS_MAP[item.cookingStatus]} />
             </button>

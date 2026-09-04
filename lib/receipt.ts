@@ -17,13 +17,24 @@
  *   - 新規は「新規」、2回目以降は「追加(2)」
  *   - 金額は刷らない（点数のみ）
  *   - 店内は卓ラベルが主役、テイクアウトは受渡番号が主役（2バリエーション）
+ *
+ * 2026-09-04 の追加（docs/specs/serving-timing.md）:
+ *   - FOOD と DRINK の両方が入った注文は、同じ内容を2枚続けて刷る
+ *     （1枚目「厨房伝票 1/2」、2枚目「ドリンク伝票 2/2」。厨房とドリンク場に1枚ずつ）
+ *   - 提供タイミングを選んだ明細は品名の下に印字する。「食後」は黒帯、
+ *     「でき次第」「先出し」は通常の文字
  */
 
 import { formatJstMdHm } from "./dateFormat";
+import { SERVING_TIMING_LABEL, type ServingTiming } from "./servingTiming";
 
 export interface ReceiptItem {
   name: string;
   quantity: number;
+  /** 提供タイミング（supabase/serving_timing.sql）。選択対象外・移行前の注文は null / 無し */
+  servingTiming?: ServingTiming | null;
+  /** 商品の区分。2枚出しの判定に使う。無ければ food 扱い */
+  categoryType?: "food" | "drink" | null;
 }
 
 /** supabase の claim_print_job() が返す JSON と同じ形 */
@@ -145,28 +156,63 @@ function headline(job: ReceiptJob): { label: string; value: string } {
   return { label: "テーブル", value: job.tableLabel };
 }
 
+/** 伝票1枚ぶんの見出し（右上の小さい文字） */
+export interface ReceiptCopy {
+  title: string;
+}
+
+/**
+ * 何枚刷るかを決める（天真の決定、2026-09-04）。
+ *   FOOD と DRINK の両方が入った注文 → 同じ内容を2枚。1枚目「厨房伝票 1/2」、2枚目「ドリンク伝票 2/2」
+ *   どちらか片方だけ → 従来どおり1枚「厨房伝票」
+ * 区分が引けない明細（移行前の注文など）は food として数える。
+ */
+export function receiptCopies(job: ReceiptJob): ReceiptCopy[] {
+  const hasFood  = job.items.some((i) => (i.categoryType ?? "food") !== "drink");
+  const hasDrink = job.items.some((i) => i.categoryType === "drink");
+  if (hasFood && hasDrink) {
+    return [{ title: "厨房伝票 1/2" }, { title: "ドリンク伝票 2/2" }];
+  }
+  return [{ title: "厨房伝票" }];
+}
+
 /**
  * 厨房伝票の中身（<epos-print> 要素）を組み立てる。
  * サーバーダイレクトプリントの封筒は buildPrintRequest() が被せる。
+ *
+ * 2枚出しは**1つの印刷ジョブの中で**伝票を2回組み立てて2回カットする。
+ * ジョブを2つにしないのは、print_jobs.order_id の UNIQUE（二重印刷の機構的防止）を
+ * 崩さないため。刷り直し（/admin/print）も1操作で2枚出る。
  */
 export function buildReceiptXml(job: ReceiptJob): string {
   const x: string[] = [];
-  const head = headline(job);
-
   x.push(`<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">`);
 
   // 日本語を印字するので国際文字セットを日本語に切り替える。
   // これは印字前に一度だけでよい（以降ずっと有効）。
   x.push(`<text lang="ja"/>`);
+
+  for (const copy of receiptCopies(job)) x.push(...ticketXml(job, copy));
+
+  x.push(`</epos-print>`);
+  return x.join("");
+}
+
+/** 伝票1枚ぶん（バッジからカットまで） */
+function ticketXml(job: ReceiptJob, copy: ReceiptCopy): string[] {
+  const x: string[] = [];
+  const head = headline(job);
+
   x.push(`<text font="font_a" align="left"/>`);
 
-  // ── 1. 「新規 / 追加(N)」バッジ ＋ 右上に「厨房伝票」 ──
+  // ── 1. 「新規 / 追加(N)」バッジ ＋ 右上に見出し（「厨房伝票」「ドリンク伝票 2/2」） ──
   // reverse="true" が黒地に白抜き。前後に全角空白を入れて帯に見せる
   x.push(`<text width="2" height="2" em="true" reverse="true"/>`);
   x.push(`<text>${esc(`　${seqLabel(job.seq)}　`)}</text>`);
   x.push(`<text reverse="false" width="1" height="1"/>`);
-  x.push(`<text x="${PRINT_WIDTH - 4 * 2 * HALF_WIDTH_DOTS}"/>`); // 全角4文字ぶんを右端に寄せる
-  x.push(`<text>厨房伝票&#10;</text>`);
+  // 見出しは長さが変わるので、右端から逆算して右揃えにする
+  x.push(`<text x="${PRINT_WIDTH - halfWidthLength(copy.title) * HALF_WIDTH_DOTS}"/>`);
+  x.push(`<text>${esc(copy.title)}&#10;</text>`);
   x.push(`<text em="false"/>`);
 
   x.push(`<feed unit="8"/>`);
@@ -211,6 +257,23 @@ export function buildReceiptXml(job: ReceiptJob): string {
       x.push(`<text>${esc(line)}&#10;</text>`);
     });
     x.push(`<text width="1" height="1" em="false"/>`);
+
+    // 提供タイミング（選んだ明細だけ）。品名と同じ左端・同じ倍高で、厨房から読める大きさにする。
+    // 「食後」は黒帯（見落とすと事故になるのはこちら）、「でき次第」「先出し」は通常の文字。
+    if (item.servingTiming) {
+      const label = SERVING_TIMING_LABEL[item.servingTiming];
+      x.push(`<text x="${ITEM_NAME_X}"/>`);
+      if (item.servingTiming === "after_meal") {
+        x.push(`<text width="1" height="2" em="true" reverse="true"/>`);
+        x.push(`<text>${esc(`　${label}　`)}</text>`);
+        x.push(`<text reverse="false" em="false" width="1" height="1"/>`);
+        x.push(`<text>&#10;</text>`);
+      } else {
+        x.push(`<text width="1" height="2"/>`);
+        x.push(`<text>${esc(label)}&#10;</text>`);
+        x.push(`<text width="1" height="1"/>`);
+      }
+    }
   });
 
   x.push(`<feed unit="10"/>`);
@@ -231,9 +294,7 @@ export function buildReceiptXml(job: ReceiptJob): string {
   // カット位置まで送ってから切る
   x.push(`<feed line="2"/>`);
   x.push(`<cut type="feed"/>`);
-
-  x.push(`</epos-print>`);
-  return x.join("");
+  return x;
 }
 
 /**

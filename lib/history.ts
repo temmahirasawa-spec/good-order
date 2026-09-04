@@ -6,6 +6,8 @@
  * そのまま LocalStorage に保存する方針を取る
  */
 
+import type { ServingTiming } from "./servingTiming";
+
 const KEY = "yorkys_order_history";
 const MAX = 30;
 
@@ -15,6 +17,8 @@ export interface HistoryItemSnapshot {
   image: string | null;
   quantity: number;
   unitPrice: number;
+  /** 提供タイミング（でき次第 / 先出し / 食後）。選択対象外は null。移行前の履歴には無い */
+  servingTiming?: ServingTiming | null;
 }
 
 export interface HistoryEntry {

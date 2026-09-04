@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>提供タイミング 3案比較（たたき台）</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#FAC03D;--accent-pressed:#E5A817;--accent-deep:#996B00;--accent-subtle:#FFFCF7;
+  --t1:#1A1A1A;--t2:#646464;--t3:#999999;--t4:#C4C4C4;--inv:#FFFFFF;
+  --divider:#EDEDED;--border:#DDDDDD;
+  --bg1:#FAFAFA;--bg2:#F5F5F5;--bg3:#EFEFEF;--warm:#FCF7EE;--white:#FFFFFF;--ink:#1A1A1A;
+  --tag-yellow:#FBEEC5;--tag-blue:#E1EDF8;--tag-teal:#DEF1EC;
+  --shadow-card:0 2px 8px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --jp:'Noto Sans JP',sans-serif;--en:'Barlow',sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#E6E6E6;font-family:var(--jp);color:var(--t1)}
+.sheet{padding:28px 32px 40px;width:1400px}
+h1{font:700 22px/1.3 var(--jp);margin:0 0 4px}
+.note{font:500 13px/1.6 var(--jp);color:var(--t2);margin:0 0 20px}
+h2{font:700 16px/1.4 var(--jp);margin:28px 0 12px;display:flex;gap:12px;align-items:center}
+h2 small{font:500 12px/1.5 var(--jp);color:var(--t2)}
+.row{display:flex;gap:24px;align-items:flex-start}
+.col{width:390px;flex:0 0 390px}
+.plan{font:700 13px/1.2 var(--jp);margin:0 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plan .nm{white-space:nowrap}
+.plan b{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;align-items:center;justify-content:center;font:700 13px var(--en)}
+.plan span.rec{font:700 11px var(--jp);color:var(--accent-deep);border:1px solid var(--accent-deep);border-radius:9999px;padding:2px 8px;white-space:nowrap}
+.plan small{font:500 11px/1.4 var(--jp);color:var(--t2);flex-basis:100%}
+.phone{width:390px;background:var(--bg1);border:1px solid #cfcfcf;border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.10)}
+/* type */
+.hl{font:700 20px/1.4 var(--jp);letter-spacing:.01em}
+.hm{font:700 17px/1.4 var(--jp);letter-spacing:.01em}
+.hs{font:700 15px/1.45 var(--jp);letter-spacing:.01em}
+.body{font:500 14px/1.6 var(--jp);letter-spacing:.01em}
+.bodyb{font:700 14px/1.6 var(--jp);letter-spacing:.01em}
+.cap{font:500 12px/1.5 var(--jp);letter-spacing:.01em}
+.capb{font:700 12px/1.5 var(--jp);letter-spacing:.01em}
+.lab{font:500 11px/1.4 var(--jp);letter-spacing:.02em}
+.pm{font:600 17px/1.2 var(--en);font-variant-numeric:tabular-nums}
+.pl{font:600 22px/1.2 var(--en);font-variant-numeric:tabular-nums}
+.ps{font:600 14px/1.2 var(--en);font-variant-numeric:tabular-nums}
+.en-m{font:500 24px/1.2 var(--en)}
+.t2{color:var(--t2)}.t3{color:var(--t3)}
+/* detail */
+.kv{position:relative;height:260px;background:var(--bg3) center/cover}
+.close{position:absolute;right:16px;top:12px;width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:center;font:500 18px var(--en)}
+.intro{display:flex;flex-direction:column;gap:12px;align-items:center;padding:0 16px;margin-top:32px}
+.tag{display:inline-block;padding:4px 10px;border-radius:9999px;background:var(--tag-yellow)}
+.tag.blue{background:var(--tag-blue)}.tag.teal{background:var(--tag-teal)}
+.timing{padding:0 16px;margin-top:24px;display:flex;flex-direction:column;gap:8px}
+.timing .ttl{display:flex;align-items:baseline;gap:8px}
+.rec-hint{margin:24px 16px 0;padding:14px 0 0;border-top:1px solid var(--divider);text-align:center}
+.bar{display:flex;gap:12px;align-items:center;background:#fff;border-top:1px solid var(--divider);padding:12px 16px 16px;margin-top:20px}
+.cartbtn{width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:center;position:relative}
+.cartbtn i{position:absolute;right:6px;top:4px;background:var(--accent);border-radius:9999px;padding:1px 5px;font:600 10px var(--en);font-style:normal}
+.step{display:flex;gap:16px;align-items:center}
+.step b{width:36px;height:36px;border-radius:50%;border:1px solid var(--t1);background:#fff;display:flex;align-items:center;justify-content:center;font:500 18px var(--en)}
+.step b.dis{border-color:var(--border);color:var(--t4)}
+.step span{font:700 16px var(--en);width:20px;text-align:center}
+.cta{margin-left:auto;width:154px;height:52px;border-radius:9999px;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-card)}
+/* controls */
+.seg{display:flex;padding:3px;border:1px solid var(--border);border-radius:9999px;background:#fff;height:44px}
+.seg div{flex:1;display:flex;align-items:center;justify-content:center;border-radius:9999px;color:var(--t2)}
+.seg div.on{background:var(--accent);color:var(--t1);font-weight:700}
+.opt{display:flex;gap:16px;align-items:center;padding:14px 20px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.opt.on{border:2px solid var(--t1);padding:13px 19px}
+.radio{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border);flex:0 0 18px}
+.opt.on .radio{border:5px solid var(--t1)}
+.chips{display:flex;gap:8px}
+.chip{height:44px;padding:0 16px;border-radius:9999px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;gap:6px;color:var(--t1)}
+.chip.on{background:var(--accent);border-color:transparent;font-weight:700}
+.chip.small{height:36px;padding:0 12px}
+.chip .chev{font:500 12px var(--en);color:var(--t2)}
+/* cart */
+.hdr{height:68px;background:#fff;display:flex;align-items:center;justify-content:center;position:relative}
+.hdr .b{position:absolute;left:16px;top:8px;width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--border);box-shadow:var(--shadow-card);display:flex;align-items:center;justify-content:center;font:500 16px var(--en)}
+.cartwrap{background:var(--warm);padding:24px 24px 16px;display:flex;flex-direction:column;gap:16px}
+.crow{position:relative;display:flex;gap:12px;align-items:flex-start;padding:16px;background:#fff;border-radius:16px;box-shadow:var(--shadow-card)}
+.crow .img{width:80px;height:80px;border-radius:12px;background:var(--bg3) center/cover;flex:0 0 80px}
+.crow .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.crow .pq{display:flex;align-items:center;justify-content:space-between;height:36px}
+.crow .trash{position:absolute;right:16px;top:16px;color:var(--t3);font:500 12px var(--en)}
+.crow .ctl{margin-top:8px}
+.summary{background:var(--warm);border-top:1px solid var(--divider);padding:16px 24px 20px}
+.summary .l{display:flex;justify-content:space-between}
+/* shared */
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+pre.paper{margin:0;background:#fff;border:1px solid #cfcfcf;padding:14px 16px;font:500 12px/1.55 "SF Mono",Menlo,Consolas,monospace;white-space:pre;color:#111;box-shadow:var(--shadow-card)}
+pre.paper .rev{background:#111;color:#fff;padding:0 2px}
+pre.paper .big{font-weight:700;font-size:15px}
+pre.paper .cut{color:#888}
+.kitem{display:flex;height:52px;align-items:center;justify-content:space-between;padding:0 16px;border-top:1px solid var(--divider)}
+.badge{font:700 12px/1 var(--jp);padding:6px 10px;border-radius:9999px;background:var(--bg3);color:var(--t2)}
+.inkchip{display:inline-flex;align-items:center;font:700 11px/1 var(--jp);padding:4px 8px;border-radius:9999px;background:var(--ink);color:#fff;vertical-align:middle}
+.toggle{width:40px;height:22px;border-radius:9999px;background:var(--accent);position:relative;flex:0 0 40px}
+.toggle:after{content:"";position:absolute;top:2px;left:20px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.segadmin{display:flex;gap:4px}.segadmin div{height:32px;min-width:44px;padding:0 12px;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;font:700 12px var(--jp);color:var(--t2);background:#fff}
+.segadmin div.on{background:var(--t1);color:#fff;border-color:transparent}
+</style></head><body><div class="sheet">
+<h1>提供タイミングの選択UI ── 3案の比較</h1>
+<p class="note">たたき台（HTML）です。Figma ではありません。中身（文言・項目・初期値）は3案とも同じで、<b>器だけ</b>を変えています。例はパンケーキ（FOOD: でき次第／食後）。ドリンクは「先出し／食後」になります。</p>
+
+<section class="sec" data-sec="1"><h2>1. 商品詳細 <small>説明文の下に「提供タイミング」が入る。初期値（でき次第）が選ばれた状態</small></h2>
+<div class="row">
+  <!-- A -->
+  <div class="col">
+    <p class="plan"><b>A</b><span class="nm">セグメント</span><span class="rec">AI推奨</span><small>常連が多く説明が要らない店。画面が縦に伸びない</small></p>
+    <div class="phone">
+      <div class="kv" style="background-image:url('../../../public/images/pancake/p1.webp')"><div class="close">×</div></div>
+      <div class="intro"><div style="display:flex;flex-direction:column;gap:4px;align-items:center;width:100%"><span class="tag lab">パンケーキ</span><div class="hl" style="text-align:center">パンケーキ プレーン</div></div><p class="body t2" style="margin:0;width:100%">焼きたてのふわふわ生地に、バターとメープルシロップをたっぷり。YORKYS の原点になった一皿です。</p></div>
+      <div class="timing"><div class="ttl"><span class="capb t2">提供タイミング</span></div><div class="seg body"><div class="on">でき次第</div><div>食後</div></div></div>
+      <div class="rec-hint"><span class="en-m">RECOMMENDED</span><br><span class="cap t2">関連のおすすめ</span></div>
+      <div class="bar"><div class="cartbtn">🛒<i>3</i></div><div class="step" style="margin-left:auto"><b class="dis">−</b><span>1</span><b>+</b></div><div class="cta bodyb">カートに入れる</div></div>
+    </div>
+  </div>
+  <!-- B -->
+  <div class="col">
+    <p class="plan"><b>B</b><span class="nm">説明つきカード</span><small>初来店が多い店。「先出し」「食後」の意味を伝えたい</small></p>
+    <div class="phone">
+      <div class="kv" style="background-image:url('../../../public/images/pancake/p1.webp')"><div class="close">×</div></div>
+      <div class="intro"><div style="display:flex;flex-direction:column;gap:4px;align-items:center;width:100%"><span class="tag lab">パンケーキ</span><div class="hl" style="text-align:center">パンケーキ プレーン</div></div><p class="body t2" style="margin:0;width:100%">焼きたてのふわふわ生地に、バターとメープルシロップをたっぷり。YORKYS の原点になった一皿です。</p></div>
+      <div class="timing"><div class="ttl"><span class="capb t2">提供タイミング</span></div>
+        <div class="opt on"><span class="radio"></span><div><div class="hs">でき次第</div><div class="cap t2">お料理と一緒にお持ちします</div></div></div>
+        <div class="opt"><span class="radio"></span><div><div class="hs">食後</div><div class="cap t2">お食事のあとにお持ちします</div></div></div>
+      </div>
+      <div class="rec-hint"><span class="en-m">RECOMMENDED</span><br><span class="cap t2">関連のおすすめ</span></div>
+      <div class="bar"><div class="cartbtn">🛒<i>3</i></div><div class="step" style="margin-left:auto"><b class="dis">−</b><span>1</span><b>+</b></div><div class="cta bodyb">カートに入れる</div></div>
+    </div>
+  </div>
+  <!-- C -->
+  <div class="col">
+    <p class="plan"><b>C</b><span class="nm">チップ</span><small>選択肢が将来増えるかもしれない店。既存の絞り込みと同じ見た目</small></p>
+    <div class="phone">
+      <div class="kv" style="background-image:url('../../../public/images/pancake/p1.webp')"><div class="close">×</div></div>
+      <div class="intro"><div style="display:flex;flex-direction:column;gap:4px;align-items:center;width:100%"><span class="tag lab">パンケーキ</span><div class="hl" style="text-align:center">パンケーキ プレーン</div></div><p class="body t2" style="margin:0;width:100%">焼きたてのふわふわ生地に、バターとメープルシロップをたっぷり。YORKYS の原点になった一皿です。</p></div>
+      <div class="timing"><div class="ttl"><span class="capb t2">提供タイミング</span></div><div class="chips body"><div class="chip on">でき次第</div><div class="chip">食後</div></div></div>
+      <div class="rec-hint"><span class="en-m">RECOMMENDED</span><br><span class="cap t2">関連のおすすめ</span></div>
+      <div class="bar"><div class="cartbtn">🛒<i>3</i></div><div class="step" style="margin-left:auto"><b class="dis">−</b><span>1</span><b>+</b></div><div class="cta bodyb">カートに入れる</div></div>
+    </div>
+  </div>
+</div>
+
+</section><section class="sec" data-sec="2"><h2>2. カート <small>対象の行だけに選択が付く。パンケーキは「食後」に変えた状態、コーヒーは初期値「先出し」、フライは対象外</small></h2>
+<div class="row">
+  <!-- A cart -->
+  <div class="col">
+    <p class="plan"><b>A</b><span class="nm">行の中に同じセグメント</span></p>
+    <div class="phone">
+      <div class="hdr"><div class="b">←</div><span class="hm">カート</span></div>
+      <div class="cartwrap">
+        <div><div class="hl">ご注文内容</div><div class="cap" style="color:var(--accent-deep);margin-top:4px">4点</div></div>
+        <div class="crow"><div class="img" style="background-image:url('../../../public/images/pancake/p1.webp')"></div><div class="txt"><span class="tag lab" style="padding:2px 10px;align-self:flex-start">パンケーキ</span><div class="hs">パンケーキ プレーン</div><div class="pq"><span class="pm">¥1,200</span><div class="step"><b>−</b><span>1</span><b>+</b></div></div><div class="ctl seg body"><div>でき次第</div><div class="on">食後</div></div></div><span class="trash">🗑</span></div>
+        <div class="crow"><div class="img" style="background-image:url('../../../public/images/cafe/c1.webp')"></div><div class="txt"><span class="tag blue lab" style="padding:2px 10px;align-self:flex-start">コーヒー</span><div class="hs">ブレンドコーヒー</div><div class="pq"><span class="pm">¥550</span><div class="step"><b>−</b><span>2</span><b>+</b></div></div><div class="ctl seg body"><div class="on">先出し</div><div>食後</div></div></div><span class="trash">🗑</span></div>
+        <div class="crow"><div class="img"></div><div class="txt"><span class="tag teal lab" style="padding:2px 10px;align-self:flex-start">フリッター</span><div class="hs">フレンチフライ</div><div class="pq"><span class="pm">¥600</span><div class="step"><b>−</b><span>1</span><b>+</b></div></div></div><span class="trash">🗑</span></div>
+      </div>
+      <div class="summary"><div class="l body t2"><span>小計</span><span class="ps">¥2,900</span></div><div class="l" style="margin-top:12px"><span class="hs">合計（税込）</span><span class="pl">¥3,190</span></div></div>
+    </div>
+  </div>
+  <!-- B cart -->
+  <div class="col">
+    <p class="plan"><b>B</b><span class="nm">チップ表示 → タップで半モーダル（詳細と同じカード）</span></p>
+    <div class="phone">
+      <div class="hdr"><div class="b">←</div><span class="hm">カート</span></div>
+      <div class="cartwrap">
+        <div><div class="hl">ご注文内容</div><div class="cap" style="color:var(--accent-deep);margin-top:4px">4点</div></div>
+        <div class="crow"><div class="img" style="background-image:url('../../../public/images/pancake/p1.webp')"></div><div class="txt"><span class="tag lab" style="padding:2px 10px;align-self:flex-start">パンケーキ</span><div class="hs">パンケーキ プレーン</div><div class="pq"><span class="pm">¥1,200</span><div class="step"><b>−</b><span>1</span><b>+</b></div></div><div class="ctl" style="display:flex;align-items:center;gap:8px"><span class="cap t2">提供</span><div class="chip on body">食後 <span class="chev">▾</span></div></div></div><span class="trash">🗑</span></div>
+        <div class="crow"><div class="img" style="background-image:url('../../../public/images/cafe/c1.webp')"></div><div class="txt"><span class="tag blue lab" style="padding:2px 10px;align-self:flex-start">コーヒー</span><div class="hs">ブレンドコーヒー</div><div class="pq"><span class="pm">¥550</span><div class="step"><b>−</b><span>2</span><b>+</b></div></div><div class="ctl" style="display:flex;align-items:center;gap:8px"><span class="cap t2">提供</span><div class="chip body">先出し <span class="chev">▾</span></div></div></div><span class="trash">🗑</span></div>
+        <div class="crow"><div class="img"></div><div class="txt"><span class="tag teal lab" style="padding:2px 10px;align-self:flex-start">フリッター</span><div class="hs">フレンチフライ</div><div class="pq"><span class="pm">¥600</span><div class="step"><b>−</b><span>1</span><b>+</b></div></div></div><span class="trash">🗑</span></div>
+      </div>
+      <div class="summary"><div class="l body t2"><span>小計</span><span class="ps">¥2,900</span></div><div class="l" style="margin-top:12px"><span class="hs">合計（税込）</span><span class="pl">¥3,190</span></div></div>
+    </div>
+  </div>
+  <!-- C cart -->
+  <div class="col">
+    <p class="plan"><b>C</b><span class="nm">行の中に同じチップ</span></p>
+    <div class="phone">
+      <div class="hdr"><div class="b">←</div><span class="hm">カート</span></div>
+      <div class="cartwrap">
+        <div><div class="hl">ご注文内容</div><div class="cap" style="color:var(--accent-deep);margin-top:4px">4点</div></div>
+        <div class="crow"><div class="img" style="background-image:url('../../../public/images/pancake/p1.webp')"></div><div class="txt"><span class="tag lab" style="padding:2px 10px;align-self:flex-start">パンケーキ</span><div class="hs">パンケーキ プレーン</div><div class="pq"><span class="pm">¥1,200</span><div class="step"><b>−</b><span>1</span><b>+</b></div></div><div class="ctl chips body"><div class="chip small">でき次第</div><div class="chip small on">食後</div></div></div><span class="trash">🗑</span></div>
+        <div class="crow"><div class="img" style="background-image:url('../../../public/images/cafe/c1.webp')"></div><div class="txt"><span class="tag blue lab" style="padding:2px 10px;align-self:flex-start">コーヒー</span><div class="hs">ブレンドコーヒー</div><div class="pq"><span class="pm">¥550</span><div class="step"><b>−</b><span>2</span><b>+</b></div></div><div class="ctl chips body"><div class="chip small on">先出し</div><div class="chip small">食後</div></div></div><span class="trash">🗑</span></div>
+        <div class="crow"><div class="img"></div><div class="txt"><span class="tag teal lab" style="padding:2px 10px;align-self:flex-start">フリッター</span><div class="hs">フレンチフライ</div><div class="pq"><span class="pm">¥600</span><div class="step"><b>−</b><span>1</span><b>+</b></div></div></div><span class="trash">🗑</span></div>
+      </div>
+      <div class="summary"><div class="l body t2"><span>小計</span><span class="ps">¥2,900</span></div><div class="l" style="margin-top:12px"><span class="hs">合計（税込）</span><span class="pl">¥3,190</span></div></div>
+    </div>
+  </div>
+</div>
+
+</section><section class="sec" data-sec="3"><h2>3. どの案でも共通 <small>伝票（FOOD と DRINK が両方あるので2枚）／厨房画面／完了画面／カテゴリ管理のトグル</small></h2>
+<div class="row">
+  <div style="flex:0 0 auto"><p class="plan">伝票 ── 1枚目「厨房伝票」、2枚目「ドリンク伝票」。「食後」は黒帯</p>
+<pre class="paper"><span class="rev"> 新規 </span>                                <b>厨房伝票 1/2</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+テーブル                                    受付
+<span class="big">A-1</span>                                  <b>09/04 11:28</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>1       パンケーキ プレーン</b>
+        <span class="rev"> 食後 </span>
+────────────────────────────────────────────────
+<b>2       ブレンドコーヒー</b>
+        先出し
+────────────────────────────────────────────────
+<b>1       フレンチフライ</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+合計                                        <b>4</b> 点
+
+<span class="cut">- - - - - - - - - - - - - - - - - - - - - - - ✂</span>
+<span class="rev"> 新規 </span>                              <b>ドリンク伝票 2/2</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+テーブル                                    受付
+<span class="big">A-1</span>                                  <b>09/04 11:28</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>1       パンケーキ プレーン</b>
+        <span class="rev"> 食後 </span>
+────────────────────────────────────────────────
+<b>2       ブレンドコーヒー</b>
+        先出し
+────────────────────────────────────────────────
+<b>1       フレンチフライ</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+合計                                        <b>4</b> 点
+<span class="cut">- - - - - - - - - - - - - - - - - - - - - - - ✂</span></pre>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;gap:20px">
+    <div><p class="plan">厨房画面（Order Card）── 「食後」は墨のチップ、初期値は薄い文字</p>
+      <div class="card" style="width:430px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px"><span style="display:flex;gap:8px;align-items:center"><span class="hs t2">テーブル</span><span style="font:600 20px/1.2 var(--en);letter-spacing:.02em">A-1</span></span><span style="font:600 15px var(--en)" class="t2">今</span></div>
+        <div class="kitem"><span style="display:flex;gap:8px;align-items:center"><span class="hs">パンケーキ プレーン</span><span style="font:600 14px var(--en)" class="t2">×1</span><span class="inkchip">食後</span></span><span class="badge">未着手</span></div>
+        <div class="kitem"><span style="display:flex;gap:8px;align-items:center"><span class="hs">ブレンドコーヒー</span><span style="font:600 14px var(--en)" class="t2">×2</span><span class="cap t3">先出し</span></span><span class="badge">未着手</span></div>
+        <div class="kitem"><span style="display:flex;gap:8px;align-items:center"><span class="hs">フレンチフライ</span><span style="font:600 14px var(--en)" class="t2">×1</span></span><span class="badge">未着手</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid var(--divider)"><span class="cap t2">調理中：0 / 3 品</span><span style="background:var(--ink);color:#fff;padding:8px 16px;border-radius:9999px" class="capb">すべて提供済みにする</span></div>
+      </div>
+    </div>
+    <div><p class="plan">完了画面「ご注文内容」── 「食後」だけ小さく出す（初期値は出さない）</p>
+      <div class="card" style="width:430px;padding:8px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><span class="body">パンケーキ プレーン <span class="inkchip" style="margin-left:6px">食後</span></span><span style="display:flex;gap:8px"><span class="cap t2">×1</span><span class="pm t2" style="font-weight:500;width:70px;text-align:right">¥1,200</span></span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><span class="body">ブレンドコーヒー</span><span style="display:flex;gap:8px"><span class="cap t2">×2</span><span class="pm t2" style="font-weight:500;width:70px;text-align:right">¥1,100</span></span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0"><span class="body">フレンチフライ</span><span style="display:flex;gap:8px"><span class="cap t2">×1</span><span class="pm t2" style="font-weight:500;width:70px;text-align:right">¥600</span></span></div>
+      </div>
+    </div>
+    <div><p class="plan">管理画面「カテゴリ管理」の編集パネル ── 「区分」の下にトグルを足す</p>
+      <div class="card" style="width:430px;padding:16px 20px;display:flex;flex-direction:column;gap:16px">
+        <div><div class="capb t2" style="margin-bottom:8px">区分</div><div class="segadmin"><div class="on">フード</div><div>ドリンク</div></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><div><div class="bodyb">提供タイミングをお客様が選べる</div><div class="cap t2">フードは「でき次第 / 食後」、ドリンクは「先出し / 食後」から選べるようになります</div></div><div class="toggle"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</section></div><script>const s=location.hash.slice(1);if(s){document.querySelectorAll(".sec").forEach(e=>{if(e.dataset.sec!==s)e.style.display="none"});document.querySelector("h1").style.display="none";document.querySelector(".note").style.display="none";}</script></body></html>

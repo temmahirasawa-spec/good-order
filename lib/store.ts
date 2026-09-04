@@ -5,6 +5,8 @@ import type { MenuItem } from "./menu";
 import { supabase } from "./supabase";
 import { appendHistory, type HistoryEntry } from "./history";
 import { isAcceptingOrders } from "./api";
+import { useMenuDataStore } from "./menuDataStore";
+import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
@@ -45,7 +47,7 @@ function generateUuid(): string {
  */
 async function saveOrderToDb(
   orderId: string,
-  items: { item: MenuItem; quantity: number }[],
+  items: CartItem[],
   tableNumber: number | null,
   tableId: string | null,
   tableLabel: string | null,
@@ -64,9 +66,11 @@ async function saveOrderToDb(
       p_order_type:   orderType,
       p_total_amount: totalAmount,
       p_items: items.map((ci) => ({
-        menu_item_id: ci.item.id,
-        quantity:     ci.quantity,
-        unit_price:   ci.item.price,
+        menu_item_id:   ci.item.id,
+        quantity:       ci.quantity,
+        unit_price:     ci.item.price,
+        // 提供タイミング（supabase/serving_timing.sql）。選べない商品は null
+        serving_timing: ci.servingTiming ?? null,
       })),
     });
 
@@ -89,6 +93,38 @@ async function saveOrderToDb(
 export interface CartItem {
   item: MenuItem;
   quantity: number;
+  /**
+   * 提供タイミング（でき次第 / 先出し / 食後、lib/servingTiming.ts）。
+   * 選べない商品は null。移行前に保存されたカート（orderly-cart）には無い（undefined）ので、
+   * カート画面が初期値で埋め直す。同じ商品でもこの値が違えば別の行になる。
+   */
+  servingTiming?: ServingTiming | null;
+}
+
+/** カートの行を識別するキー（商品ID ＋ 提供タイミング） */
+const lineKeyOf = (ci: CartItem) => cartLineKey(ci.item.id, ci.servingTiming);
+
+/**
+ * 商品の提供タイミングの初期値を引く。
+ * 呼び出し元（一覧のカード・商品詳細・履歴）がカテゴリーを持ち回らなくて済むよう、
+ * メニューのキャッシュ（menuDataStore）から直接引く。まだ読み込まれていなければ
+ * 対象外扱い（null）になるが、カート画面が開いた時点で初期値に埋め直される。
+ */
+function resolveDefaultTiming(item: MenuItem, orderType: "dine_in" | "takeout"): ServingTiming | null {
+  return defaultServingTimingFor(useMenuDataStore.getState().categories, item, orderType);
+}
+
+/** 同じ行（商品ID ＋ 提供タイミング）があれば数量を足し、無ければ行を増やす */
+function mergeLine(
+  items: CartItem[],
+  item: MenuItem,
+  qty: number,
+  timing: ServingTiming | null
+): CartItem[] {
+  const key = cartLineKey(item.id, timing);
+  const idx = items.findIndex((i) => lineKeyOf(i) === key);
+  if (idx === -1) return [...items, { item, quantity: qty, servingTiming: timing }];
+  return items.map((i, n) => (n === idx ? { ...i, quantity: i.quantity + qty } : i));
 }
 
 export type PlaceOrderResult =
@@ -117,10 +153,17 @@ interface CartStore {
   setTableRef: (id: string | null, label: string | null) => void;
   setOrderType: (type: "dine_in" | "takeout") => void;
   setTakeoutMode: (flag: boolean) => void;
-  addItem: (item: MenuItem, qty?: number) => void;
+  /** servingTiming を省略すると、その商品の初期値（選べない商品は null）で入る */
+  addItem: (item: MenuItem, qty?: number, servingTiming?: ServingTiming | null) => void;
   addItems: (entries: CartItem[]) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  /** servingTiming を省略すると、その商品の行を全部消す */
+  removeItem: (id: string, servingTiming?: ServingTiming | null) => void;
+  /** servingTiming を省略すると、その商品の最初の行を対象にする */
+  updateQuantity: (id: string, quantity: number, servingTiming?: ServingTiming | null) => void;
+  /** 一覧のステッパー「−」用。その商品の最後の行から1つ減らす */
+  decrementItem: (id: string) => void;
+  /** カート行の提供タイミングを変える。移動先に同じ行があれば数量を合流させる */
+  setServingTiming: (id: string, from: ServingTiming | null, to: ServingTiming) => void;
   clearCart: () => void;
   placeOrder: () => Promise<PlaceOrderResult>;
 
@@ -146,45 +189,69 @@ export const useCartStore = create<CartStore>()(
       setOrderType: (type) => set({ orderType: type }),
       setTakeoutMode: (flag) => set({ isTakeoutMode: flag }),
 
-      addItem: (item, qty = 1) => {
-        const existing = get().items.find((i) => i.item.id === item.id);
-        if (existing) {
-          set({
-            items: get().items.map((i) =>
-              i.item.id === item.id
-                ? { ...i, quantity: i.quantity + qty }
-                : i
-            ),
-          });
-        } else {
-          set({ items: [...get().items, { item, quantity: qty }] });
-        }
+      addItem: (item, qty = 1, servingTiming) => {
+        const timing =
+          servingTiming === undefined ? resolveDefaultTiming(item, get().orderType) : servingTiming;
+        set({ items: mergeLine(get().items, item, qty, timing) });
       },
 
       addItems: (entries) => {
-        const curr = get().items.slice();
+        let next = get().items;
         for (const e of entries) {
-          const existing = curr.find((i) => i.item.id === e.item.id);
-          if (existing) existing.quantity += e.quantity;
-          else curr.push({ item: e.item, quantity: e.quantity });
+          const timing =
+            e.servingTiming === undefined
+              ? resolveDefaultTiming(e.item, get().orderType)
+              : e.servingTiming;
+          next = mergeLine(next, e.item, e.quantity, timing);
         }
-        set({ items: curr });
+        set({ items: next });
       },
 
-      removeItem: (id) => {
-        set({ items: get().items.filter((i) => i.item.id !== id) });
-      },
-
-      updateQuantity: (id, quantity) => {
-        if (quantity <= 0) {
-          get().removeItem(id);
-          return;
-        }
+      removeItem: (id, servingTiming) => {
+        const key = cartLineKey(id, servingTiming ?? null);
         set({
-          items: get().items.map((i) =>
-            i.item.id === id ? { ...i, quantity } : i
+          items: get().items.filter((i) =>
+            servingTiming === undefined ? i.item.id !== id : lineKeyOf(i) !== key
           ),
         });
+      },
+
+      updateQuantity: (id, quantity, servingTiming) => {
+        const key = cartLineKey(id, servingTiming ?? null);
+        const target =
+          servingTiming === undefined
+            ? get().items.find((i) => i.item.id === id)
+            : get().items.find((i) => lineKeyOf(i) === key);
+        if (!target) return;
+        if (quantity <= 0) {
+          get().removeItem(id, target.servingTiming ?? null);
+          return;
+        }
+        set({ items: get().items.map((i) => (i === target ? { ...i, quantity } : i)) });
+      },
+
+      decrementItem: (id) => {
+        const lines = get().items.filter((i) => i.item.id === id);
+        const target = lines[lines.length - 1];
+        if (!target) return;
+        get().updateQuantity(id, target.quantity - 1, target.servingTiming ?? null);
+      },
+
+      setServingTiming: (id, from, to) => {
+        const items = get().items;
+        const source = items.find((i) => lineKeyOf(i) === cartLineKey(id, from));
+        if (!source || (source.servingTiming ?? null) === to) return;
+        const dest = items.find((i) => lineKeyOf(i) === cartLineKey(id, to));
+        if (dest) {
+          // 移動先に同じ商品の行が既にあれば数量を合流させる（同じ行が2本にならないように）
+          set({
+            items: items
+              .filter((i) => i !== source)
+              .map((i) => (i === dest ? { ...i, quantity: i.quantity + source.quantity } : i)),
+          });
+          return;
+        }
+        set({ items: items.map((i) => (i === source ? { ...i, servingTiming: to } : i)) });
       },
 
       clearCart: () => set({ items: [] }),
@@ -227,6 +294,7 @@ export const useCartStore = create<CartStore>()(
             image: ci.item.image || null,
             quantity: ci.quantity,
             unitPrice: ci.item.price,
+            servingTiming: ci.servingTiming ?? null,
           })),
         };
         appendHistory(entry);

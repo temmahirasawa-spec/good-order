@@ -3111,3 +3111,121 @@ tea           ゆったり時間のお供に、香り豊かな一杯
 soft          食事と一緒に、すっきり爽やかに
 alcohol       乾杯はここから、大人のひととき
 ```
+
+---
+
+# 提供タイミングの指定と、伝票の2枚出し（2026-09-04・実装済み、PR前）
+
+仕様は `docs/specs/serving-timing.md`（確定版）。ブランチ `feat/serving-timing`。
+天真の3つの依頼「FOOD と DRINK 両方の注文は伝票を2枚」「パンケーキ・フレンチトーストは
+でき次第 / 食後」「DRINK は先出し / 食後」を、1つの仕組み「提供タイミング」＋「2枚出し」にまとめた。
+
+## 進め方（design-rules との関係）
+
+1. 先に操作の流れを文章で出し、選択UIの器を3案（A セグメント / B 説明つきカード / C チップ）
+   **HTMLのたたき台**で比較して天真の決定を取った（`.claude/verification/2026-09-04-serving-timing/`）。
+   Figma 連携（MCP）がこのセッションでは未認証で書けなかったため、Figma の代わりに HTML で出した。
+2. 決定: **商品詳細は B（フードの補足は「調理でき次第お持ちします」）、カートは A**、
+   伝票・厨房・完了画面・管理画面はたたき台どおり。
+3. 天真の指示で **Figma と実装の両方を進める**ことになり、実装を先に完了させた。
+   セッション内で Figma を再接続してもらったが、**MCP のツールがこのセッションには現れなかった**
+   （ToolSearch / ListPlugins とも空）。**Figma は新しいセッションで着手すること**（下記「残り」）。
+
+## 実装の要点
+
+| 場所 | 中身 |
+|---|---|
+| `lib/servingTiming.ts`（新規） | 文言・初期値・対象判定・カート行キーを1か所に。他はすべてここを見る |
+| `lib/store.ts` | `CartItem.servingTiming`。行の同一性は「商品ID＋タイミング」（`cartLineKey`）。`addItem` は省略時に初期値を自動で入れる（`menuDataStore` のカテゴリーから引く）。`decrementItem` / `setServingTiming` を追加 |
+| `components/ui/ServingTimingCards.tsx`（新規） | 商品詳細の選択カード（案B）。Option Card 180:167 を土台に説明文とラジオを足した |
+| `components/ui/SegmentedControl.tsx`（新規） | カート行の切替（案A）。**Figma に無い新規部品**。高さ44 |
+| `components/ui/ServingTimingBadge.tsx`（新規） | 読み取り表示。「食後」は墨チップ、初期値は薄い文字。厨房・完了・履歴で共用 |
+| `lib/receipt.ts` | `receiptCopies()` で枚数を決め、`buildReceiptXml()` が1ジョブの中で伝票を N 回組み立てる。見出しは「厨房伝票 1/2」「ドリンク伝票 2/2」。明細の下に提供タイミング（食後は黒帯・倍高） |
+| `supabase/serving_timing.sql`（新規） | `categories.serving_timing_choice` / `order_items.serving_timing` / `place_order` と `claim_print_job` の差し替え / 初期データ |
+| 管理画面「カテゴリ管理」 | 「区分」の下にトグル「提供タイミングをお客様が選べる」 |
+| `app/history/page.tsx` | 再注文の `MenuItem` を `rowToMenuItem` で作るようにした（従来は category/subcategory が "food"/"pancake" 決め打ちで、**再注文した商品のタグが全部「パンケーキ」になっていた**。副次的に修正） |
+
+## 判断: 2枚出しは「1ジョブで2回組み立てる」
+
+ジョブを2つにすると `print_jobs.order_id` の UNIQUE（二重印刷の機構的防止）を崩すことになる。
+1つの `<epos-print>` の中で伝票を2回組み立てて2回 `<cut>` すれば、刷り直しも1操作で2枚出る。
+ニセ・プリンタ（`node scripts/fake-printer.mjs --render`）で2枚・黒帯・右揃えの見出しを確認済み。
+
+## 判断: 値は3値（asap / first / after_meal）で持つ
+
+「標準 / 食後」の2値にすると、後でカテゴリーの区分を変えたときに過去の注文・伝票の意味が変わる。
+NULL は「選択対象外」（テイクアウト・対象外カテゴリー・移行前の注文）。
+
+## 本番データで分かったこと（重要）
+
+**本番のカテゴリーは全14件が「フード」区分だった。「ドリンク」（slug `drink`）「アルコール」（`alcohol`）も。**
+このままだと 2枚出しもドリンクの「先出し / 食後」も一度も効かない。
+`supabase/serving_timing.sql` の初期データ（2-a）でこの2件をドリンク区分に直す。
+天真には報告済み。管理画面「カテゴリ管理」の「区分」からいつでも変えられる。
+
+slug も想定と違った（`frenchtoast` であって `french_toast` ではない）。初期データは slug と名前の両方で拾う。
+
+## ⚠ 流す順番: SQL → マージ
+
+アプリ側は新しい列（`categories.serving_timing_choice` / `order_items.serving_timing`）を前提に SELECT する。
+**SQL を流す前にマージすると、お客様側のカテゴリー取得と厨房画面の明細取得が「列が無い」で失敗する。**
+SQL だけ先に流してもアプリは壊れない。手順: (1) SQL Editor で `serving_timing.sql` を実行 → (2) PR をマージ。
+
+## 副次的に見つけた別件（未対応）
+
+お客様画面のカテゴリータグ・見出しは `SUBCATEGORY_LABEL[slug] ?? slug` で、
+本番の新しいカテゴリー（`brekkie` `hamburger` `frenchtoast` 等）は**英字のスラッグのまま表示**されている。
+DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せるべき。別タスクにした（spawn_task で提案済み）。
+
+## 洋輔さんへの共有資料
+
+`docs/share/2026-09-04-serving-timing.html`。1ファイルで完結（写真は埋め込み）。
+何が変わるか・お客様の3ステップ・店舗側の変化・Q&A・変更点一覧。画面はHTMLで再現したもので、実機のスクリーンショットではない。
+
+## Figma（同日中に追いついた）
+
+セッション中に Figma 連携がつながったので、実装の後追いで起こした。作ったものの一覧は
+`docs/specs/serving-timing.md` の 10 章。スクリーンショットは
+`.claude/verification/2026-09-04-serving-timing/figma-*.png`。`npm run design:figma` は
+「構造・パディング 全ページ問題なし / 新しい違反なし・増えた違反なし」で通っている。
+
+判断と注意:
+- **共通部品 `Order Item Row` に子を足した**（design-rules 6）。末尾に隠しバッジを追加し、
+  BOOLEAN `Show Timing` で出す形にしたので、既存インスタンスには影響しない。
+  変更前後で Kitchen の PC / SP の全行（20行）の文言を突き合わせ、一致を確認した
+- `Cart Item Row` は触らず、`Cart Item Row (Timing)` を別部品として置いた
+- Segmented Control の内側余白は **space/4**（3px はスペーシングのスケールに無い）。実装側も `p-[var(--space-4)]` に揃えた
+- 「食後」チップの文字は **JP/Caption Bold**（12px）。実装側も `type-jp-caption-bold` に揃えた
+- Product Detail の提供タイミング枠は Intro の中に paddingTop 12 で入れ、本文との距離を実装（mt-24）と同じ 24 にした
+- `npm run design:figma` を通すために、**自分の作業以外の既存の構造違反も直した**:
+  Components ページの浮いていた `Frame 3` → 新設 `99 未整理` セクションへ / `00 Foundations` の下パディング 97→100（下のセクションを 3px ずつ押し下げ）/
+  Brand Guideline ページの浮いていた `Frame 1` → `99_ARCHIVE` へ移動（消していない）
+- Order Confirmed の `Order Item Row`（原本と複製）の上下パディングを 10→12（space/12）にした。行は高さ固定 50 なので見た目は変わらない。
+  複製で件数が倍になり「増えた違反」で落ちたため、原本ごと返済した
+
+## 仕上げ（同日）
+
+- **PR #53** を作成（`feat/serving-timing` → `main`）。マージは天真
+- **SQL は天真が本番（`good-order` / `oiropkuvaenebmlicrac`）に実行済み**なのを本番データで確認した
+  （`categories.serving_timing_choice` と、ドリンク・アルコールの `category_type='drink'` が入っている）
+- お客様側（商品詳細・カート・完了・履歴）と `/dev/ui` の実機スクリーンショット（PC 1400 / SP 390）は
+  `.claude/verification/2026-09-04-serving-timing/*-pc-1400.png` / `*-sp-390.png`。
+  管理画面はログインが要るため天真の指示で省略し、PR には Figma のフレームを載せた
+- **スクリーンショットの撮り方（Playwright MCP が繋がらない環境用）**: Playwright のキャッシュにある
+  `chrome-headless-shell` を DevTools Protocol で操作するスクリプトを使った（`localStorage` に
+  カートの中身を先に入れてから撮る）。スクリプトは scratchpad に置いたもので、リポジトリには入れていない。
+  同じ手を使うなら: `~/Library/Caches/ms-playwright/chromium_headless_shell-*/…/chrome-headless-shell --remote-debugging-port=9333`
+  を起動し、`/json/new` でタブを作って `Page.navigate` → `Runtime.evaluate` で seed → `Page.captureScreenshot`
+- **dev サーバーが壊れていた**: HTML は 200 なのに CSS・JS・フォントがすべて 404（`.next/static` が空）。
+  Browser ペインが管理していたサーバーだったので `preview_stop` → `preview_start name=dev` で立て直した。
+  `npm run check`（`next build`）を dev サーバーと同時に走らせたのが原因の可能性がある。
+  **同時に走らせない**か、走らせたあとは dev を再起動すること
+- 2つの Supabase プロジェクトの正体: **`good-order`（NANO、`oiropkuvaenebmlicrac`）が本番**。
+  `good-order-yorkys-shukugawa`（MICRO、`kugmyzvhwzphmuicdken`）は未使用。名前と実態が逆なので注意。
+  本番サイトのJSに埋め込まれた接続先と `.env.local` の両方で確認した
+
+## 残り
+
+- PR #53 のマージ（天真）。マージ後、店舗の実機でパンケーキ＋ドリンクを注文して伝票が2枚出ることを確認する
+- 別タスク: お客様画面のカテゴリータグが英字スラッグのまま出る不具合（spawn_task 済み）
+- 未使用の Supabase プロジェクト `good-order-yorkys-shukugawa`（MICRO）を残すか消すかの判断（天真）

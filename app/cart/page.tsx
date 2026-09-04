@@ -16,12 +16,21 @@ import CartItemRow from "@/components/ui/CartItemRow";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import {
+  canChooseServingTiming,
+  cartLineKey,
+  defaultServingTiming,
+  servingCategoryType,
+  servingTimingOptions,
+} from "@/lib/servingTiming";
 
 export default function CartPage() {
   const router = useRouter();
   const items = useCartStore((s) => s.items);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
+  const setServingTiming = useCartStore((s) => s.setServingTiming);
+  const orderType = useCartStore((s) => s.orderType);
   const totalPrice = useCartStore((s) => s.totalPrice());
   const placeOrder = useCartStore((s) => s.placeOrder);
 
@@ -41,6 +50,22 @@ export default function CartPage() {
     router.prefetch("/complete");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* 提供タイミングを持たない行（移行前に保存されたカートや、カテゴリー読み込み前に
+     入れた商品）に初期値を入れる。選べる商品なのに値が無いと、画面には初期値が出るのに
+     注文には null が乗って伝票に何も印字されない、というズレが起きるため。 */
+  useEffect(() => {
+    if (categories.length === 0) return;
+    for (const ci of items) {
+      if (ci.servingTiming == null && canChooseServingTiming(categories, ci.item, orderType)) {
+        setServingTiming(
+          ci.item.id,
+          null,
+          defaultServingTiming(servingCategoryType(categories, ci.item))
+        );
+      }
+    }
+  }, [categories, items, orderType, setServingTiming]);
 
   const NOT_ACCEPTING_MESSAGE =
     "現在、ご注文の受付を一時停止しています。しばらくしてから再度お試しください。";
@@ -157,20 +182,39 @@ export default function CartPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-[var(--space-16)]">
-            {items.map((ci) => (
-              <CartItemRow
-                key={ci.item.id}
-                image={ci.item.image}
-                categoryLabel={SUBCATEGORY_LABEL[ci.item.subcategory] ?? ci.item.subcategory}
-                categoryColor={resolveTagColor(categories, ci.item.subcategory)}
-                name={ci.item.name}
-                price={ci.item.price}
-                quantity={ci.quantity}
-                onIncrement={() => updateQuantity(ci.item.id, ci.quantity + 1)}
-                onDecrement={() => updateQuantity(ci.item.id, ci.quantity - 1)}
-                onRemove={() => removeItem(ci.item.id)}
-              />
-            ))}
+            {items.map((ci) => {
+              /* 行の同一性は「商品ID ＋ 提供タイミング」（docs/specs/serving-timing.md 3-3）。
+                 同じ商品でも「でき次第」と「食後」は別の行になる */
+              const timing = ci.servingTiming ?? null;
+              const selectable = canChooseServingTiming(categories, ci.item, orderType);
+              const type = servingCategoryType(categories, ci.item);
+              return (
+                <CartItemRow
+                  key={cartLineKey(ci.item.id, timing)}
+                  image={ci.item.image}
+                  categoryLabel={SUBCATEGORY_LABEL[ci.item.subcategory] ?? ci.item.subcategory}
+                  categoryColor={resolveTagColor(categories, ci.item.subcategory)}
+                  name={ci.item.name}
+                  price={ci.item.price}
+                  quantity={ci.quantity}
+                  onIncrement={() => updateQuantity(ci.item.id, ci.quantity + 1, timing)}
+                  onDecrement={() => updateQuantity(ci.item.id, ci.quantity - 1, timing)}
+                  onRemove={() => removeItem(ci.item.id, timing)}
+                  servingTiming={
+                    selectable
+                      ? {
+                          value: timing ?? defaultServingTiming(type),
+                          options: servingTimingOptions(type).map((o) => ({
+                            value: o.value,
+                            label: o.label,
+                          })),
+                          onChange: (next) => setServingTiming(ci.item.id, timing, next),
+                        }
+                      : undefined
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </main>

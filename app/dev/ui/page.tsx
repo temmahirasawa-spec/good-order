@@ -19,6 +19,10 @@ import { MenuCard, MenuCardWide } from "@/components/ui/MenuCard";
 import { MenuCarousel, MenuCarouselWide, RecommendCarousel } from "@/components/ui/MenuCarousel";
 import RecommendCard from "@/components/ui/RecommendCard";
 import CartItemRow from "@/components/ui/CartItemRow";
+import SegmentedControl from "@/components/ui/SegmentedControl";
+import ServingTimingCards from "@/components/ui/ServingTimingCards";
+import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
+import { SERVING_TIMING_TITLE, servingTimingOptions, type ServingTiming } from "@/lib/servingTiming";
 import MenuCategoryCard from "@/components/ui/MenuCategoryCard";
 import SeeMoreButton from "@/components/ui/SeeMoreButton";
 import { AddToCartButton, CartButton, BackButton, LinkButton } from "@/components/ui/Buttons";
@@ -79,9 +83,9 @@ const SAMPLE_PICKUP_ITEMS: PickupItem[] = [
 ];
 
 const SAMPLE_ORDER_ITEMS: OrderCardItem[] = [
-  { orderItemId: "1", name: "パンケーキ プレーン", quantity: 2, cookingStatus: "cooking", isTakeoutItem: false },
-  { orderItemId: "2", name: "アイスコーヒー", quantity: 1, cookingStatus: "done", isTakeoutItem: false },
-  { orderItemId: "3", name: "フレンチフライ", quantity: 1, cookingStatus: "pending", isTakeoutItem: true },
+  { orderItemId: "1", name: "パンケーキ プレーン", quantity: 2, cookingStatus: "cooking", isTakeoutItem: false, servingTiming: "after_meal" },
+  { orderItemId: "2", name: "アイスコーヒー", quantity: 1, cookingStatus: "done", isTakeoutItem: false, servingTiming: "first" },
+  { orderItemId: "3", name: "フレンチフライ", quantity: 1, cookingStatus: "pending", isTakeoutItem: true, servingTiming: null },
 ];
 
 const TAG_COLORS: TagColor[] = [
@@ -108,6 +112,7 @@ const sampleCat: ApiCategory = {
   image_url: asset("/images/pancake/p1.webp"),
   display_order: 1,
   tag_color: "yellow",
+  serving_timing_choice: true,
 };
 
 const sampleVideo = [
@@ -305,6 +310,74 @@ function CheckoutConfirmAlertDemo() {
         onConfirm={() => setOpen(false)}
       />
     </>
+  );
+}
+
+/* ── 提供タイミング（docs/specs/serving-timing.md）のデモ。選択状態を持つ ── */
+function ServingTimingDemo() {
+  const [food, setFood]   = useState<ServingTiming>("asap");
+  const [drink, setDrink] = useState<ServingTiming>("after_meal");
+  const [seg, setSeg]     = useState<ServingTiming>("after_meal");
+  const foodOptions  = servingTimingOptions("food");
+  const drinkOptions = servingTimingOptions("drink");
+  return (
+    <div className="flex flex-col gap-[24px]">
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          商品詳細（案B・説明つきカード）。フード: でき次第 / 食後
+        </p>
+        <div className="flex flex-col gap-[8px]">
+          <p className="type-jp-caption-bold text-text-secondary">{SERVING_TIMING_TITLE}</p>
+          <ServingTimingCards options={foodOptions} value={food} onChange={setFood} />
+        </div>
+      </div>
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">ドリンク: 先出し / 食後</p>
+        <ServingTimingCards options={drinkOptions} value={drink} onChange={setDrink} />
+      </div>
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          カート行（案A・セグメント）。SegmentedControl 単体と、CartItemRow に載せた状態
+        </p>
+        <div className="flex flex-col gap-[12px]">
+          <SegmentedControl
+            ariaLabel={SERVING_TIMING_TITLE}
+            options={foodOptions.map((o) => ({ value: o.value, label: o.label }))}
+            value={seg}
+            onChange={setSeg}
+          />
+          <CartItemRow
+            image={sampleItem.image}
+            categoryLabel="パンケーキ"
+            categoryColor="yellow"
+            name={sampleItem.name}
+            price={sampleItem.price}
+            quantity={1}
+            onIncrement={() => {}}
+            onDecrement={() => {}}
+            onRemove={() => {}}
+            servingTiming={{
+              value: seg,
+              options: foodOptions.map((o) => ({ value: o.value, label: o.label })),
+              onChange: setSeg,
+            }}
+          />
+        </div>
+      </div>
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          ServingTimingBadge（厨房・完了画面・履歴の表示。showDefault=false は「食後」だけ出す）
+        </p>
+        <div className="flex flex-wrap gap-[16px] items-center">
+          <ServingTimingBadge timing="after_meal" />
+          <ServingTimingBadge timing="asap" />
+          <ServingTimingBadge timing="first" />
+          <span className="type-jp-caption text-text-tertiary">
+            showDefault=false: [<ServingTimingBadge timing="asap" showDefault={false} />]
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -537,6 +610,10 @@ export default function UiGalleryPage() {
             onRemove={() => {}}
           />
         </div>
+      </Section>
+
+      <Section title="提供タイミング（ServingTimingCards / SegmentedControl / ServingTimingBadge）">
+        <ServingTimingDemo />
       </Section>
 
       <Section title="BottomViewCartBar">
