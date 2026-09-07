@@ -72,6 +72,25 @@ AI の推奨: **A**。トップの長さを増やさず、区分の存在を伝�
    - 一覧ページの上部 = **Tab Nav**（押すとその見出しへスクロール。トップのタブと同じ）
 8. 写真なしの文字メニュー（`menu-text-rows.md`）は **A 行リスト**で進める（トップの絵がそれで、そのまま同意）
 
-## 8. Figma
+## 8. Figma（2026-09-08 に起こし済み）
 
-着手: 2026-09-08。記録はこの節に追記する。
+| 場所 | 追加したもの |
+|---|---|
+| Components / 02 Buttons & CTAs | `See All Link`（「すべてを見る ›」。Label のテキストプロパティ。Icon は新設の `Name=Chevron Right`） |
+| Components / 03 Navigation | `Menu Section Header`（Eyebrow / Title / Subtitle ＋ BOOLEAN `Show Link`。トップの区画見出し。リンクは Subtitle の行の右）、`List Sub Heading`（Title / Count ＋ `Show Count`。一覧ページのサブカテゴリー見出し）、`Filter Chip` に BOOLEAN `Show Icon`（既定 ON。サブカテゴリーのチップは OFF） |
+| Components / 04 Tags & Steppers | `Plus Button`（36px の丸い「＋」。行の右端用） |
+| Components / 05 Cards | `Menu List Row`（Thumb=None / Image × Cart=Empty / Active。Name / Description / Price ＋ `Show Description`。写真なしの文字の行。高さ 88） |
+| Components / 01 Icons | `Icon` に `Name=Chevron Right` を追加（Chevron Down を回転） |
+| MobileOrder / 注文 / SP | `TOP — 新構成`（キービジュアル → ベストセラー → ドリンク(チップ＋5行) → パンケーキ(5枚) → エッグベネディクト(5枚)。各区画に「すべてを見る」。タブは おすすめ／ドリンク／パンケーキ／…）、`TOP — 新構成（ドリンク：カフェで絞り込み）`（カフェのチップ選択、カフェ5行）、`Category Listing — ドリンク（サブカテゴリー）`（上部は Tab Nav＝トップと同じ下線タブ、本文は List Sub Heading ＋ Menu List Row の縦一覧） |
+| MobileOrder / Categories Management | PC `Template / Categories Management — サブカテゴリー 1180x820`（一覧に ドリンク ＞ カフェ／ソフトドリンク の字下げ行。編集パネルに「親カテゴリー」セレクトと「トップに出す件数」3/5/8/全件）、SP `Category Editing — サブカテゴリー — Mobile 390` |
+
+`npm run design:figma`: 構造・パディング 0件、新しい違反 0件（この節の末尾に結果を記す）。
+
+### 8-1. Figma で決めたこと（相談なしで決めた。覆せる）
+
+- **見出しの「すべてを見る」は Subtitle（日本語名）と同じ行の右**に置いた。たたき台では英語タイトルの右だったが、`EGG BENEDICT` のような長いタイトルが2行に折れるため。
+- 一覧ページの上部は既存の Category Listing と同じ **Header / Open（ロゴ）＋ カテゴリー名**。既存にあった「カスタマイズ／アレルギー」の Filter Bar は、タブと役割がかぶるので一覧ページには置いていない。
+- トップのドリンクの行は、説明文の代わりに**サブカテゴリー名（カフェ／ソフトドリンク…）を小さく**出す。一覧ページの行は商品の説明文。
+- 行の「＋」は 36px（Quantity Stepper の＋と同じ大きさ）。実装ではタップ領域を 44px 以上に広げる。
+- サブカテゴリーのチップは高さ 44px（既存の Filter Chip 36px より大きい。SP のタップ領域の規約に合わせた）。
+- 「トップに出す件数」は管理画面の Admin Chip を 4つ並べた（3 / 5 / 8 / 全件）。SP でも 44px 以上になるよう上下の余白を 12 にした。

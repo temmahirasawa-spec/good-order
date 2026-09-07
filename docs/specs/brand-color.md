@@ -101,3 +101,15 @@ A だけは文字が黒のままで済むので、`accent/contrast` トークン
 - ボタン等の文字色は白（`accent/contrast` を新設して切り替えられるようにする）。
 - Figma: `Color` コレクションに新しいモード **「YORKYS Moss」** を追加し、accent 4色＋on-ink を M1 の派生色で埋める。
   既存の YORKYS モードは触らない（黄色のまま残す）。
+
+## 10. Figma（2026-09-08 に起こし済み）
+
+- `Color` コレクションにモード **`YORKYS Moss`** を追加（4つ目。YORKYS の値を写した上で accent 系だけ差し替え）:
+  `accent/primary #5E6B4A` / `accent/pressed #4B563B` / `accent/deep #444D35` / `accent/subtle #E7E9E5` / `accent/on-ink #97A67F` / `bg/warm #F3F3F0`
+- 変数 **`accent/contrast`** を新設（アクセント色の上に置く文字・アイコンの色）: YORKYS `#1A1A1A`、Demo (Green) `#FFFFFF`、Izakaya `#FFFFFF`、YORKYS Moss `#FFFFFF`
+- **共通コンポーネントの文字色の付け替え**（影響範囲）: アクセント色の塗りの上に載っている文字・アイコンの色を `text/primary` → `accent/contrast` に付け替えた。
+  YORKYS モードでは同じ値（#1A1A1A）なので**今の画面の見た目は変わらない**。対象:
+  `Add to Cart Button`（文字・アイコン）、`Add to Cart Button S`、`Button` の Style=Accent 全サイズ（文字・アイコン）、`Cart Icon Button` の件数、`Filter Chip` State=Selected（文字・アイコン）、`Segmented Control` の選択側の文字、`Pickup Card` の「受け渡し完了」
+- 確認用の画面（MobileOrder / 注文 / SP、モード `YORKYS Moss` を明示）: `TOP — 新構成（モスグリーン）`、`Product Detail — モスグリーン`、`Cart — モスグリーン`
+- 実装側では `app/design-tokens.css` に `--accent-contrast` を足し、アクセント上の文字色をこれに寄せる（実装は別 PR）。
+- 管理画面「表示設定 ＞ ブランドカラー」の器は **3案を出してから**作る（design-rules 1-2）。案出しの際に、天真のメモ（カラーピッカー／読みにくい色の実プレビュー）を織り込む。
