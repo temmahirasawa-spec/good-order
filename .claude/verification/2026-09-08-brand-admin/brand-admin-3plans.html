@@ -1,0 +1,54 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>ブランドカラー設定の3案</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Barlow:wght@500;600&display=swap" rel="stylesheet"><style>
+:root{--ink:#1A1A1A;--sub:#646464;--t3:#999;--line:#DDD;--div:#EDEDED;--bg:#FAFAFA;--bg2:#F5F5F5;--bg3:#EFEFEF;--y:#FAC03D;--m:#5E6B4A;--jp:'Noto Sans JP',sans-serif;--en:Barlow,sans-serif}
+body{margin:0;background:#E8E8E8;font:500 14px/1.5 var(--jp);color:var(--ink)}
+h1{font:700 22px var(--jp);margin:0 0 6px}.note{color:var(--sub);font-size:13px;margin:0 0 24px;max-width:1300px}
+h2{font:700 17px var(--jp);margin:28px 0 12px}
+.row{display:flex;gap:28px;align-items:flex-start}.col{width:420px;flex:0 0 420px}
+.plan{margin:0 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plan b{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;align-items:center;justify-content:center;font-size:13px}.plan .nm{font:700 15px var(--jp)}.plan small{flex-basis:100%;color:var(--sub);font-size:12px;line-height:1.5}.rec{font:700 11px var(--jp);background:#FFF4D6;border:1px solid var(--y);color:#7a5200;padding:2px 8px;border-radius:999px}
+.panel{width:420px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tb{height:56px;display:flex;align-items:center;padding:0 20px;font:700 17px var(--jp);border-bottom:1px solid var(--div)}
+.tabs{display:flex;gap:16px;padding:0 20px;border-bottom:1px solid var(--div)}.tabs span{padding:12px 2px;font-size:13px;color:var(--sub)}.tabs .on{color:var(--ink);font-weight:700;border-bottom:3px solid var(--ink)}
+.body{padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.lab{font:700 13px var(--jp)}.help{font-size:12px;color:var(--sub)}
+.sw{display:flex;gap:10px;flex-wrap:wrap}.sw i{display:block;width:44px;height:44px;border-radius:50%;border:2px solid transparent;box-sizing:border-box}.sw .on{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}.sw div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--sub);width:64px;text-align:center}
+.custom{display:flex;gap:10px;align-items:center}.pick{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);position:relative;overflow:hidden}.pick:after{content:"";position:absolute;inset:0;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}.pick i{position:absolute;inset:6px;border-radius:4px;z-index:1}.hex{height:44px;border:1px solid var(--line);border-radius:8px;padding:0 12px;display:flex;align-items:center;font:600 15px var(--en);flex:1}
+.warn{border:1px solid #F59E0B;background:#FEF3E2;border-radius:8px;padding:10px 12px;font-size:12px;color:#7a4b00}.ok{border:1px solid #16A34A;background:#E3F5E9;border-radius:8px;padding:10px 12px;font-size:12px;color:#0f5a2a}
+.prev{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}.prev .cap{font-size:11px;color:var(--t3);margin-bottom:8px}
+.mini{display:flex;flex-direction:column;gap:8px}.mtabs{display:flex;gap:12px;font-size:12px;color:var(--sub);border-bottom:1px solid var(--div);padding-bottom:6px}.mtabs .on{color:var(--ink);font-weight:700;border-bottom:3px solid var(--ink)}
+.mchips{display:flex;gap:6px}.mchips span{padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-size:11px;background:#fff}.mchips .on{border-color:transparent;font-weight:700}
+.mcta{display:flex;align-items:center;justify-content:space-between;gap:8px}.mbtn{padding:9px 14px;border-radius:999px;font:700 12px var(--jp)}.mtot{display:flex;justify-content:space-between;font-size:12px;padding:8px 10px;border-radius:8px}
+.seg{display:flex;border:1px solid var(--line);border-radius:999px;padding:3px;width:max-content}.seg span{padding:6px 14px;border-radius:999px;font-size:12px;color:var(--sub)}.seg .on{background:var(--ink);color:#fff;font-weight:700}
+.score{font:600 26px var(--en)}.foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--div)}.btn{padding:12px 20px;border-radius:999px;font:700 13px var(--jp)}.btn.dark{background:var(--ink);color:#fff}.btn.out{border:1px solid var(--line)}
+.big{border-radius:12px;padding:14px;border:1px solid var(--line);background:#fff}.badge{display:inline-block;font:700 11px var(--jp);padding:3px 8px;border-radius:999px}
+</style></head><body><div style="padding:28px 32px 40px;width:1400px">
+<h1>管理画面「表示設定 ＞ ブランドカラー」の3案（たたき台）</h1>
+<p class="note">中身は3案とも同じ（プリセット6色／カスタム＝カラーピッカー＋HEX／読みやすさの判定／プレビュー）。器だけ違います。天真さんのメモ「カスタムはカラーピッカー」「読みにくい色は実際にプレビューで見せる」は3案すべてに入れました。SP 版は選んだ案で Figma に起こすときに対で作ります。</p>
+<div class="row">
+<div class="col"><p class="plan"><b>A</b><span class="nm">色を選ぶ → 下でプレビュー</span> <span class="rec">AI推奨</span><small>今の「ベストセラー」設定と同じ縦の流れ。上から順に選ぶだけ。プレビューは小さめ</small></p><div class="panel"><div class="tb">表示設定</div><div class="tabs"><span>動画設定</span><span>ベストセラー</span><span class="on">ブランドカラー</span></div><div class="body">
+<div><div class="lab">ブランドカラー</div><div class="help">ボタン・選択中のチップ・合計の背景など、アクセントに使う色です。</div></div>
+<div class="sw"><div><i class="" style="background:#FAC03D"></i>YORKYS イエロー</div><div><i class="on" style="background:#5E6B4A"></i>オリーブモス</div><div><i class="" style="background:#2E8A36"></i>フォレスト</div><div><i class="" style="background:#CBFA3D"></i>ライム</div><div><i class="" style="background:#C4302A"></i>居酒屋レッド</div><div><i class="" style="background:#35B37E"></i>ミント</div></div>
+<div><div class="lab">カスタム</div><div class="custom"><div class="pick"><i style="background:#5E6B4A"></i></div><div class="hex">#5E6B4A</div></div><div class="help">丸をタップするとカラーピッカーが開きます。HEX を直接入れてもOK。</div></div>
+<div class="ok">✓ 白い文字で読みやすい色です（コントラスト 5.7）</div>
+<div class="prev"><div class="cap">プレビュー（この色で実際にどう見えるか）</div><div class="mini"><div class="mtabs"><span class="on">おすすめ</span><span>ドリンク</span><span>パンケーキ</span></div>
+<div class="mchips"><span class="on" style="background:#5E6B4A;color:#fff">すべて</span><span>カフェ</span><span>ソフトドリンク</span></div>
+<div class="mcta"><span style="font:700 12px var(--jp)">パンケーキ プレーン ¥1,540</span><span class="mbtn" style="background:#5E6B4A;color:#fff">カートに入れる</span></div>
+<div class="mtot" style="background:#E7E9E5"><span>合計（税込）</span><b>¥3,190</b></div></div></div>
+</div><div class="foot"><span class="btn out">元に戻す</span><span class="btn dark">保存する</span></div></div></div>
+<div class="col"><p class="plan"><b>B</b><span class="nm">プレビューが主役</span><small>いちばん上に大きなプレビュー。読みにくい色でも「実際の見え方」を先に見せる。色選びは下</small></p><div class="panel"><div class="tb">表示設定</div><div class="tabs"><span>動画設定</span><span>ベストセラー</span><span class="on">ブランドカラー</span></div><div class="body">
+<div class="big"><div class="cap" style="font-size:11px;color:var(--t3);margin-bottom:8px">プレビュー（お客様の画面）　<span class="badge" style="background:#FEF3E2;color:#7a4b00;border:1px solid #F59E0B">⚠ この色は文字が読みにくいです</span></div><div class="mini"><div class="mtabs"><span class="on">おすすめ</span><span>ドリンク</span><span>パンケーキ</span></div>
+<div class="mchips"><span class="on" style="background:#CBFA3D;color:#fff">すべて</span><span>カフェ</span><span>ソフトドリンク</span></div>
+<div class="mcta"><span style="font:700 12px var(--jp)">パンケーキ プレーン ¥1,540</span><span class="mbtn" style="background:#CBFA3D;color:#fff">カートに入れる</span></div>
+<div class="mtot" style="background:#F4FBE0"><span>合計（税込）</span><b>¥3,190</b></div></div><div class="help" style="margin-top:8px">読みにくい色を選んだときは、警告だけでなく<b>そのままの見え方</b>を出します。下の「文字色」で白／黒を切り替えられます。</div></div>
+<div class="custom"><div class="pick"><i style="background:#CBFA3D"></i></div><div class="hex">#CBFA3D</div><div class="seg"><span>自動</span><span>黒</span><span class="on">白</span></div></div>
+<div class="sw"><div><i class="" style="background:#FAC03D"></i>YORKYS イエロー</div><div><i class="" style="background:#5E6B4A"></i>オリーブモス</div><div><i class="" style="background:#2E8A36"></i>フォレスト</div><div><i class="on" style="background:#CBFA3D"></i>ライム</div><div><i class="" style="background:#C4302A"></i>居酒屋レッド</div><div><i class="" style="background:#35B37E"></i>ミント</div></div>
+</div><div class="foot"><span class="btn out">元に戻す</span><span class="btn dark">保存する</span></div></div></div>
+<div class="col"><p class="plan"><b>C</b><span class="nm">アクセントと文字色を2段で決める</span><small>文字色（自動／黒／白）を明示的に選ぶ。コントラストの数値も出す。こだわる店向け</small></p><div class="panel"><div class="tb">表示設定</div><div class="tabs"><span>動画設定</span><span>ベストセラー</span><span class="on">ブランドカラー</span></div><div class="body">
+<div><div class="lab">1. アクセントの色</div><div class="custom" style="margin-top:6px"><div class="pick"><i style="background:#5E6B4A"></i></div><div class="hex">#5E6B4A</div></div></div>
+<div class="sw"><div><i class="" style="background:#FAC03D"></i>YORKYS イエロー</div><div><i class="on" style="background:#5E6B4A"></i>オリーブモス</div><div><i class="" style="background:#2E8A36"></i>フォレスト</div><div><i class="" style="background:#CBFA3D"></i>ライム</div><div><i class="" style="background:#C4302A"></i>居酒屋レッド</div><div><i class="" style="background:#35B37E"></i>ミント</div></div>
+<div><div class="lab">2. アクセントの上の文字色</div><div class="seg" style="margin-top:6px"><span class="on">自動（白）</span><span>黒</span><span>白</span></div><div class="help">自動は、読みやすい方を選びます。</div></div>
+<div style="display:flex;gap:16px;align-items:center"><div><div class="help">コントラスト</div><div class="score">5.7 <small style="font-size:12px;color:#0f5a2a">✓ AA</small></div></div><div class="prev" style="flex:1"><div class="mini"><div class="mtabs"><span class="on">おすすめ</span><span>ドリンク</span><span>パンケーキ</span></div>
+<div class="mchips"><span class="on" style="background:#5E6B4A;color:#fff">すべて</span><span>カフェ</span><span>ソフトドリンク</span></div>
+<div class="mcta"><span style="font:700 12px var(--jp)">パンケーキ プレーン ¥1,540</span><span class="mbtn" style="background:#5E6B4A;color:#fff">カートに入れる</span></div>
+<div class="mtot" style="background:#E7E9E5"><span>合計（税込）</span><b>¥3,190</b></div></div></div></div>
+</div><div class="foot"><span class="btn out">元に戻す</span><span class="btn dark">保存する</span></div></div></div>
+</div></div></body></html>
