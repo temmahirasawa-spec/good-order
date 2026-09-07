@@ -7,8 +7,9 @@
  *
  * カテゴリごとの表示は「2×2グリッド4件＋もっと見る」から
  * **そのカテゴリの全商品を横スワイプで見るカルーセル**に変更した。
- * 件数制限が無くなったので SeeMoreButton はこのページから外している
- * （カテゴリ一覧ページ /order/[category] 自体はMenuページから引き続き辿れる）。
+ * （2026-09-07 まで注文実績の上位4件に絞る計算が残っていて、ドリンクが4件しか
+ *   出なかった。今は display_order 順の全件。上限 30 件を超えたときだけ
+ *   「すべて見る」でカテゴリ一覧ページ /order/[category] へ送る。）
  *
  * カートへの導線は右下のフローティングカートボタン1つに集約している
  * （下部の「カートを見る」バーは遷移先が同じで冗長だったため廃止）。
@@ -21,6 +22,7 @@ import { FilterBar } from "@/components/ui/FilterBar";
 import { Video16x9 } from "@/components/ui/VideoBlock";
 import { MenuCardM, MenuCardWide } from "@/components/ui/MenuCard";
 import { MenuCarouselM, MenuCarouselWide } from "@/components/ui/MenuCarousel";
+import SeeMoreButton from "@/components/ui/SeeMoreButton";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
@@ -292,7 +294,7 @@ function OrderContent() {
             )}
 
             {/* ── Menu Section ×11（フード7 → ドリンク4） ── */}
-            {categorySections.map(({ category, items }) => {
+            {categorySections.map(({ category, items, total }) => {
               const slug = category.slug;
               return (
                 <section
@@ -319,6 +321,13 @@ function OrderContent() {
                         />
                       ))}
                     </MenuCarouselM>
+                  )}
+                  {total > items.length && (
+                    <SeeMoreButton
+                      label={`${category.name}をすべて見る（${total}件）`}
+                      href={`/order/${slug}`}
+                      className="mx-[var(--space-16)] mt-[var(--space-16)]"
+                    />
                   )}
                 </section>
               );

@@ -86,7 +86,21 @@ export function computeRelatedItems(
     .slice(0, limit);
 }
 
-/* ── サブカテゴリ別の人気アイテム（新TOPページ：11サブカテゴリを縦に並べる用） ── */
+/* ── ホームのカテゴリー区画に出す商品（display_order 順・上限つき） ──
+ * 以前は注文実績の上位4件だけを出していたが、天真の要望（2026-09-07）で
+ * そのカテゴリーの全商品を出すようにした（ドリンク等は4件では足りない）。
+ * 上限（cap）は、100件を超えるような極端な店舗でカルーセルが壊れないための安全弁。
+ * 上限を超えた分は「すべて見る」でカテゴリー一覧ページへ。 */
+export function computeSectionItems(
+  items: MenuItem[],
+  subcategory: string,
+  cap: number
+): { items: MenuItem[]; total: number } {
+  const all = items.filter((i) => i.subcategory === subcategory);
+  return { items: all.slice(0, cap), total: all.length };
+}
+
+/* ── サブカテゴリ別の人気アイテム（旧TOPページの「上位4件」。今は未使用） ── */
 export function computeTopItemsBySubcategory(
   items: MenuItem[],
   subcategory: string,
