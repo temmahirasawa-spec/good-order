@@ -1,0 +1,105 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>ブランドカラー モスグリーン候補</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--t1:#1A1A1A;--t2:#646464;--t3:#999999;--border:#DDDDDD;--divider:#EDEDED;--bg2:#F5F5F5;--jp:'Noto Sans JP',sans-serif;--en:'Barlow',sans-serif}
+*{box-sizing:border-box}body{margin:0;background:#E6E6E6;font-family:var(--jp);color:var(--t1)}
+.sheet{padding:28px 32px 40px;width:1440px}h1{font:700 20px/1.3 var(--jp);margin:0 0 4px}.note{font:500 13px/1.6 var(--jp);color:var(--t2);margin:0 0 16px}
+h2{font:700 16px var(--jp);margin:28px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.cand{background:#fff;border-radius:12px;padding:14px;border:1px solid #cfcfcf}.cand h3{font:700 13px var(--jp);margin:0 0 4px;display:flex;align-items:center;gap:6px}.cand h3 b{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--t1);color:#fff;align-items:center;justify-content:center;font:700 11px var(--en)}.cand code{font:500 12px var(--en);color:var(--t2)}
+.m{font:500 11px/1.5 var(--jp);color:var(--t2);margin:0 0 8px}
+.sws{display:flex;gap:4px;margin-bottom:10px}.sw{flex:1;text-align:center}.sw i{display:block;height:28px;border-radius:6px;border:1px solid rgba(0,0,0,.06)}.sw b{display:block;font:600 9px var(--en);color:var(--t2);margin-top:2px}.sw span{font:500 8px var(--en);color:var(--t3)}
+.ui{background:#FAFAFA;border:1px solid var(--divider);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;font:500 13px var(--jp)}
+.tabs{display:flex;gap:14px;border-bottom:1px solid var(--divider)}.tabs span{padding:4px 0 8px;color:var(--t2);border-bottom:3px solid transparent}.tabs span.on{color:var(--t1);font-weight:700;border-bottom-color:var(--a)}
+.chips{display:flex;gap:6px}.chip{height:32px;padding:0 12px;border-radius:9999px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;font-size:12px}.chip.on{background:var(--a);color:var(--tx);border-color:transparent;font-weight:700}
+.seg{display:flex;padding:3px;border:1px solid var(--border);border-radius:9999px;background:#fff;height:36px}.seg div{flex:1;display:flex;align-items:center;justify-content:center;border-radius:9999px;color:var(--t2);font-size:12px}.seg div.on{background:var(--a);color:var(--tx);font-weight:700}
+.row{display:flex;align-items:center;gap:6px}.cartbtn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;position:relative;font-size:14px}.cartbtn i{position:absolute;right:-2px;top:-4px;background:var(--a);color:var(--tx);border-radius:9999px;padding:0 5px;font:600 9px var(--en);font-style:normal}
+.stepper{display:flex;gap:8px;align-items:center}.stepper b{width:28px;height:28px;border-radius:50%;border:1px solid var(--t1);background:#fff;display:flex;align-items:center;justify-content:center;font:500 14px var(--en)}.stepper span{font:700 13px var(--en)}
+.cta{flex:1;min-width:0;height:40px;border-radius:9999px;background:var(--a);color:var(--tx);display:flex;align-items:center;justify-content:center;font:700 11px var(--jp);white-space:nowrap;padding:0 8px}
+.warm{background:var(--warm);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;font-size:12px}.warm b{font:600 14px var(--en)}
+.ink{background:#1A1A1A;border-radius:8px;padding:8px 10px;display:flex;gap:12px;font-size:12px;color:rgba(255,255,255,.7)}.ink .tab-ink{color:#fff;font-weight:700;border-bottom:2px solid var(--aoi);padding-bottom:2px}
+.adminwrap{display:flex;gap:16px;align-items:flex-start}.acard{width:430px;background:#fff;border:1px solid #cfcfcf;border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:12px}.acard.warn{width:430px}
+.ahead b{display:block;font:700 14px var(--jp)}.ahead span{font:500 12px var(--jp);color:var(--t2)}.alabel{font:700 12px var(--jp)}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.pre{border:1px solid var(--border);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px;align-items:center;font:700 11px var(--jp)}.pre i{display:block;width:100%;height:36px;border-radius:8px}.pre.on{border:2px solid var(--t1)}
+.custom{display:flex;gap:8px;align-items:center}.custom i{width:44px;height:44px;border-radius:8px;border:1px solid var(--border)}.input{height:44px;flex:0 0 120px;border:1px solid var(--border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font:600 14px var(--en);background:#fff}
+.okpill{font:700 12px var(--jp);color:#16A34A;background:#E3F5E9;padding:6px 10px;border-radius:9999px}.ngpill{font:500 11px/1.4 var(--jp);color:#996B00;background:#FEF3E2;padding:6px 10px;border-radius:10px;flex:1}
+.afoot{display:flex;gap:8px;justify-content:flex-end}.btn{height:40px;padding:0 20px;border-radius:9999px;display:flex;align-items:center;font:700 13px var(--jp)}.btn.out{border:1px solid var(--border)}.btn.dark{background:var(--t1);color:#fff}
+</style></head><body><div class="sheet">
+<h1>ブランドカラー ── モスグリーンの候補と、管理画面での設定</h1>
+<p class="note">上段: 候補5色。それぞれの派生色（押した時 / 濃い文字色 / 薄い地 / 墨地用 / 暖色の地）を機械的に作り、実際の部品（タブ・チップ・セグメント・ボタン・合計・墨地）に当てた状態。白文字の読みやすさ（4.5:1 以上で合格）を併記。下段: 管理画面「表示設定」に足すブランドカラーの設定 UI のたたき台。</p>
+<div class="grid"><div class="cand"><h3><b>M1</b>オリーブモス（画像相当） <code>#5E6B4A</code></h3>
+<p class="m">白文字 5.7:1 ／ 黒文字 3.0:1 → ボタンの文字は<b>白</b>。deep の白文字 11.6:1、墨地の on-ink 6.7:1</p>
+<div class="sws"><div class="sw"><i style="background:#5E6B4A"></i><b>primary</b><span>#5E6B4A</span></div><div class="sw"><i style="background:#4B563B"></i><b>pressed</b><span>#4B563B</span></div><div class="sw"><i style="background:#343B29"></i><b>deep</b><span>#343B29</span></div><div class="sw"><i style="background:#E7E9E5"></i><b>subtle</b><span>#E7E9E5</span></div><div class="sw"><i style="background:#97A67F"></i><b>on_ink</b><span>#97A67F</span></div><div class="sw"><i style="background:#F3F3F3"></i><b>warm</b><span>#F3F3F3</span></div></div>
+<div class="ui" style="--a:#5E6B4A;--ap:#4B563B;--ad:#343B29;--as:#E7E9E5;--aoi:#97A67F;--warm:#F3F3F3;--tx:#FFFFFF">
+  <div class="tabs"><span class="on">おすすめ</span><span>パンケーキ</span><span>ドリンク</span></div>
+  <div class="chips"><span class="chip on">でき次第</span><span class="chip">食後</span></div>
+  <div class="seg"><div class="on">先出し</div><div>食後</div></div>
+  <div class="row"><span class="cartbtn">🛒<i>2</i></span><span class="stepper"><b>−</b><span>1</span><b>+</b></span><span class="cta">カートに入れる</span></div>
+  <div class="warm"><span>合計（税込）</span><b>¥3,190</b></div>
+  <div class="ink"><span class="tab-ink">おすすめ</span><span>メニュー</span></div>
+</div></div><div class="cand"><h3><b>M2</b>ディープモス <code>#4F5D3C</code></h3>
+<p class="m">白文字 7.1:1 ／ 黒文字 2.5:1 → ボタンの文字は<b>白</b>。deep の白文字 14.6:1、墨地の on-ink 6.0:1</p>
+<div class="sws"><div class="sw"><i style="background:#4F5D3C"></i><b>primary</b><span>#4F5D3C</span></div><div class="sw"><i style="background:#3D472E"></i><b>pressed</b><span>#3D472E</span></div><div class="sw"><i style="background:#252B1C"></i><b>deep</b><span>#252B1C</span></div><div class="sw"><i style="background:#D9DDD4"></i><b>subtle</b><span>#D9DDD4</span></div><div class="sw"><i style="background:#899F6A"></i><b>on_ink</b><span>#899F6A</span></div><div class="sw"><i style="background:#E5E5E5"></i><b>warm</b><span>#E5E5E5</span></div></div>
+<div class="ui" style="--a:#4F5D3C;--ap:#3D472E;--ad:#252B1C;--as:#D9DDD4;--aoi:#899F6A;--warm:#E5E5E5;--tx:#FFFFFF">
+  <div class="tabs"><span class="on">おすすめ</span><span>パンケーキ</span><span>ドリンク</span></div>
+  <div class="chips"><span class="chip on">でき次第</span><span class="chip">食後</span></div>
+  <div class="seg"><div class="on">先出し</div><div>食後</div></div>
+  <div class="row"><span class="cartbtn">🛒<i>2</i></span><span class="stepper"><b>−</b><span>1</span><b>+</b></span><span class="cta">カートに入れる</span></div>
+  <div class="warm"><span>合計（税込）</span><b>¥3,190</b></div>
+  <div class="ink"><span class="tab-ink">おすすめ</span><span>メニュー</span></div>
+</div></div><div class="cand"><h3><b>M3</b>フォレストモス <code>#465535</code></h3>
+<p class="m">白文字 8.0:1 ／ 黒文字 2.2:1 → ボタンの文字は<b>白</b>。deep の白文字 16.1:1、墨地の on-ink 5.5:1</p>
+<div class="sws"><div class="sw"><i style="background:#465535"></i><b>primary</b><span>#465535</span></div><div class="sw"><i style="background:#343F27"></i><b>pressed</b><span>#343F27</span></div><div class="sw"><i style="background:#1D2316"></i><b>deep</b><span>#1D2316</span></div><div class="sw"><i style="background:#D2D7CB"></i><b>subtle</b><span>#D2D7CB</span></div><div class="sw"><i style="background:#7F9A60"></i><b>on_ink</b><span>#7F9A60</span></div><div class="sw"><i style="background:#DEDEDE"></i><b>warm</b><span>#DEDEDE</span></div></div>
+<div class="ui" style="--a:#465535;--ap:#343F27;--ad:#1D2316;--as:#D2D7CB;--aoi:#7F9A60;--warm:#DEDEDE;--tx:#FFFFFF">
+  <div class="tabs"><span class="on">おすすめ</span><span>パンケーキ</span><span>ドリンク</span></div>
+  <div class="chips"><span class="chip on">でき次第</span><span class="chip">食後</span></div>
+  <div class="seg"><div class="on">先出し</div><div>食後</div></div>
+  <div class="row"><span class="cartbtn">🛒<i>2</i></span><span class="stepper"><b>−</b><span>1</span><b>+</b></span><span class="cta">カートに入れる</span></div>
+  <div class="warm"><span>合計（税込）</span><b>¥3,190</b></div>
+  <div class="ink"><span class="tab-ink">おすすめ</span><span>メニュー</span></div>
+</div></div><div class="cand"><h3><b>M4</b>セージモス <code>#6B7A56</code></h3>
+<p class="m">白文字 4.6:1 ／ 黒文字 3.8:1 → ボタンの文字は<b>白</b>。deep の白文字 9.3:1、墨地の on-ink 7.7:1</p>
+<div class="sws"><div class="sw"><i style="background:#6B7A56"></i><b>primary</b><span>#6B7A56</span></div><div class="sw"><i style="background:#596547"></i><b>pressed</b><span>#596547</span></div><div class="sw"><i style="background:#414A34"></i><b>deep</b><span>#414A34</span></div><div class="sw"><i style="background:#F4F5F3"></i><b>subtle</b><span>#F4F5F3</span></div><div class="sw"><i style="background:#A3B190"></i><b>on_ink</b><span>#A3B190</span></div><div class="sw"><i style="background:#FFFFFF"></i><b>warm</b><span>#FFFFFF</span></div></div>
+<div class="ui" style="--a:#6B7A56;--ap:#596547;--ad:#414A34;--as:#F4F5F3;--aoi:#A3B190;--warm:#FFFFFF;--tx:#FFFFFF">
+  <div class="tabs"><span class="on">おすすめ</span><span>パンケーキ</span><span>ドリンク</span></div>
+  <div class="chips"><span class="chip on">でき次第</span><span class="chip">食後</span></div>
+  <div class="seg"><div class="on">先出し</div><div>食後</div></div>
+  <div class="row"><span class="cartbtn">🛒<i>2</i></span><span class="stepper"><b>−</b><span>1</span><b>+</b></span><span class="cta">カートに入れる</span></div>
+  <div class="warm"><span>合計（税込）</span><b>¥3,190</b></div>
+  <div class="ink"><span class="tab-ink">おすすめ</span><span>メニュー</span></div>
+</div></div><div class="cand"><h3><b>M5</b>カーキモス <code>#6A6E45</code></h3>
+<p class="m">白文字 5.3:1 ／ 黒文字 3.3:1 → ボタンの文字は<b>白</b>。deep の白文字 11.3:1、墨地の on-ink 7.2:1</p>
+<div class="sws"><div class="sw"><i style="background:#6A6E45"></i><b>primary</b><span>#6A6E45</span></div><div class="sw"><i style="background:#555837"></i><b>pressed</b><span>#555837</span></div><div class="sw"><i style="background:#3A3C26"></i><b>deep</b><span>#3A3C26</span></div><div class="sw"><i style="background:#E8E9E2"></i><b>subtle</b><span>#E8E9E2</span></div><div class="sw"><i style="background:#A6AB79"></i><b>on_ink</b><span>#A6AB79</span></div><div class="sw"><i style="background:#F2F2F2"></i><b>warm</b><span>#F2F2F2</span></div></div>
+<div class="ui" style="--a:#6A6E45;--ap:#555837;--ad:#3A3C26;--as:#E8E9E2;--aoi:#A6AB79;--warm:#F2F2F2;--tx:#FFFFFF">
+  <div class="tabs"><span class="on">おすすめ</span><span>パンケーキ</span><span>ドリンク</span></div>
+  <div class="chips"><span class="chip on">でき次第</span><span class="chip">食後</span></div>
+  <div class="seg"><div class="on">先出し</div><div>食後</div></div>
+  <div class="row"><span class="cartbtn">🛒<i>2</i></span><span class="stepper"><b>−</b><span>1</span><b>+</b></span><span class="cta">カートに入れる</span></div>
+  <div class="warm"><span>合計（税込）</span><b>¥3,190</b></div>
+  <div class="ink"><span class="tab-ink">おすすめ</span><span>メニュー</span></div>
+</div></div></div>
+<h2>管理画面「表示設定」── ブランドカラー（プリセット＋カスタム HEX、プレビューと読みやすさの判定）</h2>
+
+<div class="adminwrap"><div class="acard">
+  <div class="ahead"><b>ブランドカラー</b><span>ボタン・選択中の色。お客様の画面全体で使われます</span></div>
+  <div class="alabel">プリセット</div>
+  <div class="presets">
+    <div class="pre"><i style="background:#FAC03D"></i><span>YORKYS イエロー</span></div>
+    <div class="pre on"><i style="background:#5E6B4A"></i><span>モスグリーン</span></div>
+    <div class="pre"><i style="background:#C4302A"></i><span>居酒屋レッド</span></div>
+    <div class="pre"><i style="background:#35B37E"></i><span>デモグリーン</span></div>
+  </div>
+  <div class="alabel">カスタム</div>
+  <div class="custom"><i style="background:#5E6B4A"></i><div class="input">#5E6B4A</div><div class="okpill">白文字で 5.7:1 ・読めます</div></div>
+  <div class="alabel">プレビュー</div>
+  <div class="ui small" style="--a:#5E6B4A;--ap:#4F5C3D;--ad:#3E4A2F;--as:#F1F3EC;--aoi:#8A9A76;--warm:#F5F6F1;--tx:#FFFFFF">
+    <div class="tabs"><span class="on">おすすめ</span><span>パンケーキ</span></div>
+    <div class="row"><span class="stepper"><b>−</b><span>1</span><b>+</b></span><span class="cta">カートに入れる</span></div>
+  </div>
+  <div class="afoot"><div class="btn out">キャンセル</div><div class="btn dark">保存する</div></div>
+</div>
+<div class="acard warn">
+  <div class="ahead"><b>読みにくい色を選んだとき</b></div>
+  <div class="custom"><i style="background:#C8D2B0"></i><div class="input">#C8D2B0</div><div class="ngpill">白 1.6:1 ／ 黒 12.8:1 → 黒文字にしますが、薄すぎて選択中が分かりにくくなります</div></div>
+</div></div>
+</div></body></html>

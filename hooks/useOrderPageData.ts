@@ -13,18 +13,21 @@ import {
   pickDrinkCategories,
   computeHeroItems,
   computeTopItems,
-  computeTopItemsBySubcategory,
+  computeSectionItems,
   computeBestSellerItems,
 } from "@/lib/orderHome";
 import type { MenuItem } from "@/lib/menu";
 
 const ORDER_COUNT_WINDOW_DAYS = 14;
-const SECTION_ITEM_LIMIT = 4;
+/* ホームのカテゴリー区画に出す上限。全件表示だが、極端な店舗でカルーセルが壊れないための安全弁 */
+const SECTION_ITEM_CAP = 30;
 const BEST_SELLER_LIMIT = 8;
 
 export interface CategorySection {
   category: ApiCategory;
   items: MenuItem[];
+  /** そのカテゴリーの全件数。items が上限で切られているときに「すべて見る」を出す */
+  total: number;
 }
 
 export interface UseOrderPageDataResult {
@@ -156,7 +159,7 @@ export function useOrderPageData(): UseOrderPageDataResult {
     return orderedCats
       .map((category) => ({
         category,
-        items: computeTopItemsBySubcategory(allItems, category.slug, orderCounts, SECTION_ITEM_LIMIT),
+        ...computeSectionItems(allItems, category.slug, SECTION_ITEM_CAP),
       }))
       // 出せる商品が1つも無いカテゴリは、見出しごと出さない。
       //   allItems は is_available=true だけなので、全品を販売停止にすれば
