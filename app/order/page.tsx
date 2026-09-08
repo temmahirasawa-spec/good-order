@@ -3,7 +3,7 @@
 /**
  * TOPページ（Step3-C、Figma: TOP — 新構成 1494:10980、docs/specs/home-layout.md）
  * Header → TabNav（scrollspy）→ FilterBar → ヒーロー動画 →
- * Best Seller（MenuCardWide カルーセル）→ ドリンク → フード の区画
+ * Best Seller（MenuCardWide カルーセル）→ カテゴリーの区画（管理画面の並び順）
  *
  * 各区画は「上位 top_limit 件（既定5）＋ 見出し右の『すべてを見る』」。
  * 残りは縦一覧の /order/[category] へ送る（2026-09-08 天真の決定。
@@ -271,7 +271,7 @@ function OrderContent() {
             </section>
             )}
 
-            {/* ── カテゴリーの区画（ドリンク → フード） ── */}
+            {/* ── カテゴリーの区画（管理画面「カテゴリ管理」の並び順） ── */}
             {categorySections.map((sec) => {
               const { category, listStyle, chips } = sec;
               const slug = category.slug;

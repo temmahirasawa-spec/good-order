@@ -42,13 +42,14 @@ export default function MenuSectionHeader({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-[var(--space-4)] px-[var(--space-16)] ${className}`}>
-      {eyebrow && <p className="type-jp-label text-text-secondary">{eyebrow}</p>}
-      {en && <p className={`${EN_SIZE_CLASS[enSize]} text-text-primary`}>{en}</p>}
-      <div className="flex items-center justify-between gap-[var(--space-12)]">
-        <p className={`${JP_SIZE_CLASS[jpSize]} text-text-secondary min-w-0`}>{jp}</p>
-        {seeAllHref && <SeeAllLink href={seeAllHref} className="-my-[var(--space-12)]" />}
+    <div className={`flex items-end gap-[var(--space-12)] px-[var(--space-16)] ${className}`}>
+      <div className="flex flex-1 flex-col gap-[var(--space-4)] min-w-0">
+        {eyebrow && <p className="type-jp-label text-text-secondary">{eyebrow}</p>}
+        {en && <p className={`${EN_SIZE_CLASS[enSize]} text-text-primary`}>{en}</p>}
+        <p className={`${JP_SIZE_CLASS[jpSize]} text-text-secondary`}>{jp}</p>
       </div>
+      {/* タップ領域の上下 6px ぶんだけ下に食い込ませ、見た目の 32px の下端を日本語名の下端に揃える */}
+      {seeAllHref && <SeeAllLink href={seeAllHref} className="-mb-[6px]" />}
     </div>
   );
 }

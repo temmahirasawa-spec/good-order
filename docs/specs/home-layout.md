@@ -88,7 +88,7 @@ AI の推奨: **A**。トップの長さを増やさず、区分の存在を伝�
 
 ### 8-1. Figma で決めたこと（相談なしで決めた。覆せる）
 
-- **見出しの「すべてを見る」は Subtitle（日本語名）と同じ行の右**に置いた。たたき台では英語タイトルの右だったが、`EGG BENEDICT` のような長いタイトルが2行に折れるため。
+- **見出しの「すべてを見る」は白塗り・モスの線のボタン（高さ 32）にして、見出しの右・日本語名に下揃え**（案C、2026-09-08 夜の天真の決定。文字のリンクだと目立たなすぎるため）。英語名が長いときはボタンと被らず、英語名側が折り返す。
 - 一覧ページの上部は既存の Category Listing と同じ **Header / Open（ロゴ）＋ カテゴリー名**。既存にあった「カスタマイズ／アレルギー」の Filter Bar は、タブと役割がかぶるので一覧ページには置いていない。
 - トップのドリンクの行は、説明文の代わりに**サブカテゴリー名（カフェ／ソフトドリンク…）を小さく**出す。一覧ページの行は商品の説明文。
 - 行の「＋」は 36px（Quantity Stepper の＋と同じ大きさ）。実装ではタップ領域を 44px 以上に広げる。
@@ -101,7 +101,7 @@ AI の推奨: **A**。トップの長さを増やさず、区分の存在を伝�
 |---|---|
 | `supabase/category_subcategories.sql`（新規） | `categories.parent_id`（自己参照、親を消すと子は親なしに戻る）、`top_limit`（既定 5、0 = 全件） |
 | `lib/api.ts` | `ApiCategory` に `parent_id / top_limit / list_style`。SQL を流す前の DB では旧列で読み直して既定値を補う（安全弁） |
-| `lib/orderHome.ts` | `orderHomeCategories`（親のみ、ドリンク → フード）、`childCategories`、`itemsOfCategory`（親＋子の商品）、`applyTopLimit`、`subcategoryChips` |
+| `lib/orderHome.ts` | `orderHomeCategories`（親のみ、display_order 順。区分では並べ替えない）、`childCategories`、`itemsOfCategory`（親＋子の商品）、`applyTopLimit`、`subcategoryChips` |
 | `hooks/useOrderPageData.ts` | `CategorySection` に `children / allItems / items(上位N) / total / topLimit / listStyle / chips` |
 | `app/order/page.tsx` | 区画の見出しは `MenuSectionHeader`（右に「すべてを見る」）。サブカテゴリーがあれば `SubcategoryChips`（押すとその区分の上位 N 件）。文字リストの区画は `MenuListRow` の縦並び |
 | `app/order/[category]/page.tsx` | 見出しは DB から。サブカテゴリーがあれば sticky の `TabNav`（トップと同じ下線タブ。押すと見出しへスクロール）＋ `ListSubHeading` で区切る。親に直接ぶら下がる商品は末尾「その他」 |
@@ -110,3 +110,8 @@ AI の推奨: **A**。トップの長さを増やさず、区分の存在を伝�
 
 - 2026-09-07 の PR #60（トップに全件）は、この実装で上書きされた（`SECTION_ITEM_CAP` と `SeeMoreButton` の使用は廃止。`SeeMoreButton` の部品は `/dev/ui` 用に残す）。
 - 商品は今までどおり1つのカテゴリーに属する（`menu_items.category_id`）。サブカテゴリーを作ったら、商品の編集でカテゴリーを子に付け替える。
+
+### 9-1. 並び順の変更（2026-09-08 夜）
+
+- 「ドリンクを最上部に固定」（2 の並び）は**取り下げ**。トップの区画とタブは、管理画面「カテゴリ管理」の並び順（display_order）そのまま。
+  ドリンクを上に出したいときは、カテゴリ管理でドリンクを上に動かす（天真が実際に試して、その方が自由でよいと判断）。

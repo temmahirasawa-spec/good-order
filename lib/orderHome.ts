@@ -4,7 +4,7 @@
  *
  * 2026-09-08（docs/specs/home-layout.md / menu-text-rows.md）:
  *   - カテゴリーは2階層（parent_id）。トップの区画とタブは親だけ。
- *   - トップの並びは ドリンク → フード（ベストセラーの次にドリンク）。
+ *   - トップの区画の並びは管理画面の並び順（display_order）そのまま。区分では並べ替えない。
  *   - 各区画は上位 top_limit 件（既定5、0=全件）＋「すべてを見る」。
  *   - 一覧の見せ方（list_style）は写真の有無から自動判定できる。
  */
@@ -38,14 +38,12 @@ export function childCategories(categories: ApiCategory[], parentId: string): Ap
   return categories.filter((c) => c.parent_id === parentId).sort(byDisplayOrder);
 }
 
-/* ── トップの区画の並び: ドリンク（親）→ フード（親）。それぞれ display_order 順 ──
- *   ドリンクをベストセラーの直後に置く（2026-09-08 天真の決定）。 */
+/* ── トップの区画の並び: 親カテゴリーを display_order 順に ──
+ *   区分（フード／ドリンク）では並べ替えない。ドリンクを上に出したければ、
+ *   管理画面「カテゴリ管理」で並び替える（2026-09-08 夜、天真の決定。
+ *   同日昼の「ドリンクを最上部に固定」は、管理画面で自由に動かせる方がよいので取り下げ）。 */
 export function orderHomeCategories(categories: ApiCategory[]): ApiCategory[] {
-  const parents = topLevelCategories(categories);
-  return [
-    ...pickDrinkCategories(parents).sort(byDisplayOrder),
-    ...pickFoodCategories(parents).sort(byDisplayOrder),
-  ];
+  return topLevelCategories(categories).sort(byDisplayOrder);
 }
 
 /* ── 親カテゴリー（＋そのサブカテゴリー）に属する商品。並びは items の並び（display_order）のまま ── */

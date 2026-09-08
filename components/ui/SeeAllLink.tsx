@@ -1,9 +1,12 @@
 "use client";
 
 /**
- * 「すべてを見る ›」（Figma: Components / 02 Buttons & CTAs / See All Link、2026-09-08 追加）
+ * 「すべてを見る ›」ボタン（Figma: Components / 02 Buttons & CTAs / See All Link、2026-09-08）
  * トップの各区画の見出し右に置き、縦一覧の /order/[category] へ送る。
- * 文字は JP/Body Bold の text-secondary、右に Chevron Right。高さ 44 でタップ領域を確保。
+ *
+ * 白の塗り・1.5px のアクセント線・文字とアイコンもアクセント色。角丸 full、高さ 32。
+ * 文字のリンクだと目立たなすぎる、という天真の指摘（2026-09-08）でボタンにした。
+ * 見た目は 32px だが、タップ領域は上下に 6px ずつ足して 44px を確保する。
  */
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
@@ -20,10 +23,12 @@ export default function SeeAllLink({
   return (
     <Link
       href={href}
-      className={`pressable flex items-center gap-[var(--space-2)] h-[var(--size-touch-min)] pl-[var(--space-8)] shrink-0 ${className}`}
+      className={`pressable flex items-center py-[6px] shrink-0 ${className}`}
     >
-      <span className="type-jp-body-bold text-text-secondary whitespace-nowrap">{label}</span>
-      <Icon name="chevron-right" className="w-4 h-4 text-text-secondary shrink-0" />
+      <span className="flex items-center gap-[var(--space-2)] h-[32px] pl-[var(--space-12)] pr-[var(--space-8)] rounded-full bg-surface-white border-[1.5px] border-accent-primary">
+        <span className="type-jp-caption-bold text-accent-primary whitespace-nowrap">{label}</span>
+        <Icon name="chevron-right" className="w-4 h-4 text-accent-primary shrink-0" />
+      </span>
     </Link>
   );
 }
