@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/Icon";
 
-/* ── メインCTA（大）。accent/primary 塗り × 黒文字。押下時は accent/pressed ── */
+/* ── メインCTA（大）。accent/primary 塗り × accent/contrast の文字（黄なら墨、モスなら白）。押下時は accent/pressed ── */
 export function AddToCartButton({
   label,
   onClick,
@@ -26,7 +26,7 @@ export function AddToCartButton({
       disabled={disabled}
       className={`btn-pill flex gap-[var(--space-8)] h-[var(--size-control-lg)] items-center justify-center rounded-full bg-accent-primary active:bg-accent-pressed disabled:opacity-40 w-full shadow-[var(--shadow-card)] ${className}`}
     >
-      <span className="type-jp-body-bold text-text-primary whitespace-nowrap">
+      <span className="type-jp-body-bold text-accent-contrast whitespace-nowrap">
         {label}
       </span>
     </button>
@@ -51,7 +51,7 @@ export function AddToCartButtonS({
       onClick={onClick}
       className={`btn-pill flex h-[32px] items-center justify-center rounded-full bg-accent-primary active:bg-accent-pressed px-[var(--space-12)] ${className}`}
     >
-      <span className="type-jp-caption-bold text-text-primary whitespace-nowrap">
+      <span className="type-jp-caption-bold text-accent-contrast whitespace-nowrap">
         {label}
       </span>
     </button>
@@ -79,7 +79,7 @@ export function CartButton({
         <Icon name="cart" className="absolute left-0 top-[8px] w-4 h-4 text-text-primary" />
         {count > 0 && (
           <span className="absolute left-[11px] top-0 bg-accent-primary rounded-full px-[5px] py-px">
-            <span className="font-en font-semibold text-[10px] leading-normal text-text-primary whitespace-nowrap tabular-nums">
+            <span className="font-en font-semibold text-[10px] leading-normal text-accent-contrast whitespace-nowrap tabular-nums">
               {count}
             </span>
           </span>

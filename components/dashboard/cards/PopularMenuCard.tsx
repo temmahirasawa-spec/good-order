@@ -56,7 +56,7 @@ export default function PopularMenuCard({
             type="button"
             onClick={() => onTabChange(t.key)}
             className={`px-[var(--space-12)] py-[6px] rounded-[var(--radius-full)] type-jp-caption-bold whitespace-nowrap ${
-              tab === t.key ? "bg-accent-primary text-text-primary" : "bg-bg-tertiary text-text-primary"
+              tab === t.key ? "bg-accent-primary text-accent-contrast" : "bg-bg-tertiary text-text-primary"
             }`}
           >
             {t.label}

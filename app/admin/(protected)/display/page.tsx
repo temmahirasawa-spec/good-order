@@ -3,9 +3,10 @@
 /**
  * 表示設定（旧「店舗設定」）。
  *
- * タブは2つ。
- *   動画設定     … お客様側2か所の見せ方。2枚目は色 / 画像 / 動画 を切り替えられる
- *   ベストセラー … メニュー管理のモーダルから移設したもの（新機能ではない）
+ * タブは3つ。
+ *   動画設定       … お客様側2か所の見せ方。2枚目は色 / 画像 / 動画 を切り替えられる
+ *   ベストセラー   … メニュー管理のモーダルから移設したもの（新機能ではない）
+ *   ブランドカラー … お客様画面のアクセント色（docs/specs/brand-color.md、2026-09-08）
  *
  * 動画設定の保存は操作のたびに即時（＝明示的な「保存」ボタンは置かない）。
  * トグル・タイプ切替・色選択は楽観的更新で、失敗したときだけ元に戻す（CLAUDE.md 4章）。
@@ -23,6 +24,8 @@ import DisplayTabs, { type DisplayTabId } from "@/components/admin/display/Displ
 import BestSellerPanel, {
   type BestSellerCandidate,
 } from "@/components/admin/display/BestSellerPanel";
+import BrandColorPanel from "@/components/admin/display/BrandColorPanel";
+import { fetchBrandAccent, saveBrandAccent } from "@/lib/brandColor";
 import { fetchCategories, type ApiCategory } from "@/lib/api";
 import {
   fetchBestSellerSetting,
@@ -90,6 +93,19 @@ export default function DisplaySettingsPage() {
   const [bestSeller, setBestSeller] = useState<BestSellerSetting | null>(null);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [candidates, setCandidates] = useState<BestSellerCandidate[]>([]);
+  /* ブランドカラー。undefined = 読み込み中、null = 未設定（既定色） */
+  const [brandAccent, setBrandAccent] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setBrandAccent(await fetchBrandAccent());
+      } catch (e) {
+        console.error("[display] brand accent fetch failed:", e);
+        setBrandAccent(null);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     void (async () => setMediaMap(await fetchStoreMedia()))();
@@ -305,6 +321,25 @@ export default function DisplaySettingsPage() {
                         }
                       />
                     )}
+                  </SettingsSection>
+                </>
+              ) : tab === "brand" ? (
+                <>
+                  <p className="type-jp-caption text-text-secondary">
+                    お客様の画面のボタンやチップに使う色（ブランドカラー）を決めます。プリセットから選ぶか、カスタムで好きな色を指定できます。
+                  </p>
+
+                  <SettingsSection
+                    title="ブランドカラー"
+                    description="ボタン・選択中のチップ・合計の背景など、アクセントに使う色です。保存するとお客様の画面に反映されます。"
+                  >
+                    <BrandColorPanel
+                      saved={brandAccent}
+                      onSave={async (hex) => {
+                        await saveBrandAccent(hex);
+                        setBrandAccent(hex);
+                      }}
+                    />
                   </SettingsSection>
                 </>
               ) : (

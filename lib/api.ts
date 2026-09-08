@@ -27,6 +27,9 @@ export function invalidateCategoriesCache(): void {
 /** カテゴリー見出しの文字サイズ。既存のデザイントークンに対応する */
 export type HeadingSize = "large" | "medium" | "small";
 
+/** 一覧の見せ方（supabase/category_list_style.sql）。auto = 写真が1枚も無ければ文字リスト */
+export type ListStyle = "auto" | "photo" | "list";
+
 export interface ApiCategory {
   id: string;
   slug: string;
@@ -47,6 +50,12 @@ export interface ApiCategory {
   tag_color: TagColor;
   /** お客様が提供タイミング（でき次第 / 先出し / 食後）を選べるカテゴリーか（supabase/serving_timing.sql） */
   serving_timing_choice: boolean;
+  /** 親カテゴリー。NULL = 親（トップの区画・タブになる）。ありならその親の中のサブカテゴリー（supabase/category_subcategories.sql） */
+  parent_id: string | null;
+  /** トップの区画に出す件数。0 = 全件（同上） */
+  top_limit: number;
+  /** 一覧の見せ方（supabase/category_list_style.sql） */
+  list_style: ListStyle;
 }
 
 export type ApiMediaItem = { type: "image" | "video"; url: string };
@@ -107,14 +116,35 @@ export async function fetchMenuItemOptionsForItem(menuItemId: string): Promise<A
   return (data ?? []) as ApiMenuItemOption[];
 }
 
-/* ── カテゴリー一覧（display_order 順） ── */
+/* ── カテゴリー一覧（display_order 順） ──
+ *   parent_id / top_limit / list_style は 2026-09-08 の SQL（category_subcategories.sql /
+ *   category_list_style.sql）で増えた列。SQL を流す前のDBでは「列が無い」エラーになるので、
+ *   そのときだけ旧列で読み直して既定値を補う（お客様の画面が真っ白になるのを避ける安全弁）。 */
+const CATEGORY_COLUMNS_BASE =
+  "id, slug, name, caption, description, en_size, jp_size, category_type, image_url, display_order, tag_color, serving_timing_choice";
+const CATEGORY_COLUMNS_2026_09 = "parent_id, top_limit, list_style";
+
 export async function fetchCategories(): Promise<ApiCategory[]> {
+  const full = await supabase
+    .from("categories")
+    .select(`${CATEGORY_COLUMNS_BASE}, ${CATEGORY_COLUMNS_2026_09}`)
+    .order("display_order");
+  if (!full.error) return (full.data ?? []) as ApiCategory[];
+
+  // 42703 = undefined_column。それ以外のエラーはそのまま投げる
+  if (full.error.code !== "42703") throw full.error;
+  console.warn("[api] categories に新しい列がありません。supabase/category_subcategories.sql と category_list_style.sql を流してください。");
   const { data, error } = await supabase
     .from("categories")
-    .select("id, slug, name, caption, description, en_size, jp_size, category_type, image_url, display_order, tag_color, serving_timing_choice")
+    .select(CATEGORY_COLUMNS_BASE)
     .order("display_order");
   if (error) throw error;
-  return (data ?? []) as ApiCategory[];
+  return (data ?? []).map((row) => ({
+    ...(row as Omit<ApiCategory, "parent_id" | "top_limit" | "list_style">),
+    parent_id: null,
+    top_limit: 5,
+    list_style: "auto" as const,
+  }));
 }
 
 /* ── slug → category_id マップを構築（全件は 30秒キャッシュ） ── */

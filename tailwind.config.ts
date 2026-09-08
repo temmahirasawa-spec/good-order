@@ -42,6 +42,8 @@ const config: Config = {
           pressed: "var(--color-accent-pressed)",
           deep: "var(--color-accent-deep)",
           subtle: "var(--color-accent-subtle)",
+          /* アクセントの上の文字色（白か墨）。ボタン・選択中のチップの文字はこれ */
+          contrast: "var(--color-accent-contrast)",
         },
         text: {
           primary: "var(--color-text-primary)",

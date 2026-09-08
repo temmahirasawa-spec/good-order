@@ -1,15 +1,19 @@
 "use client";
 
 /**
- * TOPページ（Step3-C、Figma: TOP 32:4）
+ * TOPページ（Step3-C、Figma: TOP — 新構成 1494:10980、docs/specs/home-layout.md）
  * Header → TabNav（scrollspy）→ FilterBar → ヒーロー動画 →
- * Best Seller（MenuCardWide カルーセル）→ Menu Section ×11（MenuCardM カルーセル＋ドット）
+ * Best Seller（MenuCardWide カルーセル）→ ドリンク → フード の区画
  *
- * カテゴリごとの表示は「2×2グリッド4件＋もっと見る」から
- * **そのカテゴリの全商品を横スワイプで見るカルーセル**に変更した。
- * （2026-09-07 まで注文実績の上位4件に絞る計算が残っていて、ドリンクが4件しか
- *   出なかった。今は display_order 順の全件。上限 30 件を超えたときだけ
- *   「すべて見る」でカテゴリ一覧ページ /order/[category] へ送る。）
+ * 各区画は「上位 top_limit 件（既定5）＋ 見出し右の『すべてを見る』」。
+ * 残りは縦一覧の /order/[category] へ送る（2026-09-08 天真の決定。
+ * 2026-09-07 の「全件をカルーセル」は、ユーザーのメンタルモデルに合わないので取り下げ）。
+ *
+ * 区画の中身は2種類:
+ *   写真カード … MenuCardM の横スワイプ（フード）
+ *   文字の行   … MenuListRow の縦並び（写真の無いドリンクなど。docs/specs/menu-text-rows.md）
+ * サブカテゴリーがある区画は、見出しの下にチップ（すべて／カフェ／…）が並び、
+ * 押すとその区分の上位 N 件に入れ替わる。
  *
  * カートへの導線は右下のフローティングカートボタン1つに集約している
  * （下部の「カートを見る」バーは遷移先が同じで冗長だったため廃止）。
@@ -22,34 +26,20 @@ import { FilterBar } from "@/components/ui/FilterBar";
 import { Video16x9 } from "@/components/ui/VideoBlock";
 import { MenuCardM, MenuCardWide } from "@/components/ui/MenuCard";
 import { MenuCarouselM, MenuCarouselWide } from "@/components/ui/MenuCarousel";
-import SeeMoreButton from "@/components/ui/SeeMoreButton";
+import MenuSectionHeader from "@/components/ui/MenuSectionHeader";
+import MenuListRow from "@/components/ui/MenuListRow";
+import SubcategoryChips, { ALL_CHIP_ID } from "@/components/ui/SubcategoryChips";
 import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { hasSelectableOptions } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
-import { useOrderPageData } from "@/hooks/useOrderPageData";
+import { applyTopLimit, hasImage } from "@/lib/orderHome";
+import { useOrderPageData, type CategorySection } from "@/hooks/useOrderPageData";
 import { useStoreVideo } from "@/lib/useStoreMedia";
 import { toMediaItems } from "@/lib/storeMedia";
 import type { MenuItem } from "@/lib/menu";
-import type { HeadingSize } from "@/lib/api";
-
-/* ── セクション構成（フード7 → ドリンク4） ── */
-/* ── 見出しの文字サイズ → デザイントークン ──────────────────────
-   カテゴリーごとに管理画面から「大・中・小」を選べる。
-   新しいサイズは作らず、既存のトークンに割り当てている。
-   既定値（英語=大 / 日本語=小）は、DB管理に移す前の見た目と同じ組み合わせ。 */
-const EN_SIZE_CLASS: Record<HeadingSize, string> = {
-  large:  "type-en-display-xl",
-  medium: "type-en-display-l",
-  small:  "type-en-display-m",
-};
-const JP_SIZE_CLASS: Record<HeadingSize, string> = {
-  large:  "type-jp-heading-m",
-  medium: "type-jp-body-bold",
-  small:  "type-jp-caption-bold",
-};
 
 const BEST_SELLER = {
   id: "best-seller",
@@ -66,36 +56,6 @@ const FILTER_CHIPS = [
 
 /* Header(68px) + sticky TabNav(50px) の下にセクション先頭が来るようにする */
 const SCROLL_OFFSET = 118;
-
-/* ── セクション見出し（Figma 54:556 実測: gap4 / jp-label + en-display-xl + jp-caption-bold） ── */
-/**
- * カテゴリーの見出し。**文言もサイズもDB（categories）から来る。**
- * 以前はこのファイルに11カテゴリぶんをハードコードしていたため、
- * 管理画面でカテゴリーを追加してもお客様の画面に出なかった。
- *
- * 説明文・英語名は未入力なら行ごと出さない（空行が空くのを避ける）。
- */
-function SectionHeading({
-  eyebrow,
-  en,
-  jp,
-  enSize = "large",
-  jpSize = "small",
-}: {
-  eyebrow: string | null;
-  en: string | null;
-  jp: string;
-  enSize?: HeadingSize;
-  jpSize?: HeadingSize;
-}) {
-  return (
-    <div className="flex flex-col gap-[var(--space-4)] px-[var(--space-16)]">
-      {eyebrow && <p className="type-jp-label text-text-secondary">{eyebrow}</p>}
-      {en && <p className={`${EN_SIZE_CLASS[enSize]} text-text-primary`}>{en}</p>}
-      <p className={`${JP_SIZE_CLASS[jpSize]} text-text-secondary`}>{jp}</p>
-    </div>
-  );
-}
 
 /* ── ローディングスケルトン ── */
 function TopSkeleton() {
@@ -141,6 +101,10 @@ function OrderContent() {
   const [activeSection, setActiveSection] = useState<string>(BEST_SELLER.id);
   const [filterOpen, setFilterOpen] = useState(false);
   const visibleSectionsRef = useRef<Set<string>>(new Set());
+
+  /* ── サブカテゴリーの絞り込み（区画ごと）。未選択 = すべて ── */
+  const [chipSelection, setChipSelection] = useState<Record<string, string>>({});
+  const chipOf = (slug: string) => chipSelection[slug] ?? ALL_CHIP_ID;
 
   /* ── scrollspy: ビューポート上部の帯に入っているセクションのうち最上位を active に ──
      Best Seller がOFFのときはセクション自体が無いので監視対象からも外す ── */
@@ -201,7 +165,7 @@ function OrderContent() {
     onClick: () => openItemDetail(item.id),
   });
 
-  /* ── タブ。DB のカテゴリー（display_order 順）から作る ── */
+  /* ── タブ。DB のカテゴリー（親のみ・トップと同じ並び）から作る ── */
   const tabs = [
     ...(bestSellerEnabled ? [{ id: BEST_SELLER.id, label: "おすすめ" }] : []),
     ...categorySections.map((sec) => ({ id: sec.category.slug, label: sec.category.name })),
@@ -223,6 +187,20 @@ function OrderContent() {
     onAddToCart: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, draftOf(item.id))),
     onClick: () => openItemDetail(item.id),
   });
+
+  /* ── 区画に出す商品: チップで絞ってから上位 N 件 ── */
+  const itemsFor = (sec: CategorySection) => {
+    const chip = chipOf(sec.category.slug);
+    const base = chip === ALL_CHIP_ID
+      ? sec.allItems
+      : sec.allItems.filter((i) => i.subcategory === chip);
+    return applyTopLimit(base, sec.topLimit);
+  };
+  /* 文字の行の2行目: サブカテゴリーがある区画は区分名、無ければ商品の説明文 */
+  const rowDescription = (sec: CategorySection, item: MenuItem) =>
+    sec.children.length > 0
+      ? (sec.children.find((c) => c.slug === item.subcategory)?.name ?? null)
+      : item.description;
 
   /* ── モードバナー（テイクアウト混入時、既存挙動を踏襲） ── */
   const showMixBanner = orderType === "dine_in" && isTakeoutMode;
@@ -270,9 +248,9 @@ function OrderContent() {
             <section
               id={`section-${BEST_SELLER.id}`}
               style={{ scrollMarginTop: SCROLL_OFFSET }}
-              className="pt-[40px] pb-[40px]"
+              className="pt-[40px] pb-[40px] bg-accent-subtle"
             >
-              <SectionHeading
+              <MenuSectionHeader
                 eyebrow={BEST_SELLER.eyebrow}
                 en={BEST_SELLER.en}
                 jp={BEST_SELLER.jp}
@@ -293,9 +271,12 @@ function OrderContent() {
             </section>
             )}
 
-            {/* ── Menu Section ×11（フード7 → ドリンク4） ── */}
-            {categorySections.map(({ category, items, total }) => {
+            {/* ── カテゴリーの区画（ドリンク → フード） ── */}
+            {categorySections.map((sec) => {
+              const { category, listStyle, chips } = sec;
               const slug = category.slug;
+              const items = itemsFor(sec);
+              const showThumb = listStyle === "list" && sec.allItems.some(hasImage);
               return (
                 <section
                   key={slug}
@@ -303,31 +284,53 @@ function OrderContent() {
                   style={{ scrollMarginTop: SCROLL_OFFSET }}
                   className="pt-[40px] pb-[40px]"
                 >
-                  <SectionHeading
+                  <MenuSectionHeader
                     eyebrow={category.description}
                     en={category.caption}
                     jp={category.name}
                     enSize={category.en_size}
                     jpSize={category.jp_size}
+                    seeAllHref={`/order/${slug}`}
                   />
-                  {items.length > 0 && (
-                    <MenuCarouselM count={items.length} className="mt-[16px]">
+
+                  {chips.length > 0 && (
+                    <SubcategoryChips
+                      chips={chips}
+                      selectedId={chipOf(slug)}
+                      onSelect={(id) => setChipSelection((s) => ({ ...s, [slug]: id }))}
+                      className="mt-[var(--space-16)]"
+                    />
+                  )}
+
+                  {listStyle === "list" ? (
+                    <div className="flex flex-col px-[var(--space-16)] mt-[var(--space-8)]">
                       {items.map((item) => (
-                        <MenuCardM
+                        <MenuListRow
                           key={item.id}
                           item={item}
-                          {...carouselCardHandlers(item)}
-                          imageLoading="lazy"
+                          quantity={qtyOf(item.id)}
+                          description={rowDescription(sec, item)}
+                          showThumb={showThumb}
+                          onAdd={() => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1))}
+                          onIncrement={() => addItem(item, 1)}
+                          onDecrement={() => updateQuantity(item.id, qtyOf(item.id) - 1)}
+                          onClick={() => openItemDetail(item.id)}
                         />
                       ))}
-                    </MenuCarouselM>
-                  )}
-                  {total > items.length && (
-                    <SeeMoreButton
-                      label={`${category.name}をすべて見る（${total}件）`}
-                      href={`/order/${slug}`}
-                      className="mx-[var(--space-16)] mt-[var(--space-16)]"
-                    />
+                    </div>
+                  ) : (
+                    items.length > 0 && (
+                      <MenuCarouselM count={items.length} className="mt-[16px]">
+                        {items.map((item) => (
+                          <MenuCardM
+                            key={item.id}
+                            item={item}
+                            {...carouselCardHandlers(item)}
+                            imageLoading="lazy"
+                          />
+                        ))}
+                      </MenuCarouselM>
+                    )
                   )}
                 </section>
               );

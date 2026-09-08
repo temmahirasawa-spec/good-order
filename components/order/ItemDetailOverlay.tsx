@@ -32,7 +32,7 @@ import MenuOptionPicker from "@/components/ui/OptionRow";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
-import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import { resolveTagColor, resolveCategoryLabel } from "@/lib/categoryLabels";
 import { computeRelatedItems } from "@/lib/orderHome";
 import { ITEM_PARAM, openItemDetail, stripItemParam, takePushedByApp } from "@/lib/itemOverlay";
 import {
@@ -152,7 +152,7 @@ function OverlayContent() {
     }, CLOSE_ANIM_MS);
   };
 
-  const label = item ? SUBCATEGORY_LABEL[item.subcategory] ?? item.subcategory : "";
+  const label = item ? resolveCategoryLabel(categories, item.subcategory) : "";
   const color = item ? resolveTagColor(categories, item.subcategory) : "yellow";
   const subImage = item?.images?.[1] ?? null;
   const hasVideo = (item?.media ?? []).some((m) => m.type === "video");
@@ -185,8 +185,13 @@ function OverlayContent() {
           <>
             {/* overscroll-contain: 端まで来たときに背面の一覧へスクロールが伝わらないようにする */}
             <div className="flex-1 overflow-y-auto overscroll-contain">
-              {/* ── KV: メイン画像 + 右上の×（全画面共通のルール） ── */}
-              <div className="relative w-full bg-bg-tertiary" style={{ height: 260 }}>
+              {/* ── KV: メイン画像 + 右上の×（全画面共通のルール） ──
+                  写真が無い商品（文字メニュー）はグレーの空箱を出さず、×だけの薄い帯にする
+                  （docs/specs/menu-text-rows.md 4章）。 */}
+              <div
+                className={`relative w-full ${item.image ? "bg-bg-tertiary" : ""}`}
+                style={{ height: item.image ? 260 : 72 }}
+              >
                 {item.image && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

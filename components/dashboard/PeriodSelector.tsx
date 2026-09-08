@@ -49,8 +49,8 @@ export default function PeriodSelector({
           /* type-jp-* はカスタムクラスなので lg: バリアントが効かない。
              PCで1段小さくする分だけ生の任意値ユーティリティで上書きする */
           className={`shrink-0 px-[14px] py-[var(--space-8)] lg:py-[7px] rounded-[var(--radius-full)] type-jp-body lg:text-[12px] lg:leading-[1.5] lg:tracking-[0.12px] whitespace-nowrap ${
-            period === key ? "bg-accent-primary" : "bg-bg-tertiary"
-          } text-text-primary`}
+            period === key ? "bg-accent-primary text-accent-contrast" : "bg-bg-tertiary text-text-primary"
+          }`}
         >
           {label}
         </button>

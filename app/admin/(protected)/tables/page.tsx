@@ -148,7 +148,7 @@ export default function AdminTablesPage() {
                   aria-label="席カテゴリの設定・テーブルの追加"
                   className="lg:hidden flex bg-accent-primary items-center justify-center rounded-full w-[44px] h-[44px] shrink-0"
                 >
-                  <span className="font-jp font-bold text-[20px] leading-none text-text-primary">＋</span>
+                  <span className="font-jp font-bold text-[20px] leading-none text-accent-contrast">＋</span>
                 </button>
               </>
             }

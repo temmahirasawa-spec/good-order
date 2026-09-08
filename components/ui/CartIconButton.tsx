@@ -62,7 +62,7 @@ export default function CartIconButton({
           /* ボタンの白背景から浮かせるため2.5pxの白フチ。1桁なら正円、2桁以上は横に伸びる */
           className="absolute -top-[7px] -right-[7px] flex items-center justify-center bg-accent-primary rounded-full min-w-[24px] h-[24px] px-[6px] border-[2.5px] border-surface-white"
         >
-          <span className="type-en-data-s text-text-primary leading-none">
+          <span className="type-en-data-s text-accent-contrast leading-none">
             {formatCount(count)}
           </span>
         </span>
