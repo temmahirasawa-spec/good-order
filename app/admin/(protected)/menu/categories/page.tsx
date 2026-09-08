@@ -35,7 +35,7 @@ import ColorSwatchPicker from "@/components/admin/category/ColorSwatchPicker";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import { Icon } from "@/components/Icon";
-import type { HeadingSize } from "@/lib/api";
+import type { HeadingSize, ListStyle } from "@/lib/api";
 import {
   describeDbError,
   CANNOT_DELETE_ORDERED_CATEGORY,
@@ -60,6 +60,12 @@ interface FormState {
   display_order: number;
   image_url: string;
   tag_color: TagColor;
+  /** 親カテゴリー。"" = 親なし（＝自分がトップの区画になる）（docs/specs/home-layout.md） */
+  parent_id: string;
+  /** トップに出す件数。0 = 全件 */
+  top_limit: number;
+  /** 一覧の見せ方（docs/specs/menu-text-rows.md） */
+  list_style: ListStyle;
 }
 const EMPTY_FORM: FormState = {
   name: "", slug: "", caption: "", description: "",
@@ -67,7 +73,22 @@ const EMPTY_FORM: FormState = {
   en_size: "large", jp_size: "small", category_type: "food",
   serving_timing_choice: false,
   display_order: 99, image_url: "", tag_color: "yellow",
+  parent_id: "", top_limit: 5, list_style: "auto",
 };
+
+/** トップに出す件数の選択肢。0 = 全件 */
+const TOP_LIMIT_OPTIONS: { value: number; label: string }[] = [
+  { value: 3, label: "3" },
+  { value: 5, label: "5" },
+  { value: 8, label: "8" },
+  { value: 0, label: "全件" },
+];
+
+const LIST_STYLE_OPTIONS: { value: ListStyle; label: string }[] = [
+  { value: "auto",  label: "自動" },
+  { value: "photo", label: "写真カード" },
+  { value: "list",  label: "文字リスト" },
+];
 
 /** 説明文の上限。DB側にも CHECK 制約がある（supabase/category_heading.sql） */
 const DESCRIPTION_MAX = 40;
@@ -204,6 +225,9 @@ export default function AdminCategoriesPage() {
       display_order: cat.display_order,
       image_url:     cat.image_url ?? "",
       tag_color:     cat.tag_color ?? "yellow",
+      parent_id:     cat.parent_id ?? "",
+      top_limit:     cat.top_limit ?? 5,
+      list_style:    cat.list_style ?? "auto",
     });
     setPreview(cat.image_url);
     setPanelOpen(true);
@@ -300,6 +324,9 @@ export default function AdminCategoriesPage() {
             display_order: form.display_order,
             image_url:     form.image_url || null,
             tag_color:     form.tag_color,
+            parent_id:     form.parent_id || null,
+            top_limit:     form.top_limit,
+            list_style:    form.list_style,
           })
           .eq("id", editItem.id);
         if (error) throw error;
@@ -330,6 +357,9 @@ export default function AdminCategoriesPage() {
           display_order: form.display_order,
           image_url:     form.image_url || null,
           tag_color:     form.tag_color,
+          parent_id:     form.parent_id || null,
+          top_limit:     form.top_limit,
+          list_style:    form.list_style,
         });
         if (error) throw error;
       }
@@ -433,6 +463,7 @@ export default function AdminCategoriesPage() {
                     thumbnailUrl={cat.image_url}
                     tagColor={cat.tag_color ?? "yellow"}
                     categoryType={cat.category_type}
+                    parentName={cat.parent_id ? categories.find((c) => c.id === cat.parent_id)?.name ?? null : null}
                     displayOrder={cat.display_order}
                     onEdit={() => openEdit(cat)}
                     reorder={bindingsFor(cat.id)}
@@ -531,6 +562,80 @@ export default function AdminCategoriesPage() {
                     </div>
                     <p className="type-jp-caption text-text-tertiary">
                       お客様のメニュー画面で、フードが先・ドリンクが後にまとまって並びます。
+                    </p>
+                  </div>
+
+                  {/* 親カテゴリー（docs/specs/home-layout.md 6章）
+                      親を選ぶと、そのカテゴリーの中の区分（サブカテゴリー）になる。
+                      トップの区画・タブには親だけが並ぶ。2階層まで（子は親候補に出さない） */}
+                  <div className="flex flex-col gap-[var(--space-4)] w-full">
+                    <label className="type-jp-caption-bold text-text-primary">親カテゴリー</label>
+                    <select
+                      value={form.parent_id}
+                      onChange={(e) => setForm((f) => ({ ...f, parent_id: e.target.value }))}
+                      className="w-full h-[44px] bg-surface-white border border-border rounded-[var(--radius-sm)] px-[var(--space-12)] type-jp-body text-text-primary"
+                    >
+                      <option value="">なし（トップの区画になる）</option>
+                      {categories
+                        .filter((c) => !c.parent_id && c.id !== editItem?.id)
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                    <p className="type-jp-caption text-text-tertiary">
+                      親を選ぶと、そのカテゴリーの中の区分（サブカテゴリー）になります。トップには親だけが並びます。
+                    </p>
+                  </div>
+
+                  {/* トップに出す件数（親カテゴリーのときだけ意味がある） */}
+                  {!form.parent_id && (
+                    <div className="flex flex-col gap-[var(--space-4)] w-full">
+                      <label className="type-jp-caption-bold text-text-primary">トップに出す件数</label>
+                      <div className="flex gap-[var(--space-4)]">
+                        {TOP_LIMIT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setForm((f) => ({ ...f, top_limit: opt.value }))}
+                            aria-pressed={form.top_limit === opt.value}
+                            className={`h-[36px] min-w-[44px] px-[var(--space-12)] rounded-[var(--radius-sm)] border type-jp-caption-bold transition-colors ${
+                              form.top_limit === opt.value
+                                ? "bg-text-primary text-surface-white border-transparent"
+                                : "bg-surface-white text-text-secondary border-border"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="type-jp-caption text-text-tertiary">
+                        残りは「すべてを見る」の一覧ページへ。
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 一覧の見せ方（docs/specs/menu-text-rows.md 3章） */}
+                  <div className="flex flex-col gap-[var(--space-4)] w-full">
+                    <label className="type-jp-caption-bold text-text-primary">一覧の見せ方</label>
+                    <div className="flex gap-[var(--space-4)]">
+                      {LIST_STYLE_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, list_style: opt.value }))}
+                          aria-pressed={form.list_style === opt.value}
+                          className={`h-[36px] px-[var(--space-12)] rounded-[var(--radius-sm)] border type-jp-caption-bold transition-colors ${
+                            form.list_style === opt.value
+                              ? "bg-text-primary text-surface-white border-transparent"
+                              : "bg-surface-white text-text-secondary border-border"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="type-jp-caption text-text-tertiary">
+                      自動は、写真が1枚も無いカテゴリーを文字リストにします。
                     </p>
                   </div>
 

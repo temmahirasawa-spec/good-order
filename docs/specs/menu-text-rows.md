@@ -92,3 +92,12 @@ C は仕組みが2つになり、混在時の判断を店舗に強いる。
 
 - 行の部品は `Components / 05 Cards / Menu List Row`（Thumb=None / Image × Cart=Empty / Active）。細部は 4-1 のとおりだが、高さは **88**（サムネありも 88、サムネ 56px）、「＋」は `Plus Button`（36px）。
 - 使っている画面は `home-layout.md` の 8 を参照（トップのドリンク区画、ドリンクの一覧ページ）。
+
+## 9. 実装（2026-09-08）
+
+- `supabase/category_list_style.sql`（新規）: `categories.list_style`（auto / photo / list、既定 auto）
+- 判定は `lib/orderHome.ts` の `resolveListStyle(category, items)` の1か所（auto = 写真が1枚も無ければ list）。`hasImage` は media_order の image か image_url
+- トップの区画（`app/order/page.tsx`）と一覧ページ（`app/order/[category]/page.tsx`）の両方が同じ判定を使う
+- 行は `components/ui/MenuListRow.tsx`。写真つき商品が混ざる一覧では 56px のサムネ枠を全行に出して揃える（`showThumb`）
+- 写真の無い商品の詳細（`ItemDetailOverlay`）は KV のグレー箱を出さず、×だけの 72px の帯にした
+- 管理画面「カテゴリ管理」に「一覧の見せ方」（自動／写真カード／文字リスト）

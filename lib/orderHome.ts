@@ -1,9 +1,17 @@
 /**
  * 店内向けホーム画面（app/order/page.tsx）の純粋な導出ロジック
  * fetch は行わない。store/API から取得済みのデータを整形するだけ。
+ *
+ * 2026-09-08（docs/specs/home-layout.md / menu-text-rows.md）:
+ *   - カテゴリーは2階層（parent_id）。トップの区画とタブは親だけ。
+ *   - トップの並びは ドリンク → フード（ベストセラーの次にドリンク）。
+ *   - 各区画は上位 top_limit 件（既定5、0=全件）＋「すべてを見る」。
+ *   - 一覧の見せ方（list_style）は写真の有無から自動判定できる。
  */
 import type { ApiCategory } from "./api";
 import type { MenuItem } from "./menu";
+
+const byDisplayOrder = (a: ApiCategory, b: ApiCategory) => a.display_order - b.display_order;
 
 /* ── フードカテゴリーを表示順で抽出 ── */
 export function pickFoodCategories(categories: ApiCategory[]): ApiCategory[] {
@@ -18,6 +26,68 @@ export function pickFoodCategories(categories: ApiCategory[]): ApiCategory[] {
 /* ── ドリンクカテゴリーを抽出（同じく category_type で判定する） ── */
 export function pickDrinkCategories(categories: ApiCategory[]): ApiCategory[] {
   return categories.filter((c) => c.category_type === "drink");
+}
+
+/* ── 親カテゴリー（parent_id が無いもの）。トップの区画・タブになる ── */
+export function topLevelCategories(categories: ApiCategory[]): ApiCategory[] {
+  return categories.filter((c) => !c.parent_id);
+}
+
+/* ── ある親のサブカテゴリー（display_order 順） ── */
+export function childCategories(categories: ApiCategory[], parentId: string): ApiCategory[] {
+  return categories.filter((c) => c.parent_id === parentId).sort(byDisplayOrder);
+}
+
+/* ── トップの区画の並び: ドリンク（親）→ フード（親）。それぞれ display_order 順 ──
+ *   ドリンクをベストセラーの直後に置く（2026-09-08 天真の決定）。 */
+export function orderHomeCategories(categories: ApiCategory[]): ApiCategory[] {
+  const parents = topLevelCategories(categories);
+  return [
+    ...pickDrinkCategories(parents).sort(byDisplayOrder),
+    ...pickFoodCategories(parents).sort(byDisplayOrder),
+  ];
+}
+
+/* ── 親カテゴリー（＋そのサブカテゴリー）に属する商品。並びは items の並び（display_order）のまま ── */
+export function itemsOfCategory(
+  items: MenuItem[],
+  category: ApiCategory,
+  children: ApiCategory[]
+): MenuItem[] {
+  const slugs = new Set([category.slug, ...children.map((c) => c.slug)]);
+  return items.filter((i) => slugs.has(i.subcategory));
+}
+
+/* ── トップに出す件数で切る。0 = 全件 ── */
+export function applyTopLimit<T>(items: T[], limit: number): T[] {
+  return limit > 0 ? items.slice(0, limit) : items;
+}
+
+/* ── 商品に写真があるか（media_order の image、または image_url） ── */
+export function hasImage(item: MenuItem): boolean {
+  if (item.media?.some((m) => m.type === "image")) return true;
+  return typeof item.image === "string" && item.image.length > 0;
+}
+
+/* ── 一覧の見せ方を確定する（docs/specs/menu-text-rows.md 2章）
+ *   auto: そのカテゴリーの商品に写真が1枚も無ければ 'list'、1枚でもあれば 'photo' ── */
+export function resolveListStyle(
+  category: Pick<ApiCategory, "list_style">,
+  items: MenuItem[]
+): "photo" | "list" {
+  if (category.list_style === "photo" || category.list_style === "list") return category.list_style;
+  return items.some(hasImage) ? "photo" : "list";
+}
+
+/* ── 絞り込みチップに出すサブカテゴリー（商品が1つも無い区分は出さない） ── */
+export function subcategoryChips(
+  children: ApiCategory[],
+  items: MenuItem[]
+): { id: string; label: string }[] {
+  const present = new Set(items.map((i) => i.subcategory as string));
+  return children
+    .filter((c) => present.has(c.slug))
+    .map((c) => ({ id: c.slug, label: c.name }));
 }
 
 /* ── ヒーロー対象：'注目' or '本日のおすすめ'、足りない場合は 'おすすめ' / '限定' で補完 ── */
@@ -84,32 +154,4 @@ export function computeRelatedItems(
       (i) => i.subcategory === currentItem.subcategory && i.id !== currentItem.id
     )
     .slice(0, limit);
-}
-
-/* ── ホームのカテゴリー区画に出す商品（display_order 順・上限つき） ──
- * 以前は注文実績の上位4件だけを出していたが、天真の要望（2026-09-07）で
- * そのカテゴリーの全商品を出すようにした（ドリンク等は4件では足りない）。
- * 上限（cap）は、100件を超えるような極端な店舗でカルーセルが壊れないための安全弁。
- * 上限を超えた分は「すべて見る」でカテゴリー一覧ページへ。 */
-export function computeSectionItems(
-  items: MenuItem[],
-  subcategory: string,
-  cap: number
-): { items: MenuItem[]; total: number } {
-  const all = items.filter((i) => i.subcategory === subcategory);
-  return { items: all.slice(0, cap), total: all.length };
-}
-
-/* ── サブカテゴリ別の人気アイテム（旧TOPページの「上位4件」。今は未使用） ── */
-export function computeTopItemsBySubcategory(
-  items: MenuItem[],
-  subcategory: string,
-  orderCounts: Map<string, number> | null,
-  limit = 4
-): MenuItem[] {
-  return rankByOrderCount(
-    items.filter((i) => i.subcategory === subcategory),
-    orderCounts,
-    limit
-  );
 }

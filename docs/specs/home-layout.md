@@ -94,3 +94,19 @@ AI の推奨: **A**。トップの長さを増やさず、区分の存在を伝�
 - 行の「＋」は 36px（Quantity Stepper の＋と同じ大きさ）。実装ではタップ領域を 44px 以上に広げる。
 - サブカテゴリーのチップは高さ 44px（既存の Filter Chip 36px より大きい。SP のタップ領域の規約に合わせた）。
 - 「トップに出す件数」は管理画面の Admin Chip を 4つ並べた（3 / 5 / 8 / 全件）。SP でも 44px 以上になるよう上下の余白を 12 にした。
+
+## 9. 実装（2026-09-08）
+
+| 場所 | 中身 |
+|---|---|
+| `supabase/category_subcategories.sql`（新規） | `categories.parent_id`（自己参照、親を消すと子は親なしに戻る）、`top_limit`（既定 5、0 = 全件） |
+| `lib/api.ts` | `ApiCategory` に `parent_id / top_limit / list_style`。SQL を流す前の DB では旧列で読み直して既定値を補う（安全弁） |
+| `lib/orderHome.ts` | `orderHomeCategories`（親のみ、ドリンク → フード）、`childCategories`、`itemsOfCategory`（親＋子の商品）、`applyTopLimit`、`subcategoryChips` |
+| `hooks/useOrderPageData.ts` | `CategorySection` に `children / allItems / items(上位N) / total / topLimit / listStyle / chips` |
+| `app/order/page.tsx` | 区画の見出しは `MenuSectionHeader`（右に「すべてを見る」）。サブカテゴリーがあれば `SubcategoryChips`（押すとその区分の上位 N 件）。文字リストの区画は `MenuListRow` の縦並び |
+| `app/order/[category]/page.tsx` | 見出しは DB から。サブカテゴリーがあれば sticky の `TabNav`（トップと同じ下線タブ。押すと見出しへスクロール）＋ `ListSubHeading` で区切る。親に直接ぶら下がる商品は末尾「その他」 |
+| 管理画面「カテゴリ管理」 | 「親カテゴリー」セレクト（親だけが候補。自分は除く）、「トップに出す件数」3/5/8/全件（親のときだけ）。一覧ではサブカテゴリーの行を字下げして「親名 ＞」を添える |
+| 新しい部品 | `components/ui/MenuSectionHeader.tsx`、`SeeAllLink.tsx`、`SubcategoryChips.tsx`、`ListSubHeading.tsx`、`MenuListRow.tsx`、`PlusButton.tsx`。`FilterChip` に `showIcon` / `size="md"`（44px） |
+
+- 2026-09-07 の PR #60（トップに全件）は、この実装で上書きされた（`SECTION_ITEM_CAP` と `SeeMoreButton` の使用は廃止。`SeeMoreButton` の部品は `/dev/ui` 用に残す）。
+- 商品は今までどおり1つのカテゴリーに属する（`menu_items.category_id`）。サブカテゴリーを作ったら、商品の編集でカテゴリーを子に付け替える。

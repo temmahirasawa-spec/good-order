@@ -15,14 +15,21 @@
 
 :root {
   /* ============================================================
-   * COLOR — Brand (YORKYS mode)
+   * COLOR — Brand (YORKYS mode = オリーブモス、2026-09-08 決定)
    * Accent set is the only brand-swappable group. Swapping a
-   * future brand = redefining these 4 values only.
+   * future brand = redefining these values only.
+   * 店舗が管理画面「表示設定 ＞ ブランドカラー」で色を選ぶと、
+   * app/layout.tsx がここと同名の変数を <style> で上書きする（lib/brandColor.ts）。
+   * 2026-09-08 までの YORKYS イエローは Figma のモード「YORKYS Yellow（旧）」に残してある:
+   *   primary #FAC03D / pressed #E5A817 / deep #996B00 / subtle #FFFCF7 / on-ink #FAC03D / contrast #1A1A1A
    * ============================================================ */
-  --color-accent-primary: #FAC03D; /* CTA / selected state. Black text on this = 10.5:1 (AAA) */
-  --color-accent-pressed: #E5A817; /* hover / active state for accent-primary */
-  --color-accent-deep:    #996B00; /* white text on this = 4.7:1 (AA) */
-  --color-accent-subtle:  #FFFCF7; /* selection bg / tint */
+  --color-accent-primary: #5E6B4A; /* CTA / selected state. White text on this = 5.7:1 (AA) */
+  --color-accent-pressed: #4B563B; /* hover / active state for accent-primary */
+  --color-accent-deep:    #444D35; /* white text on this = 9.9:1 (AAA) */
+  --color-accent-subtle:  #E7E9E5; /* selection bg / tint */
+  /* アクセントの上に載せる文字・アイコンの色。黄色なら墨、濃い色なら白。
+   * ボタン・選択中のチップ・バッジの文字は text-primary ではなく必ずこれを使う。 */
+  --color-accent-contrast: #FFFFFF;
 
   /* ── 業態テンプレート: Izakaya（鳥貴族想定）──────────────────────────
    * Figma: Color コレクションのモード "Izakaya (鳥貴族)"（YORKYS / Demo (Green) に続く3つ目）。
@@ -59,7 +66,7 @@
   --color-bg-tertiary:  #EFEFEF;
   /* 暖色（クリーム寄り）背景。Cartページのルート背景・Bottom Summary Bar背景用。
    * Demoテーマ（Green）を導入する場合はこの1行を #F6F9F3 に差し替える想定。 */
-  --color-bg-warm:      #FCF7EE;
+  --color-bg-warm:      #F3F3F0;
 
   /* COLOR — Surface */
   --color-surface-white: #FFFFFF;
@@ -69,7 +76,7 @@
    * ことがあるため、墨専用のアクセント（accent-on-ink）を別に持つ。 */
   --color-surface-ink-soft: #2A2A2A;               /* 墨面の一段明るい面（浮きボタン等） */
   --color-border-on-ink:    rgba(255,255,255,.16); /* 墨面の上のヘアライン */
-  --color-accent-on-ink:    #FAC03D;               /* 墨面の上のアクセント。YORKYS は黄のまま可（墨に対し 10.5:1） */
+  --color-accent-on-ink:    #97A67F;               /* 墨面の上のアクセント。モスは墨で 3:1 しか出ないので明るく寄せる */
 
   /* COLOR — Status（スタッフ管理画面: 厨房Order Card・Staff Call Chip・Status Badge等） */
   --color-status-urgent-subtle:  #FCE8E8;

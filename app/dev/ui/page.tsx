@@ -27,6 +27,13 @@ import MenuOptionPicker from "@/components/ui/OptionRow";
 import type { MenuOption } from "@/lib/menuOptions";
 import MenuCategoryCard from "@/components/ui/MenuCategoryCard";
 import SeeMoreButton from "@/components/ui/SeeMoreButton";
+import SeeAllLink from "@/components/ui/SeeAllLink";
+import MenuSectionHeader from "@/components/ui/MenuSectionHeader";
+import MenuListRow from "@/components/ui/MenuListRow";
+import PlusButton from "@/components/ui/PlusButton";
+import SubcategoryChips, { ALL_CHIP_ID } from "@/components/ui/SubcategoryChips";
+import ListSubHeading from "@/components/ui/ListSubHeading";
+import BrandColorPanel from "@/components/admin/display/BrandColorPanel";
 import { AddToCartButton, CartButton, BackButton, LinkButton } from "@/components/ui/Buttons";
 import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
 import { Video16x9, Video9x16 } from "@/components/ui/VideoBlock";
@@ -65,7 +72,7 @@ import { SUBCATEGORY_LABEL } from "@/lib/categoryLabels";
 import type { ApiCategory, ApiMediaItem } from "@/lib/api";
 
 const ICONS: IconName[] = [
-  "crown", "sliders", "chevron-down", "cart", "arrow-left",
+  "crown", "sliders", "chevron-down", "chevron-right", "cart", "arrow-left",
   "menu", "close", "return", "bell", "bag", "map-pin",
   "clock", "phone", "water-drop", "card",
   "dashboard", "flame", "receipt", "list", "bowl", "grip", "edit", "check", "plus",
@@ -115,6 +122,19 @@ const sampleCat: ApiCategory = {
   display_order: 1,
   tag_color: "yellow",
   serving_timing_choice: true,
+  parent_id: null,
+  top_limit: 5,
+  list_style: "auto",
+};
+
+/* 文字の行（写真なしメニュー）のサンプル */
+const sampleDrink: MenuItem = {
+  ...menuItems.find((m) => m.subcategory === "coffee")!,
+  name: "自家製レモネード",
+  description: "はちみつとレモンの自家製シロップ",
+  price: 580,
+  image: "",
+  media: [],
 };
 
 const sampleVideo = [
@@ -152,6 +172,59 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="type-en-label text-text-tertiary mb-[12px]">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function MenuListRowDemo() {
+  const [qty, setQty] = useState(0);
+  const [qty2, setQty2] = useState(1);
+  return (
+    <div className="flex flex-col">
+      <MenuListRow
+        item={sampleDrink}
+        quantity={qty}
+        onAdd={() => setQty(1)}
+        onIncrement={() => setQty((q) => q + 1)}
+        onDecrement={() => setQty((q) => Math.max(0, q - 1))}
+      />
+      <MenuListRow
+        item={{ ...sampleDrink, name: "カフェラテ", description: "カフェ", price: 600 }}
+        quantity={qty2}
+        onAdd={() => setQty2(1)}
+        onIncrement={() => setQty2((q) => q + 1)}
+        onDecrement={() => setQty2((q) => Math.max(0, q - 1))}
+      />
+      <MenuListRow
+        item={{ ...sampleItem, description: "写真つきの商品が混ざるときは 56px のサムネ" }}
+        quantity={0}
+        showThumb
+        onAdd={() => {}}
+        onIncrement={() => {}}
+        onDecrement={() => {}}
+      />
+    </div>
+  );
+}
+
+function SubcategoryChipsDemo() {
+  const [sel, setSel] = useState(ALL_CHIP_ID);
+  return (
+    <SubcategoryChips
+      chips={[{ id: "cafe", label: "カフェ" }, { id: "soft", label: "ソフトドリンク" }, { id: "alcohol", label: "アルコール" }]}
+      selectedId={sel}
+      onSelect={setSel}
+      className="-mx-[16px]"
+    />
+  );
+}
+
+function BrandColorPanelDemo() {
+  const [saved, setSaved] = useState<string | null>(null);
+  return (
+    <BrandColorPanel
+      saved={saved}
+      onSave={async (hex) => { setSaved(hex); }}
+    />
   );
 }
 
@@ -580,6 +653,52 @@ export default function UiGalleryPage() {
         </div>
       </Section>
 
+      <Section title="Menu Section Header + See All Link（2026-09-08）">
+
+        <div className="-mx-[16px]">
+
+          <MenuSectionHeader
+
+            eyebrow="コーヒー・ソフトドリンク・アルコール"
+
+            en="DRINK"
+
+            jp="ドリンク"
+
+            seeAllHref="/order/drink"
+
+          />
+
+        </div>
+
+        <div className="mt-[12px]"><SeeAllLink href="/order/pancake" /></div>
+
+      </Section>
+
+
+      <Section title="Subcategory Chips（Filter Chip / Show Icon=OFF・44px）">
+
+        <SubcategoryChipsDemo />
+
+      </Section>
+
+
+      <Section title="Menu List Row + Plus Button（写真なしメニュー）">
+
+        <MenuListRowDemo />
+
+        <div className="mt-[12px]"><PlusButton onClick={() => {}} /></div>
+
+      </Section>
+
+
+      <Section title="List Sub Heading（一覧ページのサブカテゴリー見出し）">
+
+        <ListSubHeading title="カフェ" count={3} />
+
+      </Section>
+
+
       <Section title="SeeMoreButton">
         <SeeMoreButton label="パンケーキをもっと見る" href="/order/pancake" />
       </Section>
@@ -793,6 +912,13 @@ export default function UiGalleryPage() {
       <Section title="MediaUploaderField">
         <MediaUploaderFieldDemo />
       </Section>
+
+      <Section title="Brand Color Panel（表示設定 ＞ ブランドカラー）">
+
+        <BrandColorPanelDemo />
+
+      </Section>
+
 
       <Section title="DisplayTabs（表示設定のタブ）">
         <div className="max-w-[560px] border border-border-divider">

@@ -3,6 +3,8 @@ import { Noto_Sans_JP, Urbanist } from "next/font/google";
 import PageTransition from "@/components/PageTransition";
 import { notoSansJP, barlow, halisR } from "@/lib/fonts";
 import { siteUrl, STORE, SITE_DESCRIPTION, BRAND_BG } from "@/lib/siteConfig";
+import { fetchBrandAccentServer } from "@/lib/brandColor.server";
+import { brandCssText, derivePalette } from "@/lib/brandColor";
 import "./globals.css";
 
 const noto = Noto_Sans_JP({
@@ -95,13 +97,23 @@ export const viewport: Viewport = {
   themeColor: BRAND_BG,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  /* 店舗が管理画面で選んだブランドカラー（docs/specs/brand-color.md）。
+     未設定なら design-tokens.css の既定色（オリーブモス）のままにする。 */
+  const brandAccent = await fetchBrandAccentServer();
+  const brandCss = brandAccent ? brandCssText(derivePalette(brandAccent)) : null;
+
   return (
     <html lang="ja" className={`${noto.variable} ${urbanist.variable} ${notoSansJP.variable} ${barlow.variable} ${halisR.variable}`}>
+      {brandCss && (
+        <head>
+          <style id="brand-accent" dangerouslySetInnerHTML={{ __html: brandCss }} />
+        </head>
+      )}
       <body className="min-h-screen bg-brand-bg">
         <PageTransition>{children}</PageTransition>
       </body>
