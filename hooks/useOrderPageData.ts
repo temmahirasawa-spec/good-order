@@ -13,21 +13,36 @@ import {
   pickDrinkCategories,
   computeHeroItems,
   computeTopItems,
-  computeSectionItems,
   computeBestSellerItems,
+  orderHomeCategories,
+  childCategories,
+  itemsOfCategory,
+  applyTopLimit,
+  resolveListStyle,
+  subcategoryChips,
 } from "@/lib/orderHome";
 import type { MenuItem } from "@/lib/menu";
 
 const ORDER_COUNT_WINDOW_DAYS = 14;
-/* ホームのカテゴリー区画に出す上限。全件表示だが、極端な店舗でカルーセルが壊れないための安全弁 */
-const SECTION_ITEM_CAP = 30;
 const BEST_SELLER_LIMIT = 8;
 
 export interface CategorySection {
+  /** 親カテゴリー（トップの区画・タブになる） */
   category: ApiCategory;
+  /** サブカテゴリー（display_order 順）。無ければ空 */
+  children: ApiCategory[];
+  /** この区画（親＋サブカテゴリー）の全商品。display_order 順 */
+  allItems: MenuItem[];
+  /** トップに出す上位 top_limit 件（チップ未選択時） */
   items: MenuItem[];
-  /** そのカテゴリーの全件数。items が上限で切られているときに「すべて見る」を出す */
+  /** 全件数 */
   total: number;
+  /** トップに出す件数（0 = 全件） */
+  topLimit: number;
+  /** 写真カード か 文字の行 か（docs/specs/menu-text-rows.md） */
+  listStyle: "photo" | "list";
+  /** 絞り込みチップ（商品のあるサブカテゴリーだけ） */
+  chips: { id: string; label: string }[];
 }
 
 export interface UseOrderPageDataResult {
@@ -40,7 +55,7 @@ export interface UseOrderPageDataResult {
   bestSellerItems: MenuItem[];
   /** false のときは Best Seller セクションごと描画しない（見出しも出さない） */
   bestSellerEnabled: boolean;
-  /** フード7・ドリンク4の全11サブカテゴリを display_order 順（food→drink）に並べた人気アイテム */
+  /** トップの区画。ドリンク → フード の順、各グループ内は display_order 順 */
   categorySections: CategorySection[];
   selectedItem: MenuItem | null;
   setSelectedItem: (item: MenuItem | null) => void;
@@ -150,25 +165,32 @@ export function useOrderPageData(): UseOrderPageDataResult {
   const foodCats = useMemo(() => pickFoodCategories(categories), [categories]);
   const drinkCats = useMemo(() => pickDrinkCategories(categories), [categories]);
 
-  /* ── 11サブカテゴリ縦並び用：food→drink の順、各グループ内は display_order 順 ── */
+  /* ── トップの区画：親カテゴリーを ドリンク → フード の順に。
+     各区画は「上位 top_limit 件＋すべてを見る」（docs/specs/home-layout.md） ── */
   const categorySections = useMemo<CategorySection[]>(() => {
-    const orderedCats = [
-      ...[...foodCats].sort((a, b) => a.display_order - b.display_order),
-      ...[...drinkCats].sort((a, b) => a.display_order - b.display_order),
-    ];
-    return orderedCats
-      .map((category) => ({
-        category,
-        ...computeSectionItems(allItems, category.slug, SECTION_ITEM_CAP),
-      }))
+    return orderHomeCategories(categories)
+      .map((category) => {
+        const children = childCategories(categories, category.id);
+        const all = itemsOfCategory(allItems, category, children);
+        return {
+          category,
+          children,
+          allItems: all,
+          items: applyTopLimit(all, category.top_limit),
+          total: all.length,
+          topLimit: category.top_limit,
+          listStyle: resolveListStyle(category, all),
+          chips: subcategoryChips(children, all),
+        };
+      })
       // 出せる商品が1つも無いカテゴリは、見出しごと出さない。
       //   allItems は is_available=true だけなので、全品を販売停止にすれば
       //   そのカテゴリはお客様の画面から消える（＝終売の運用がこれで回る）。
       //   除外しないと、見出しとタブだけが残って中身が空の区画ができる。
       //   タブ・スクロール追従も categorySections から作っているので、
       //   ここで落とせば両方から同時に消える。
-      .filter((section) => section.items.length > 0);
-  }, [foodCats, drinkCats, allItems, orderCounts]);
+      .filter((section) => section.total > 0);
+  }, [categories, allItems]);
 
   const handleAdd = useCallback(
     (item: MenuItem) => {

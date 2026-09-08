@@ -341,7 +341,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setConfirmOpen(true)}
-                  className="bg-accent-primary active:bg-accent-pressed py-[var(--space-16)] rounded-[var(--radius-full)] type-jp-heading-m text-text-primary w-full"
+                  className="bg-accent-primary active:bg-accent-pressed py-[var(--space-16)] rounded-[var(--radius-full)] type-jp-heading-m text-accent-contrast w-full"
                 >
                   会計済みにする
                 </button>

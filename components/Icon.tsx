@@ -10,7 +10,8 @@ export type IconName =
   | "clock" | "phone" | "water-drop" | "card" | "trash"
   | "dashboard" | "flame" | "receipt" | "list" | "bowl"
   | "grip" | "edit" | "check" | "plus"
-  | "qr" | "copy" | "download" | "more";
+  | "qr" | "copy" | "download" | "more"
+  | "chevron-right";
 
 const paths: Record<IconName, JSX.Element> = {
   crown: (
@@ -29,6 +30,10 @@ const paths: Record<IconName, JSX.Element> = {
   ),
   "chevron-down": (
     <path d="M3 5L8 11L13 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  ),
+  /* 「すべてを見る ›」用（Figma: Icon / Name=Chevron Right、2026-09-08 追加。Chevron Down を回転したもの） */
+  "chevron-right": (
+    <path d="M5 3L11 8L5 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
   ),
   cart: (
     <>

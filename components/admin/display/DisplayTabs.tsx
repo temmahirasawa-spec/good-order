@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 表示設定のタブ（動画設定 / ベストセラー）。
+ * 表示設定のタブ（動画設定 / ベストセラー / ブランドカラー）。
  *
  * タブ1つぶんの見た目は既存の components/ui/Tab.tsx をそのまま使う
  * （Active = Bold + 3px の下線、Inactive = Medium グレー）。
@@ -10,16 +10,17 @@
  *
  * ここが足しているのは並べ方だけ。
  *   PC … 左寄せで横に並べる
- *   SP … 画面を等分（2つなので半分ずつ）。狭い幅でタブが左に寄ると押し間違えるため
+ *   SP … 画面を等分。狭い幅でタブが左に寄ると押し間違えるため
  * お客様側の TabNav は横スクロール前提（カテゴリ数が可変）なので使っていない。
  */
 import { Tab } from "@/components/ui/Tab";
 
-export type DisplayTabId = "video" | "bestseller";
+export type DisplayTabId = "video" | "bestseller" | "brand";
 
 export const DISPLAY_TABS: { id: DisplayTabId; label: string }[] = [
   { id: "video", label: "動画設定" },
   { id: "bestseller", label: "ベストセラー" },
+  { id: "brand", label: "ブランドカラー" },
 ];
 
 export default function DisplayTabs({

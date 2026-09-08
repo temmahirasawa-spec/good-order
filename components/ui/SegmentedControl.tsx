@@ -65,7 +65,7 @@ export default function SegmentedControl<T extends string>({
               if (!on) onChange(opt.value);
             }}
             className={`segment__item relative z-[1] flex-1 min-w-0 flex items-center justify-center rounded-[var(--radius-full)] px-[var(--space-8)] ${
-              on ? "type-jp-body-bold text-text-primary" : "type-jp-body text-text-secondary"
+              on ? "type-jp-body-bold text-accent-contrast" : "type-jp-body text-text-secondary"
             }`}
           >
             <span className="whitespace-nowrap">{opt.label}</span>

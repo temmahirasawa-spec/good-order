@@ -23,6 +23,7 @@ export default function CategoryRow({
   thumbnailUrl,
   tagColor,
   categoryType,
+  parentName = null,
   displayOrder,
   onEdit,
   reorder,
@@ -34,6 +35,8 @@ export default function CategoryRow({
   tagColor: TagColor;
   /** 'food' | 'drink'。お客様側の並び（フード→ドリンク）に効く */
   categoryType?: "food" | "drink";
+  /** サブカテゴリーなら親の名前。行を字下げして「親名 ＞」を添える（docs/specs/home-layout.md） */
+  parentName?: string | null;
   displayOrder: number;
   onEdit: () => void;
   /** ⠿ ドラッグ並び替えのバインディング（PCのみ）。未指定なら並び替え不可 */
@@ -46,6 +49,8 @@ export default function CategoryRow({
       onClick={onEdit}
       {...(reorder?.row ?? {})}
       className={`border-b flex gap-[var(--space-12)] h-[56px] items-center py-[var(--space-8)] w-full cursor-pointer transition-opacity ${
+        parentName ? "pl-[var(--space-32)]" : ""
+      } ${
         reorder?.dragOver ? "border-b-accent-primary" : "border-b-border-divider"
       } ${reorder?.dragging ? "opacity-40" : ""}`}
     >
@@ -87,6 +92,9 @@ export default function CategoryRow({
           {name}
         </p>
         <p className="type-jp-label text-text-tertiary w-full overflow-hidden text-ellipsis whitespace-nowrap">
+          {parentName && (
+            <span className="mr-[var(--space-8)] text-text-secondary">{parentName} ＞</span>
+          )}
           {slug}
           {categoryType === "drink" && (
             <span className="ml-[var(--space-8)] text-text-secondary">ドリンク</span>

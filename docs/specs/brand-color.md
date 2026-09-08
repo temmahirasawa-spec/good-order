@@ -1,6 +1,6 @@
 # ブランドカラー（テーマカラー）の設定
 
-**状態: 仕様案（2026-09-07、天真の確認待ち）。** 決めてほしいことは末尾「8. 決めてほしいこと」。
+**状態: 確定・実装済み（2026-09-08）。色は M1 オリーブモス #5E6B4A、管理画面の器は案A。** 元の状態: 仕様案（2026-09-07、天真の確認待ち）。** 決めてほしいことは末尾「8. 決めてほしいこと」。
 
 ---
 
@@ -35,6 +35,23 @@
 | M5 カーキモス | #6A6E45 | 5.3:1 ✅ AA | 3.3 | 黄みが強い。紙の質感寄り |
 
 AI の推奨: **M1**（画像に忠実）。ボタンの文字を白にする前提。派生色（pressed / deep / subtle / on-ink / bg-warm）は候補ごとに機械的に作る（`.claude/verification/2026-09-07-brand-color/` の板を参照）。
+
+### 3-1. 幅を広げた版（2026-09-08、天真の指摘「5色が似すぎ」を受けて）
+
+`.claude/verification/2026-09-08-brand-color-wide/brand-color-wide.html` に15色。3つの帯で振った。
+
+| 帯 | 作り方 | 文字 |
+|---|---|---|
+| **A 色相だけ変える** | YORKYS イエロー（#FAC03D、彩度95%・明度61%）の色相を 60°〜120° にずらす（レモン／ライム／イエローグリーン／グラス／グリーン） | 黒のまま（黄と同じ扱い。実装の変更が最小） |
+| **B 鮮やかな中明度** | 彩度50〜55%・明度36〜42%（オリーブ／モスビビッド／リーフ／フォレスト／エメラルド寄り） | 白 |
+| **C モス** | 前回の M1 を基準に、彩度と色相を振る（モス＋彩度／ディープモス＋彩度／カーキ寄り／ダークフォレスト） | 白 |
+
+紙のメニューのモスグリーンに寄せるなら C か B の左寄り、黄色のときの「元気さ」を残すなら A。
+A だけは文字が黒のままで済むので、`accent/contrast` トークンの追加が要らない（切替の実装が軽い）。
+
+### 3-2. 後で入れたいこと（天真のメモ、2026-09-08）
+- カスタムカラーに**カラーピッカー**を付ける
+- 読みにくい色を選んだときは、警告だけでなく**実際にプレビューで見せる**
 
 ---
 
@@ -76,3 +93,45 @@ AI の推奨: **M1**（画像に忠実）。ボタンの文字を白にする前
 3. **管理画面の設定 UI**: プリセット＋カスタム HEX（推奨）／ プリセットだけ／ カスタムだけ
 4. **読みにくい色の扱い**: 保存できない（推奨）／ 警告だけ出して保存できる
 5. **白文字への切替**: 色から自動判定（推奨）／ 店舗が「文字は白／黒」を選ぶ
+
+
+## 9. 決定の記録（2026-09-08）
+
+- ブランドカラーは **M1 オリーブモス `#5E6B4A`**（15色の板も試した上で、最初の候補に戻った）。
+- ボタン等の文字色は白（`accent/contrast` を新設して切り替えられるようにする）。
+- Figma: `Color` コレクションに新しいモード **「YORKYS Moss」** を追加し、accent 4色＋on-ink を M1 の派生色で埋める。
+  既存の YORKYS モードは触らない（黄色のまま残す）。
+
+## 10. Figma（2026-09-08 に起こし済み）
+
+- `Color` コレクションにモード **`YORKYS Moss`** を追加（4つ目。YORKYS の値を写した上で accent 系だけ差し替え）:
+  `accent/primary #5E6B4A` / `accent/pressed #4B563B` / `accent/deep #444D35` / `accent/subtle #E7E9E5` / `accent/on-ink #97A67F` / `bg/warm #F3F3F0`
+- 変数 **`accent/contrast`** を新設（アクセント色の上に置く文字・アイコンの色）: YORKYS `#1A1A1A`、Demo (Green) `#FFFFFF`、Izakaya `#FFFFFF`、YORKYS Moss `#FFFFFF`
+- **共通コンポーネントの文字色の付け替え**（影響範囲）: アクセント色の塗りの上に載っている文字・アイコンの色を `text/primary` → `accent/contrast` に付け替えた。
+  YORKYS モードでは同じ値（#1A1A1A）なので**今の画面の見た目は変わらない**。対象:
+  `Add to Cart Button`（文字・アイコン）、`Add to Cart Button S`、`Button` の Style=Accent 全サイズ（文字・アイコン）、`Cart Icon Button` の件数、`Filter Chip` State=Selected（文字・アイコン）、`Segmented Control` の選択側の文字、`Pickup Card` の「受け渡し完了」
+- 確認用の画面（MobileOrder / 注文 / SP、モード `YORKYS Moss` を明示）: `TOP — 新構成（モスグリーン）`、`Product Detail — モスグリーン`、`Cart — モスグリーン`
+- 実装側では `app/design-tokens.css` に `--accent-contrast` を足し、アクセント上の文字色をこれに寄せる（実装は別 PR）。
+- 管理画面「表示設定 ＞ ブランドカラー」の器は **3案を出してから**作る（design-rules 1-2）。案出しの際に、天真のメモ（カラーピッカー／読みにくい色の実プレビュー）を織り込む。
+
+## 11. 決定と実装（2026-09-08、同日）
+
+- 管理画面の器は **案A「色を選ぶ → 下でプレビュー」**（天真の決定）。
+  カスタムの「レインボーの丸」は野暮ったいので、**今の色で塗った四角（タップでカラーピッカー）＋ HEX 入力**に変えた。
+- **Figma の既定（YORKYS モード）そのものをオリーブモスに差し替えた。** 黄色は「YORKYS Yellow（旧）」モードに退避。
+  黄色の生の塗り（変数に結び付いていなかった 73 箇所: ダッシュボードのグラフ、Best Seller の地など）も accent 変数に結び付けた。
+  **YORKYS のロゴの黄色だけは触っていない**（ブランド資産。アクセントではない）。
+- 実装:
+
+| 場所 | 中身 |
+|---|---|
+| `app/design-tokens.css` | accent 4色＋on-ink＋bg-warm をモスに。`--color-accent-contrast`（アクセントの上の文字色）を新設 |
+| `tailwind.config.ts` | `text-accent-contrast` |
+| ボタン・チップ・バッジ | アクセント塗りの上の文字を `text-text-primary` → `text-accent-contrast` に（AddToCartButton / S、CartButton、CartIconButton のバッジ、FilterChip 選択中、SegmentedControl、管理画面の＋ボタン、レジの会計ボタン、ダッシュボードの期間チップ） |
+| `lib/brandColor.ts`（新規） | プリセット6色、HEX → 派生色（pressed / deep / subtle / on-ink / contrast）とコントラスト比の計算、保存・取得 |
+| `lib/brandColor.server.ts`（新規） | サーバー側で `stores.brand_accent` を読む（60秒キャッシュ） |
+| `app/layout.tsx` | 保存された色があれば `<style>` で同名の CSS 変数を上書き（ちらつき無し） |
+| `components/admin/display/BrandColorPanel.tsx`（新規） | 表示設定の3つ目のタブ。プリセット／カスタム（カラーピッカー＋HEX）／読みやすさ／プレビュー（本物の部品に変数を当てる）／元に戻す・保存する |
+| `supabase/store_brand_accent.sql`（新規） | `stores.brand_accent` と manager 限定の `save_brand_accent(p_hex)` |
+
+- 読みにくい色（コントラスト 4.5 未満）を選んだときは、警告を出した上で**プレビューにそのまま出す**（天真のメモどおり）。

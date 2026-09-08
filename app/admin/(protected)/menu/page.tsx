@@ -608,10 +608,10 @@ export default function AdminMenuPage() {
                 onClick={openCreate}
                 className="bg-accent-primary rounded-[var(--radius-full)] shrink-0 flex items-center justify-center size-[44px] lg:size-auto lg:px-[var(--space-16)] lg:py-[10px]"
               >
-                <span className="lg:hidden font-jp font-bold text-[17px] leading-[1.4] tracking-[0.17px] text-text-primary">
+                <span className="lg:hidden font-jp font-bold text-[17px] leading-[1.4] tracking-[0.17px] text-accent-contrast">
                   ＋
                 </span>
-                <span className="hidden lg:inline font-jp font-bold text-[14px] leading-[1.6] tracking-[0.14px] text-text-primary whitespace-nowrap">
+                <span className="hidden lg:inline font-jp font-bold text-[14px] leading-[1.6] tracking-[0.14px] text-accent-contrast whitespace-nowrap">
                   ＋ 新規追加
                 </span>
               </button>

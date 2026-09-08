@@ -57,6 +57,16 @@ export const SUBCATEGORY_TAG_COLOR: Record<string, TagColor> = {
   alcohol:       "gray",
 };
 
+/* ── カテゴリ名の解決: DB（categories.name）優先、無ければ上の辞書、それも無ければ slug ──
+ *   サブカテゴリー（管理画面で後から作るもの）は辞書に無いので、DB を先に見る。 */
+export function resolveCategoryLabel(
+  categories: Pick<ApiCategory, "slug" | "name">[],
+  slug: string
+): string {
+  const cat = categories.find((c) => c.slug === slug);
+  return cat?.name ?? SUBCATEGORY_LABEL[slug] ?? slug;
+}
+
 /* ── カテゴリタグ色の解決: DB（categories.tag_color）優先、
  *   見つからなければ SUBCATEGORY_TAG_COLOR にフォールバック ── */
 export function resolveTagColor(
