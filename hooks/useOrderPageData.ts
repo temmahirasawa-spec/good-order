@@ -55,7 +55,7 @@ export interface UseOrderPageDataResult {
   bestSellerItems: MenuItem[];
   /** false のときは Best Seller セクションごと描画しない（見出しも出さない） */
   bestSellerEnabled: boolean;
-  /** トップの区画。ドリンク → フード の順、各グループ内は display_order 順 */
+  /** トップの区画。親カテゴリーを display_order 順に（管理画面の並び替えがそのまま効く） */
   categorySections: CategorySection[];
   selectedItem: MenuItem | null;
   setSelectedItem: (item: MenuItem | null) => void;
@@ -165,7 +165,7 @@ export function useOrderPageData(): UseOrderPageDataResult {
   const foodCats = useMemo(() => pickFoodCategories(categories), [categories]);
   const drinkCats = useMemo(() => pickDrinkCategories(categories), [categories]);
 
-  /* ── トップの区画：親カテゴリーを ドリンク → フード の順に。
+  /* ── トップの区画：親カテゴリーを display_order 順に（管理画面「カテゴリ管理」の並びそのまま）。
      各区画は「上位 top_limit 件＋すべてを見る」（docs/specs/home-layout.md） ── */
   const categorySections = useMemo<CategorySection[]>(() => {
     return orderHomeCategories(categories)
