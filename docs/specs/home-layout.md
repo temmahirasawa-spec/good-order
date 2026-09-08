@@ -101,7 +101,7 @@ AI の推奨: **A**。トップの長さを増やさず、区分の存在を伝�
 |---|---|
 | `supabase/category_subcategories.sql`（新規） | `categories.parent_id`（自己参照、親を消すと子は親なしに戻る）、`top_limit`（既定 5、0 = 全件） |
 | `lib/api.ts` | `ApiCategory` に `parent_id / top_limit / list_style`。SQL を流す前の DB では旧列で読み直して既定値を補う（安全弁） |
-| `lib/orderHome.ts` | `orderHomeCategories`（親のみ、ドリンク → フード）、`childCategories`、`itemsOfCategory`（親＋子の商品）、`applyTopLimit`、`subcategoryChips` |
+| `lib/orderHome.ts` | `orderHomeCategories`（親のみ、display_order 順。区分では並べ替えない）、`childCategories`、`itemsOfCategory`（親＋子の商品）、`applyTopLimit`、`subcategoryChips` |
 | `hooks/useOrderPageData.ts` | `CategorySection` に `children / allItems / items(上位N) / total / topLimit / listStyle / chips` |
 | `app/order/page.tsx` | 区画の見出しは `MenuSectionHeader`（右に「すべてを見る」）。サブカテゴリーがあれば `SubcategoryChips`（押すとその区分の上位 N 件）。文字リストの区画は `MenuListRow` の縦並び |
 | `app/order/[category]/page.tsx` | 見出しは DB から。サブカテゴリーがあれば sticky の `TabNav`（トップと同じ下線タブ。押すと見出しへスクロール）＋ `ListSubHeading` で区切る。親に直接ぶら下がる商品は末尾「その他」 |
@@ -110,3 +110,8 @@ AI の推奨: **A**。トップの長さを増やさず、区分の存在を伝�
 
 - 2026-09-07 の PR #60（トップに全件）は、この実装で上書きされた（`SECTION_ITEM_CAP` と `SeeMoreButton` の使用は廃止。`SeeMoreButton` の部品は `/dev/ui` 用に残す）。
 - 商品は今までどおり1つのカテゴリーに属する（`menu_items.category_id`）。サブカテゴリーを作ったら、商品の編集でカテゴリーを子に付け替える。
+
+### 9-1. 並び順の変更（2026-09-08 夜）
+
+- 「ドリンクを最上部に固定」（2 の並び）は**取り下げ**。トップの区画とタブは、管理画面「カテゴリ管理」の並び順（display_order）そのまま。
+  ドリンクを上に出したいときは、カテゴリ管理でドリンクを上に動かす（天真が実際に試して、その方が自由でよいと判断）。
