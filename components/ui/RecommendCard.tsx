@@ -37,7 +37,7 @@ export default function RecommendCard({
           <img
             src={src}
             alt={item.name}
-            className={`menu-card__img absolute inset-0 w-full h-full object-cover ${soldOut ? "opacity-40" : ""}`}
+            className={`menu-card__img absolute inset-0 w-full h-full object-cover ${soldOut ? "sold-out-photo" : ""}`}
           />
         )}
         {soldOut && <SoldOutBand />}

@@ -96,7 +96,7 @@ export default function AdminMenuRow({
             src={thumbnailUrl}
             alt={name}
             fill
-            className={`object-cover ${soldOut ? "opacity-40" : ""}`}
+            className={`object-cover ${soldOut ? "sold-out-photo" : ""}`}
             unoptimized
           />
         )}

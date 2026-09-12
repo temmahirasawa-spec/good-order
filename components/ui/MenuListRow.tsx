@@ -61,7 +61,7 @@ export default function MenuListRow({
               src={src}
               alt=""
               loading="lazy"
-              className={`absolute inset-0 w-full h-full object-cover ${soldOut ? "opacity-40" : ""}`}
+              className={`absolute inset-0 w-full h-full object-cover ${soldOut ? "sold-out-photo" : ""}`}
             />
           )}
           {soldOut && <SoldOutBand size="sm" />}
