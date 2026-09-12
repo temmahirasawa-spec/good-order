@@ -394,7 +394,7 @@ function SoldOutDemo() {
 
       <div>
         <p className="type-jp-caption text-text-secondary mb-[8px]">
-          MenuCard（一覧のグリッド）／ MenuCardWide（ベストセラー）: 写真を薄くして墨の帯。ステッパーの代わりに押せないピル。リボン（人気）は出さない
+          MenuCard（一覧のグリッド）／ MenuCardWide（ベストセラー）: 写真の色を抜いて墨の帯。ステッパーの代わりに押せないピル。リボン（人気）は出さない
         </p>
         <div className="flex gap-[16px] items-start flex-wrap">
           <MenuCard item={soldOutItem} quantity={0} onIncrement={noop} onDecrement={noop} />
