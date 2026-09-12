@@ -1,7 +1,7 @@
 # 売り切れ（SOLD OUT）の表示と、伝票の枚数の設定
 
-**状態: 提案（2026-09-12、洋輔さんの依頼を天真が中継）。実装済み・PR 待ち（`feat/sold-out-and-receipt-copies`）。**
-決めてほしいことは末尾「9. 決めてほしいこと」。決まった項目から「確定」に書き換える。
+**状態: 確定（2026-09-12、天真の決定「A で進めて OK」）。本番反映済み（PR #68、SQL 2本適用済み）。Figma 反映済み（10章）。**
+決定の記録は末尾「9. 決めてほしいこと」。洋輔さん向けの共有資料は `docs/share/2026-09-12-sold-out-and-receipt-copies.html`。
 
 ---
 
@@ -156,9 +156,11 @@ AI の推奨: **A**。洋輔さんの「表記を出す」は"分からせたい
 
 ---
 
-## 9. 決めてほしいこと
+## 9. 決めてほしいこと（2026-09-12 に天真が決定した記録）
 
-1. **「SOLD OUT」の器**: A 帯（推奨・実装済み）／ B 角のタグ／ C 操作部だけ
+天真の回答は「A で進めて OK。マイグレーション、マージも」。2〜7 は異論なしとして、実装済みの内容で確定。
+
+1. **「SOLD OUT」の器**: **A 帯（決定）**／ B 角のタグ／ C 操作部だけ
 2. **売り切れの商品のタップ**: 詳細を開ける（推奨。何が売り切れたか見られる）／ 開かない
 3. **お客様に見える文言**（3-3 の2文）: このままでよいか
 4. **管理画面の操作場所**: メニュー管理の行のチップ＋編集パネルのトグル（実装済み）。厨房画面からも切り替えたいなら別途（厨房ロールはメニュー管理を開けないため）
@@ -166,12 +168,33 @@ AI の推奨: **A**。洋輔さんの「表記を出す」は"分からせたい
 6. **枚数を変えられるロール**: manager / kitchen / counter（実装済み。刷り直しと同じ）／ manager だけ
 7. **初期データ**: SQL で YORKYS を「2枚（毎回）」にする（実装済み。依頼どおり）／ SQL では変えず管理画面で切り替える
 
-## 10. Figma
+## 10. Figma（2026-09-12 に起こし済み）
 
-未着手。このセッションでは Figma 連携（MCP）が未認証で書けなかったため、6 章のたたき台を HTML で出した。
-天真の決定後、`Components / 04 Tags & Steppers` に `Sold Out Band` / `Sold Out Pill`、`05 Cards` の各カードに BOOLEAN `Sold Out` を足し、
-`MobileOrder / 注文 / SP` に「TOP — 売り切れ」「Product Detail — 売り切れ」「Cart — 売り切れ」、
-`Menu Management` と `Print Status` に管理画面の状態を起こす（design-rules 2-1: PC / SP を対で）。
+決定後、同じ日に `use_figma` で起こした。方針: **既存の共通部品には手を入れず、複製した「(Sold Out)」部品を足す**
+（design-rules 6 の「共通部品に子を挿入すると既存インスタンスの上書きがずれる」を避けるため。Cart Item Row (Timing) と同じやり方）。
+
+| 場所 | 追加したもの |
+|---|---|
+| Components / 04 Tags & Steppers | `Sold Out Band`（Size=SM 56 / MD 200 / LG 390。surface/ink の帯、白抜き「SOLD OUT」）、`Sold Out Pill`（Size=SM 32 / MD 36 / LG 52。bg/tertiary 地に text/tertiary） |
+| Components / 05 Cards | `Menu Card M (Sold Out)` `Menu Card (Sold Out)` `Menu Card Wide (Sold Out)` `Recommend Card (Sold Out)` `Cart Item Row (Sold Out)` `Menu List Row (Sold Out)`（Thumb=None / Image）。写真の上に Dim（surface/white 60%）＋ Band、操作部は Pill。人気リボンは出さない。Category Tag は部品のインスタンスに置き換えた |
+| Components / 08 Bottom Bars | `Bottom Detail Bar (Sold Out)`（ステッパーと CTA の代わりに Pill LG） |
+| Components / 12 Staff / Lists & Rows | `Sold Out Chip`（State=Off / On）、`Admin Menu Row (Sold Out)` `Admin Menu Row (Mobile) (Sold Out)`（BOOLEAN `Sold Out` でサムネの帯を出し分け）、`Edit Button`（SP 行の編集ボタンを部品化。生フレームの違反を増やさないため） |
+| Components / 21 Staff / Print Status（新設） | `Setting Radio Row`（State=Default / Selected、Label / Description）、`Receipt Copies Card`、`Printer Health Card`（State=OK / Offline）、`Print Job Row`（Status=Pending / Done） |
+| MobileOrder / 注文 / SP | `TOP — 売り切れ`（パンケーキの1枚目と、ドリンクの1行目が売り切れ）、`Product Detail — 売り切れ`、`Cart — 売り切れ`（赤い案内＋ボタン 40%） |
+| MobileOrder / Menu Management | PC `Template / Menu Management — 売り切れ 1180x820`（1行目 ON、他は OFF のチップ。編集パネルに「売り切れにする」）、SP `Menu Management — 売り切れ — Mobile 390` / `Menu Item Editing — 売り切れ — Mobile 390` |
+| MobileOrder / Print Status / 印刷状況（新設） | PC `Template / Print Status 1180x820`、SP `Print Status — Mobile 390`（テイクアウト受け渡しのテンプレートを土台に、プリンタ状態・出ていない伝票・最近印刷した伝票・伝票の設定） |
+
+`npm run design:figma`: **構造・パディング 全ページ問題なし ／ 新しい違反なし・増えた違反なし**。
+返済したもの: 02 Buttons & CTAs の右パディング（103→100）、Components の区画を 100px 間隔で並べ直し。
+
+Figma で決めたこと（相談なしで決めた。覆せる）:
+- `Sold Out Band` LG は EN/Display/S のまま（実装の tracking 8% は付けていない。テキストスタイルから外れるため）
+- `Sold Out Chip` の左右余白は space/12（実装も 10px → 12px に揃えた）
+- Menu Management SP の Filter Row の Admin Chip は、新しい画面では高さ 44（SP のタップ領域の規約。元の画面は 38 のまま）
+- Nav Sidebar v2 に「印刷状況」の項目が無い（部品に子を足すと既存画面がずれるため触っていない）。印刷状況のテンプレートでは、どの項目も強調していない。別タスク
+- 店舗の写真は、複製した画面では差し替えた行だけ元の写真を戻した（インスタンスを差し替えると写真の上書きが消えるため）
+
+スクリーンショット: `.claude/verification/2026-09-12-sold-out/figma-*.png`。
 
 ---
 

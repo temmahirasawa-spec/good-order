@@ -3420,3 +3420,23 @@ SQL だけ先に流しても壊れない（既定値が現状。ただし YORKYS
 - 天真: 3案から選ぶ（A 推奨・実装済み）／ 文言の確認／ 9章の7項目 → OK なら AI が SQL → マージ
 - Figma への起こし（`docs/specs/sold-out-and-receipt-copies.md` 10章）。決定後に別セッションで
 - 洋輔さん向けの共有資料（`docs/share/` 形式）は未作成。必要なら `report-artifact` スキルで
+
+## 天真の決定後（同日夜）: SQL 適用 → マージ → Figma → 共有資料
+
+天真の回答「A で進めて OK。マイグレーション、マージも。Figma への反映と、洋輔さん向け資料も」。
+
+- **SQL 2本を本番（`good-order` / oiropkuvaenebmlicrac）に適用**（Supabase MCP の `apply_migration`、名前 `sold_out` → `receipt_copies`）。
+  確認: `menu_items.is_sold_out` 全51件 false ／ `place_order` が売り切れを弾く ／ stores = YORKYS BRUNCH = `two` ／
+  `claim_print_job` が `receiptCopies` を返す ／ `save_receipt_copies` は authenticated のみ実行可（anon 不可）
+- **PR #68 をマージ**（squash、`41407d2`）。本番（app.good-order.jp/yorkys-shukugawa）に配信済みを `/dev/ui` の「SOLD OUT」セクションで確認
+- **Figma**: `docs/specs/sold-out-and-receipt-copies.md` 10章。共通部品は触らず「(Sold Out)」の複製部品で足した。
+  `npm run design:figma` は 構造・パディング 全ページ問題なし／新しい違反なし・増えた違反なし
+- **洋輔さん向けの共有資料**: `docs/share/2026-09-12-sold-out-and-receipt-copies.html`（`docs/skills/report-artifact` の作法。画像は本番の `/dev/ui` と Figma から埋め込み）
+- 本番の実機スクリーンショット（お客様の注文画面）は撮っていない。**本番の商品を売り切れにしないと撮れない**ため（店舗が営業中に触るものなので勝手に切り替えない）。
+  部品の見え方は本番 `/dev/ui` の実写（`.claude/verification/2026-09-12-sold-out/prod-devui-*.png`）で代用した
+- 実装側の微修正: `AdminMenuRow` の売り切れチップの左右余白を 10px → `var(--space-12)`（Figma のスペーシングのスケールに合わせた）
+
+### 残り
+
+- 店舗で1品「売り切れ」をオンにして、お客様側の見え方と、次の注文で伝票が2枚出ることを確認する（天真・洋輔さん）
+- Nav Sidebar v2（Figma）に「印刷状況」の項目を足す（design-rules 6 の手順で全画面を走査しながら）。別タスク

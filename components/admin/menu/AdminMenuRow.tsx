@@ -125,7 +125,7 @@ export default function AdminMenuRow({
           disabled={toggling}
           aria-pressed={soldOut}
           aria-label={soldOut ? "売り切れを解除する" : "売り切れにする"}
-          className={`shrink-0 h-[28px] px-[10px] rounded-full border type-jp-caption-bold whitespace-nowrap transition-colors disabled:opacity-50 ${
+          className={`shrink-0 h-[28px] px-[var(--space-12)] rounded-full border type-jp-caption-bold whitespace-nowrap transition-colors disabled:opacity-50 ${
             soldOut
               ? "bg-status-urgent-subtle border-transparent text-status-urgent"
               : "bg-surface-white border-border text-text-secondary hover:bg-bg-secondary"
