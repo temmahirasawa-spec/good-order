@@ -31,7 +31,7 @@ export interface BestSellerCandidate {
 const NOTE_REORDER_PC = "行を上下にドラッグすると、表示される順番を並べ替えられます。";
 const NOTE_REORDER_SP = "行の左にある上下のボタンで、表示される順番を並べ替えられます。";
 const NOTES_COMMON = [
-  "売り切れ・非表示にした商品は、ベストセラーからも自動的に隠れます。",
+  "非表示にした商品は、ベストセラーからも自動的に隠れます（売り切れの商品は「SOLD OUT」付きで残ります）。",
   `登録できるのは最大${BEST_SELLER_MAX}件までです。`,
 ];
 

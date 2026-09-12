@@ -12,7 +12,7 @@ export const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
 /* ── menu_items 取得時の共通カラム定義 ── */
 export const MENU_ITEM_COLUMNS =
-  "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_available, display_order, options_enabled, options_heading, options_select_mode";
+  "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_available, display_order, options_enabled, options_heading, options_select_mode, is_sold_out";
 
 /* ── buildCatMap のモジュールキャッシュ（TTL 30秒） ── */
 const CAT_CACHE_TTL_MS = 30_000;
@@ -80,6 +80,8 @@ export interface ApiMenuItem {
   options_enabled?: boolean;
   options_heading?: string | null;
   options_select_mode?: string | null;
+  /** 売り切れ（supabase/sold_out.sql）。古い取得列には無いので optional */
+  is_sold_out?: boolean;
 }
 
 /** 商品に設定されたオプション1件（menu_item_options） */
@@ -202,6 +204,7 @@ function toMenuItem(
     options_enabled?: boolean | null;
     options_heading?: string | null;
     options_select_mode?: string | null;
+    is_sold_out?: boolean | null;
   },
   catMap: Record<string, string>
 ): MenuItem {
@@ -244,6 +247,7 @@ function toMenuItem(
     optionsEnabled: row.options_enabled ?? false,
     optionsHeading: row.options_heading || "トッピング",
     optionsSelectMode: row.options_select_mode === "single" ? "single" : "multiple",
+    isSoldOut: row.is_sold_out ?? false,
   };
 }
 
@@ -266,7 +270,7 @@ export async function fetchMenuItemsBySlug(
 
   const { data, error } = await supabase
     .from("menu_items")
-    .select("id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout")
+    .select("id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_sold_out")
     .in("category_id", catIds)
     .eq("is_available", true)
     .order("display_order");
@@ -280,7 +284,7 @@ export async function fetchAllMenuItems(): Promise<MenuItem[]> {
   const catMap = await buildCatMap();
   const { data, error } = await supabase
     .from("menu_items")
-    .select("id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout")
+    .select("id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_sold_out")
     .eq("is_available", true)
     .eq("is_takeout", false)
     .order("display_order");
@@ -294,7 +298,7 @@ export async function fetchTakeoutMenuItems(): Promise<MenuItem[]> {
   const catMap = await buildCatMap();
   const { data, error } = await supabase
     .from("menu_items")
-    .select("id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout")
+    .select("id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_sold_out")
     .eq("is_available", true)
     .eq("is_takeout", true)
     .order("display_order");
@@ -468,7 +472,7 @@ export async function fetchAllMenuItemsAdmin(): Promise<
   const { data, error } = await supabase
     .from("menu_items")
     .select(
-      "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_available, display_order"
+      "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, calories, serving_time_min, is_takeout, is_available, display_order, is_sold_out"
     )
     .order("display_order");
   if (error) throw error;

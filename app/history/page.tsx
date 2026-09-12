@@ -126,7 +126,9 @@ export default function HistoryPage() {
           .from("menu_items")
           .select(MENU_ITEM_COLUMNS)
           .in("id", ids)
-          .eq("is_available", true),
+          .eq("is_available", true)
+          // 売り切れは再注文に入れない（カートに入れても注文できないため）
+          .eq("is_sold_out", false),
         fetchCategories(),
         // 履歴のオプションは、今も表示中のものだけ引き継ぐ（消えたものは落とす。価格は今の値）
         fetchMenuItemOptions().catch(() => []),

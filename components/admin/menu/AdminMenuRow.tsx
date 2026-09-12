@@ -13,11 +13,17 @@
  *
  * FigmaのPC版行には編集ボタンが無いため、行全体クリックで編集パネルを開く
  * （SPは明示的な編集ボタンも併存。トグルはクリック伝播を止めて誤操作を防ぐ）。
+ *
+ * 売り切れ（docs/specs/sold-out-and-receipt-copies.md）: 価格の右に「売り切れ」チップ。
+ * 押すと ON/OFF が切り替わる（PC / SP 共通）。ON のときはサムネにも SOLD OUT の帯を出し、
+ * お客様の画面と同じ見え方にする。公開トグルとは別の操作（隠すのではなく、残したまま止める）。
  */
 import Image from "next/image";
 import { Icon } from "@/components/Icon";
 import ReorderButtons from "@/components/admin/ReorderButtons";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
+import { SoldOutBand } from "@/components/ui/SoldOut";
+import { SOLD_OUT_ADMIN_LABEL } from "@/lib/soldOut";
 import type { ReorderRowBindings } from "@/hooks/useDragReorder";
 
 export default function AdminMenuRow({
@@ -26,8 +32,10 @@ export default function AdminMenuRow({
   price,
   thumbnailUrl,
   available,
+  soldOut = false,
   toggling,
   onToggleAvailable,
+  onToggleSoldOut,
   onEdit,
   dimmed,
   reorder,
@@ -38,8 +46,12 @@ export default function AdminMenuRow({
   price: number;
   thumbnailUrl: string | null;
   available: boolean;
+  /** 売り切れ（menu_items.is_sold_out） */
+  soldOut?: boolean;
   toggling: boolean;
   onToggleAvailable: () => void;
+  /** 「売り切れ」チップを押したとき。未指定ならチップを出さない */
+  onToggleSoldOut?: () => void;
   onEdit: () => void;
   dimmed?: boolean;
   /** ⠿ ドラッグ並び替えのバインディング（PCのみ）。未指定なら並び替え不可 */
@@ -80,8 +92,15 @@ export default function AdminMenuRow({
 
       <div className="relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 size-[48px]">
         {thumbnailUrl && (
-          <Image src={thumbnailUrl} alt={name} fill className="object-cover" unoptimized />
+          <Image
+            src={thumbnailUrl}
+            alt={name}
+            fill
+            className={`object-cover ${soldOut ? "opacity-40" : ""}`}
+            unoptimized
+          />
         )}
+        {soldOut && <SoldOutBand size="sm" />}
       </div>
 
       <div className="flex flex-[1_0_0] flex-col gap-[var(--space-2)] items-start min-w-0 overflow-hidden">
@@ -94,6 +113,27 @@ export default function AdminMenuRow({
       <p className="type-en-price-m text-text-primary shrink-0 whitespace-nowrap">
         ¥{price.toLocaleString()}
       </p>
+
+      {/* 売り切れチップ（PC / SP 共通）。クリック伝播を止めて行クリック=編集と競合しないようにする */}
+      {onToggleSoldOut && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSoldOut();
+          }}
+          disabled={toggling}
+          aria-pressed={soldOut}
+          aria-label={soldOut ? "売り切れを解除する" : "売り切れにする"}
+          className={`shrink-0 h-[28px] px-[10px] rounded-full border type-jp-caption-bold whitespace-nowrap transition-colors disabled:opacity-50 ${
+            soldOut
+              ? "bg-status-urgent-subtle border-transparent text-status-urgent"
+              : "bg-surface-white border-border text-text-secondary hover:bg-bg-secondary"
+          }`}
+        >
+          {SOLD_OUT_ADMIN_LABEL}
+        </button>
+      )}
 
       {/* PC: 公開トグル（クリック伝播を止めて行クリック=編集と競合しないようにする） */}
       <div onClick={(e) => e.stopPropagation()} className="hidden lg:block shrink-0">

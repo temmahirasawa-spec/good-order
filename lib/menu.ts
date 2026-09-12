@@ -40,6 +40,8 @@ export interface MenuItem {
   optionsEnabled?: boolean;
   optionsHeading?: string;
   optionsSelectMode?: "multiple" | "single";
+  /** 売り切れ（docs/specs/sold-out-and-receipt-copies.md）。true なら一覧に残したまま注文できない */
+  isSoldOut?: boolean;
 }
 
 // ─── 実店舗写真（public/images/ 配下）────────────────────────

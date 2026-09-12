@@ -9,6 +9,7 @@ import type { MenuItem } from "@/lib/menu";
 import CategoryTag from "@/components/ui/CategoryTag";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
 import { useMenuDataStore } from "@/lib/menuDataStore";
+import { SoldOutBand } from "@/components/ui/SoldOut";
 
 export default function RecommendCard({
   item,
@@ -24,6 +25,7 @@ export default function RecommendCard({
   const src = (cover?.type === "image" ? cover.url : undefined) ?? item.image;
   const label = SUBCATEGORY_LABEL[item.subcategory] ?? item.subcategory;
   const color = resolveTagColor(categories, item.subcategory);
+  const soldOut = item.isSoldOut === true;
   return (
     <div
       className={`menu-card ${onClick ? "pressable cursor-pointer" : ""} bg-surface-white border border-text-primary flex flex-col items-start overflow-hidden w-[300px] shrink-0 ${className}`}
@@ -35,9 +37,10 @@ export default function RecommendCard({
           <img
             src={src}
             alt={item.name}
-            className="menu-card__img absolute inset-0 w-full h-full object-cover"
+            className={`menu-card__img absolute inset-0 w-full h-full object-cover ${soldOut ? "opacity-40" : ""}`}
           />
         )}
+        {soldOut && <SoldOutBand />}
       </div>
       <div className="flex flex-col gap-[6px] items-start pt-[14px] pb-[var(--space-16)] px-[var(--space-16)] w-full">
         <CategoryTag label={label} color={color} />

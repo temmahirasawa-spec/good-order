@@ -8,6 +8,7 @@ import { isAcceptingOrders } from "./api";
 import { useMenuDataStore } from "./menuDataStore";
 import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
 import { optionsKey, optionsTotal, type SelectedOption } from "./menuOptions";
+import { isSoldOut, isSoldOutError, soldOutIdsIn } from "./soldOut";
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
@@ -44,7 +45,9 @@ function generateUuid(): string {
  * 受渡番号（orders.pickup_no）は BEFORE INSERT トリガーが採番するので
  * ここからは一切渡さない（`supabase/pickup_no.sql`）。
  *
- * @returns 保存できたか。再送で「既にある」場合も true（失敗ではない）
+ * @returns "saved"    = 保存できた（再送で「既にある」場合も含む。失敗ではない）
+ *          "sold_out" = 売り切れの商品が含まれていて弾かれた（supabase/sold_out.sql）。再送しても通らない
+ *          "failed"   = 通信エラー等。再送すれば通る可能性がある
  */
 async function saveOrderToDb(
   orderId: string,
@@ -54,7 +57,7 @@ async function saveOrderToDb(
   tableLabel: string | null,
   orderType: "dine_in" | "takeout",
   totalAmount: number
-): Promise<boolean> {
+): Promise<"saved" | "sold_out" | "failed"> {
   try {
     const { error } = await supabase.rpc("place_order", {
       p_order_id:     orderId,
@@ -79,8 +82,10 @@ async function saveOrderToDb(
     });
 
     if (error) throw error;
-    return true;
+    return "saved";
   } catch (err) {
+    // 売り切れで弾かれた。通信エラーではないので Sentry には送らず、再送もしない
+    if (isSoldOutError(err)) return "sold_out";
     // placeOrder はこの戻り値を待ち、false なら再試行 → それでも駄目なら
     // お客様に「送信できませんでした」と出して完了画面に進めない。
     // ただし「なぜ失敗したか」は画面には出ないので、原因を追えるよう
@@ -90,7 +95,7 @@ async function saveOrderToDb(
       tags: { feature: "order-submit" },
       extra: { orderId, orderType, itemCount: items.length, totalAmount },
     });
-    return false;
+    return "failed";
   }
 }
 
@@ -159,7 +164,8 @@ export type PlaceOrderResult =
   //   以前はここを fire-and-forget にしていたため、保存に失敗しても
   //   画面は「ご注文を承りました」に進み、厨房には何も届かないまま
   //   誰も気づけなかった（2026-08-26 の監査で判明）。
-  | { ok: false; reason: "empty" | "closed" | "failed" };
+  // "sold_out" … 売り切れの商品が含まれていて送らなかった／サーバー側で弾かれた。カートは残す
+  | { ok: false; reason: "empty" | "closed" | "failed" | "sold_out" };
 
 interface CartStore {
   items: CartItem[];
@@ -224,6 +230,8 @@ export const useCartStore = create<CartStore>()(
       setTakeoutMode: (flag) => set({ isTakeoutMode: flag }),
 
       addItem: (item, qty = 1, servingTiming, options = []) => {
+        // 売り切れはカートに入れない（画面側の操作部は SOLD OUT のピルに置き換わっているが、念のため）
+        if (isSoldOut(item)) return;
         const timing =
           servingTiming === undefined ? resolveDefaultTiming(item, get().orderType) : servingTiming;
         set({ items: mergeLine(get().items, item, qty, timing, options) });
@@ -319,6 +327,12 @@ export const useCartStore = create<CartStore>()(
         }
         if (!accepting) return { ok: false, reason: "closed" };
 
+        // 売り切れの商品が入っていたら送らない。判定は最新のメニュー（menuDataStore）で行う。
+        // サーバー側の place_order でも同じ検証をしている（こちらが最後の砦）。
+        if (soldOutIdsIn(current, useMenuDataStore.getState().menuItems).size > 0) {
+          return { ok: false, reason: "sold_out" };
+        }
+
         const tableNumber = get().tableNumber;
         const tableId     = get().tableId;
         const tableLabel  = get().tableLabel;
@@ -360,17 +374,23 @@ export const useCartStore = create<CartStore>()(
         // リトライしても安全な理由: place_order は同じ p_order_id なら
         // ON CONFLICT DO NOTHING で何もしない（supabase/order_insert_rpc.sql）。
         // orderId は上で1回だけ採番しているので、何度呼んでも二重登録にならない。
-        let saved = false;
+        let saved: "saved" | "sold_out" | "failed" = "failed";
         for (let attempt = 1; attempt <= 3; attempt++) {
           saved = await saveOrderToDb(
             orderId, current, tableNumber, tableId, tableLabel, orderType, totalAmount
           );
-          if (saved) break;
+          if (saved !== "failed") break;
           // 1回目の失敗は瞬断のことが多い。少し待って作り直す
           if (attempt < 3) await new Promise((r) => setTimeout(r, 600 * attempt));
         }
 
-        if (!saved) {
+        // 売り切れで弾かれた（売り切れにした直後に、古い画面から送られた場合）。
+        // カートは残し、お客様が該当の行を消してやり直せる状態で止める。
+        if (saved === "sold_out") {
+          return { ok: false, reason: "sold_out" };
+        }
+
+        if (saved !== "saved") {
           // カートを空にしない。お客様が「もう一度」を押せる状態で止める。
           // 履歴（localStorage）には既に積んであるが、DB に無い注文なので
           // ステータス照会にも出てこない。ここで止めるのが唯一の正解。

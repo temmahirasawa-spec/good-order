@@ -1,0 +1,132 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>SOLD OUT の見せ方 3案</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Barlow:wght@500;600&display=swap" rel="stylesheet"><style>
+:root{--m:#5E6B4A;--m-subtle:#E7E9E5;--ink:#1A1A1A;--sub:#646464;--t3:#999;--t4:#C4C4C4;--line:#DDD;--div:#EDEDED;--bg:#FAFAFA;--bg3:#EFEFEF;--warm:#F3F3F0;--urgent:#DC2626;--urgent-subtle:#FCE8E8;--tag-yellow:#FBEEC5;--jp:'Noto Sans JP',sans-serif;--en:Barlow,sans-serif;--shadow:0 2px 8px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)}
+*{box-sizing:border-box}body{margin:0;background:#E8E8E8;font:500 14px/1.5 var(--jp);color:var(--ink)}
+.sheet{padding:28px 32px 40px;width:1400px}
+h1{font:700 22px var(--jp);margin:0 0 6px}.note{color:var(--sub);font-size:13px;margin:0 0 22px;max-width:1300px;line-height:1.7}
+.row{display:flex;gap:28px;align-items:flex-start}.col{width:390px;flex:0 0 390px}
+.plan{margin:0 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plan b{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;align-items:center;justify-content:center;font-size:13px}.plan .nm{font:700 15px var(--jp)}.plan small{flex-basis:100%;color:var(--sub);font-size:12px;line-height:1.5}.rec{font:700 11px var(--jp);background:var(--m-subtle);border:1px solid var(--m);color:#2f3a24;padding:2px 8px;border-radius:999px}
+.phone{width:390px;background:var(--bg);border:1px solid #cfcfcf;border-radius:14px;overflow:hidden;padding-bottom:12px}
+.sec{padding:20px 0 4px}.lbl{padding:0 16px 8px;font:500 11px var(--jp);color:var(--t3);letter-spacing:.02em}
+/* type */
+.hs{font:700 15px/1.45 var(--jp)}.hl{font:700 20px/1.4 var(--jp)}.cap{font:500 12px/1.5 var(--jp)}.capb{font:700 12px/1.5 var(--jp)}.pm{font:600 17px/1.2 var(--en)}.ps{font:600 14px/1.2 var(--en)}.lab{font:500 12px/1.2 var(--en);letter-spacing:.04em}.micro{font:500 9px/1.2 var(--jp);letter-spacing:.04em}
+.tag{display:inline-block;padding:4px 10px;border-radius:9999px;background:var(--tag-yellow);font:500 11px/1.4 var(--jp)}
+/* cards M */
+.cards{display:flex;gap:12px;padding:0 16px;overflow:hidden}.card{width:200px;flex:0 0 200px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.im{position:relative;width:200px;height:200px;border-radius:8px;background:var(--bg3);overflow:hidden}.im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.im.dim img{opacity:.4}
+.band{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}.band span{width:100%;text-align:center;background:var(--ink);color:#fff;padding:4px 0;font:500 12px/1.2 var(--en);letter-spacing:.04em}
+.band.lg span{padding:8px 0;font-size:20px;letter-spacing:.08em}.band.sm span{padding:2px 0;font:500 9px/1.2 var(--en);letter-spacing:.04em}
+.corner{position:absolute;left:8px;top:8px;background:var(--ink);color:#fff;border-radius:4px;padding:3px 7px;font:500 11px/1.2 var(--en);letter-spacing:.04em}
+.corner.sm{left:4px;top:4px;padding:2px 5px;font-size:9px}
+.ribbon{position:absolute;left:12px;top:0;width:48px;height:64px;background:var(--m);clip-path:polygon(0 0,100% 0,100% 100%,50% 86%,0 100%);color:#fff;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;font:500 9px var(--jp)}
+.card .nm{font:700 15px/1.45 var(--jp);min-height:44px;width:100%}.card .pr{font:600 17px/1.2 var(--en)}
+.ctl{display:flex;gap:8px;align-items:center;width:100%}
+.stepS{display:flex;justify-content:space-between;align-items:center;width:84px}.stepS b{width:32px;height:32px;border-radius:50%;border:1px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font:500 16px var(--en)}.stepS b.dis{border-color:var(--line);color:var(--t4)}.stepS span{font:500 14px var(--en)}
+.cta{flex:1;height:32px;border-radius:9999px;background:var(--m);color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px var(--jp)}
+.pill{display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;background:var(--bg3);color:var(--t3);font:500 12px/1.2 var(--en);letter-spacing:.04em;white-space:nowrap}
+.pill.sm{height:32px;padding:0 12px;width:100%}.pill.md{height:36px;padding:0 16px}.pill.lg{height:52px;padding:0 24px;font:600 14px var(--en);letter-spacing:.04em;flex:1}
+.pill.outline{background:#fff;border:1px solid var(--line);color:var(--t3)}
+/* list rows */
+.lrow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--div)}.lrow .th{position:relative;width:56px;height:56px;border-radius:8px;background:var(--bg3);overflow:hidden;flex:0 0 56px}.lrow .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.lrow .th.dim img{opacity:.4}
+.lrow .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.lrow .n{font:700 15px/1.45 var(--jp);display:flex;gap:6px;align-items:center}.lrow .d{font:500 12px var(--jp);color:var(--sub)}.lrow .p{font:600 17px var(--en)}
+.plus{width:36px;height:36px;border-radius:50%;border:1px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font:500 18px var(--en)}
+.inl{display:inline-flex;align-items:center;background:var(--ink);color:#fff;border-radius:4px;padding:2px 6px;font:500 9px/1.2 var(--en);letter-spacing:.04em}
+/* detail */
+.kv{position:relative;width:100%;height:200px;background:var(--bg3);overflow:hidden}.kv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.kv.dim img{opacity:.4}
+.close{position:absolute;right:16px;top:12px;width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font:500 18px var(--en)}
+.intro{display:flex;flex-direction:column;gap:4px;align-items:center;padding:0 16px;margin-top:20px}
+.bar{display:flex;gap:12px;align-items:center;background:#fff;border-top:1px solid var(--div);padding:12px 16px 16px;margin-top:16px}
+.cartbtn{width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 48px}.cartbtn i{position:absolute;right:4px;top:2px;background:var(--m);color:#fff;border-radius:9999px;padding:1px 5px;font:600 10px var(--en);font-style:normal}
+/* cart */
+.cartwrap{background:var(--warm);padding:16px 24px;display:flex;flex-direction:column;gap:12px}
+.crow{position:relative;display:flex;gap:12px;align-items:center;padding:16px;background:#fff;border-radius:16px;box-shadow:var(--shadow)}
+.crow .img{position:relative;width:80px;height:80px;border-radius:12px;background:var(--bg3);overflow:hidden;flex:0 0 80px}.crow .img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.crow .img.dim img{opacity:.4}
+.crow .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;align-items:flex-start}.crow .pq{display:flex;align-items:center;justify-content:space-between;height:36px;width:100%}
+.crow .trash{position:absolute;right:16px;top:16px;color:var(--t3);font:500 12px var(--en)}
+.notice{font:700 12px/1.5 var(--jp);color:var(--urgent);text-align:center}
+.big{height:52px;border-radius:9999px;background:var(--m);opacity:.4;color:#fff;display:flex;align-items:center;justify-content:center;font:700 14px var(--jp)}
+/* admin */
+.admin{margin-top:36px}.admin h2{font:700 16px var(--jp);margin:0 0 4px}.admin .note{margin-bottom:12px}
+.arow{display:flex;gap:12px;align-items:center;height:64px;padding:8px 0;border-bottom:1px solid var(--div);width:560px;background:#fff;padding-left:12px;padding-right:12px}
+.arow .th{position:relative;width:48px;height:48px;border-radius:8px;background:var(--bg3);overflow:hidden;flex:0 0 48px}.arow .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.arow .th.dim img{opacity:.4}
+.arow .t{flex:1;min-width:0}.arow .n{font:700 14px/1.6 var(--jp)}.arow .c{font:500 12px var(--jp);color:var(--t3)}.arow .p{font:600 17px var(--en)}
+.chip{height:28px;padding:0 10px;border-radius:9999px;border:1px solid var(--line);background:#fff;color:var(--sub);font:700 12px var(--jp);display:inline-flex;align-items:center;white-space:nowrap}.chip.on{background:var(--urgent-subtle);border-color:transparent;color:var(--urgent)}
+.tgl{width:40px;height:22px;border-radius:9999px;background:var(--m);position:relative;flex:0 0 40px}.tgl:after{content:"";position:absolute;top:2px;left:20px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.pcard{width:560px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.pcard h3{margin:0;font:700 14px/1.6 var(--jp)}.pcard .cap{color:var(--sub)}
+.opt{display:flex;gap:12px;align-items:center;padding:12px 16px;border:1px solid var(--line);border-radius:8px;background:#fff}.opt.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.radio{width:18px;height:18px;border-radius:50%;border:1px solid var(--line);flex:0 0 18px;background:#fff}.opt.on .radio{border:5px solid var(--ink)}
+.opt .ol{font:700 14px/1.6 var(--jp)}.opt .od{font:500 12px/1.5 var(--jp);color:var(--sub)}
+.two{display:flex;gap:28px;align-items:flex-start}
+</style></head><body><div class="sheet">
+<h1>「SOLD OUT」の見せ方 3案（お客様側）</h1>
+<p class="note">中身は3案とも同じ: 商品は一覧に残る／「SOLD OUT」の文字が出る／ステッパー・「＋」・「カートに入れる」が押せなくなる／タップで商品詳細は開ける。違うのは「どこに、どのくらい強く出すか」だけ。<br>上から順に、トップのカルーセル（Menu Card M）→ 写真なしの文字の行（Menu List Row）→ 商品詳細（KV と下部バー）→ カート（入れた後で売り切れになった行）。各段の左（1つ目）が売り切れ、右（2つ目）が通常。</p>
+<div class="row">
+
+<!-- ── A ── -->
+<div class="col"><p class="plan"><b>A</b><span class="nm">帯（写真を薄くして、真ん中に墨の帯）</span> <span class="rec">AI推奨</span><small>遠目でも一目で分かる。数量限定・日替わりの多い店向き。写真なしの行はピルだけ（サムネがあれば小さい帯も）。人気リボンは帯と喧嘩するので出さない</small></p>
+<div class="phone">
+<div class="sec"><div class="lbl">トップのカルーセル（Menu Card M）</div><div class="cards">
+<div class="card"><div class="im dim"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="band"><span>SOLD OUT</span></div></div><span class="tag">パンケーキ</span><div class="nm">プレーン</div><div class="pr">¥1,100</div><div class="pill sm">SOLD OUT</div></div>
+<div class="card"><div class="im"><img src="../../../public/images/pancake/p2.webp" alt=""><div class="ribbon">人気</div></div><span class="tag">パンケーキ</span><div class="nm">フルーツ&amp;フルーツ</div><div class="pr">¥1,485</div><div class="ctl"><div class="stepS"><b class="dis">−</b><span>1</span><b>+</b></div><div class="cta">カートに入れる</div></div></div>
+</div></div>
+<div class="sec"><div class="lbl">文字の行（Menu List Row）</div>
+<div class="lrow"><div class="t"><div class="n">自家製レモネード</div><div class="d">はちみつとレモンの自家製シロップ</div><div class="p">¥580</div></div><div class="pill md">SOLD OUT</div></div>
+<div class="lrow"><div class="t"><div class="n">カフェラテ</div><div class="d">カフェ</div><div class="p">¥600</div></div><div class="plus">+</div></div>
+<div class="lrow"><div class="th dim"><img src="../../../public/images/cafe/c1.webp" alt=""><div class="band sm"><span>SOLD OUT</span></div></div><div class="t"><div class="n">ブレンドコーヒー</div><div class="d">サムネつきの行</div><div class="p">¥550</div></div><div class="pill md">SOLD OUT</div></div>
+</div>
+<div class="sec"><div class="lbl">商品詳細（KV ＋ 下部バー）</div><div class="kv dim"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="band lg"><span>SOLD OUT</span></div><div class="close">×</div></div><div class="intro"><span class="tag">パンケーキ</span><div class="hl">プレーン</div></div><div class="bar"><div class="cartbtn">🛒<i>2</i></div><div class="pill lg">SOLD OUT</div></div></div>
+<div class="sec"><div class="lbl">カート（Cart Item Row）</div><div class="cartwrap"><div class="crow"><div class="img dim"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="band"><span>SOLD OUT</span></div></div><div class="txt"><span class="tag" style="padding:2px 10px">パンケーキ</span><div class="hs">プレーン</div><div class="pq"><span class="pm">¥1,100</span><span class="pill md">SOLD OUT</span></div></div><div class="trash">🗑</div></div><div class="notice">売り切れの商品が含まれています。カートから削除すると、ご注文いただけます。</div><div class="big">注文を確定する</div></div></div>
+</div></div>
+
+<!-- ── B ── -->
+<div class="col"><p class="plan"><b>B</b><span class="nm">角のタグ（写真はそのまま。左上に小さな墨のタグ）</span><small>写真の魅力を保つ。「また今度」を促したい店向き。ただし2列のグリッドや横スワイプでは見落としやすく、押してから気づく（ピルは A と同じ）。人気リボンの位置に置くので、リボンとは同時に出ない</small></p>
+<div class="phone">
+<div class="sec"><div class="lbl">トップのカルーセル（Menu Card M）</div><div class="cards">
+<div class="card"><div class="im"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="corner">SOLD OUT</div></div><span class="tag">パンケーキ</span><div class="nm">プレーン</div><div class="pr">¥1,100</div><div class="pill sm">SOLD OUT</div></div>
+<div class="card"><div class="im"><img src="../../../public/images/pancake/p2.webp" alt=""><div class="ribbon">人気</div></div><span class="tag">パンケーキ</span><div class="nm">フルーツ&amp;フルーツ</div><div class="pr">¥1,485</div><div class="ctl"><div class="stepS"><b class="dis">−</b><span>1</span><b>+</b></div><div class="cta">カートに入れる</div></div></div>
+</div></div>
+<div class="sec"><div class="lbl">文字の行（Menu List Row）</div>
+<div class="lrow"><div class="t"><div class="n"><span class="inl">SOLD OUT</span>自家製レモネード</div><div class="d">はちみつとレモンの自家製シロップ</div><div class="p">¥580</div></div><div class="pill md">SOLD OUT</div></div>
+<div class="lrow"><div class="t"><div class="n">カフェラテ</div><div class="d">カフェ</div><div class="p">¥600</div></div><div class="plus">+</div></div>
+<div class="lrow"><div class="th"><img src="../../../public/images/cafe/c1.webp" alt=""><div class="corner sm">SOLD OUT</div></div><div class="t"><div class="n">ブレンドコーヒー</div><div class="d">サムネつきの行</div><div class="p">¥550</div></div><div class="pill md">SOLD OUT</div></div>
+</div>
+<div class="sec"><div class="lbl">商品詳細（KV ＋ 下部バー）</div><div class="kv"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="corner" style="left:16px;top:16px;padding:6px 10px;font-size:13px">SOLD OUT</div><div class="close">×</div></div><div class="intro"><span class="tag">パンケーキ</span><div class="hl">プレーン</div></div><div class="bar"><div class="cartbtn">🛒<i>2</i></div><div class="pill lg">SOLD OUT</div></div></div>
+<div class="sec"><div class="lbl">カート（Cart Item Row）</div><div class="cartwrap"><div class="crow"><div class="img"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="corner sm">SOLD OUT</div></div><div class="txt"><span class="tag" style="padding:2px 10px">パンケーキ</span><div class="hs">プレーン</div><div class="pq"><span class="pm">¥1,100</span><span class="pill md">SOLD OUT</span></div></div><div class="trash">🗑</div></div><div class="notice">売り切れの商品が含まれています。カートから削除すると、ご注文いただけます。</div><div class="big">注文を確定する</div></div></div>
+</div></div>
+
+<!-- ── C ── -->
+<div class="col"><p class="plan"><b>C</b><span class="nm">操作部だけ（写真も文字もそのまま。操作部が枠線のピルに変わる）</span><small>変更が最小で、一覧の見た目がいちばん崩れない。写真なしの文字メニュー主体の店なら A と同じ見え方。写真カードでは弱く、写真を見て「押せる」と思ってから気づく。人気リボンはそのまま出る</small></p>
+<div class="phone">
+<div class="sec"><div class="lbl">トップのカルーセル（Menu Card M）</div><div class="cards">
+<div class="card"><div class="im"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="ribbon">人気</div></div><span class="tag">パンケーキ</span><div class="nm">プレーン</div><div class="pr">¥1,100</div><div class="pill sm outline">SOLD OUT</div></div>
+<div class="card"><div class="im"><img src="../../../public/images/pancake/p2.webp" alt=""></div><span class="tag">パンケーキ</span><div class="nm">フルーツ&amp;フルーツ</div><div class="pr">¥1,485</div><div class="ctl"><div class="stepS"><b class="dis">−</b><span>1</span><b>+</b></div><div class="cta">カートに入れる</div></div></div>
+</div></div>
+<div class="sec"><div class="lbl">文字の行（Menu List Row）</div>
+<div class="lrow"><div class="t"><div class="n">自家製レモネード</div><div class="d">はちみつとレモンの自家製シロップ</div><div class="p">¥580</div></div><div class="pill md outline">SOLD OUT</div></div>
+<div class="lrow"><div class="t"><div class="n">カフェラテ</div><div class="d">カフェ</div><div class="p">¥600</div></div><div class="plus">+</div></div>
+<div class="lrow"><div class="th"><img src="../../../public/images/cafe/c1.webp" alt=""></div><div class="t"><div class="n">ブレンドコーヒー</div><div class="d">サムネつきの行</div><div class="p">¥550</div></div><div class="pill md outline">SOLD OUT</div></div>
+</div>
+<div class="sec"><div class="lbl">商品詳細（KV ＋ 下部バー）</div><div class="kv"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="close">×</div></div><div class="intro"><span class="tag">パンケーキ</span><div class="hl">プレーン</div></div><div class="bar"><div class="cartbtn">🛒<i>2</i></div><div class="pill lg outline">SOLD OUT</div></div></div>
+<div class="sec"><div class="lbl">カート（Cart Item Row）</div><div class="cartwrap"><div class="crow"><div class="img"><img src="../../../public/images/pancake/p1.webp" alt=""></div><div class="txt"><span class="tag" style="padding:2px 10px">パンケーキ</span><div class="hs">プレーン</div><div class="pq"><span class="pm">¥1,100</span><span class="pill md outline">SOLD OUT</span></div></div><div class="trash">🗑</div></div><div class="notice">売り切れの商品が含まれています。カートから削除すると、ご注文いただけます。</div><div class="big">注文を確定する</div></div></div>
+</div></div>
+
+</div>
+
+<div class="admin">
+<h2>店舗側（3案共通）</h2>
+<p class="note">左: メニュー管理の行。価格の右に「売り切れ」チップ（押すと ON / OFF。ON は赤い地）。ON の商品はサムネにも帯が出る。公開トグルは今までどおり（隠したいときはこちら）。<br>右: 印刷状況の最下部「伝票の設定 ＞ 伝票の枚数」。3択。YORKYS は初期データで「2枚（毎回）」。</p>
+<div class="two">
+<div style="display:flex;flex-direction:column">
+<div class="arow"><div class="th dim"><img src="../../../public/images/pancake/p1.webp" alt=""><div class="band sm"><span>SOLD OUT</span></div></div><div class="t"><div class="n">プレーン</div><div class="c">パンケーキ</div></div><div class="p">¥1,100</div><span class="chip on">売り切れ</span><div class="tgl"></div></div>
+<div class="arow"><div class="th"><img src="../../../public/images/pancake/p2.webp" alt=""></div><div class="t"><div class="n">フルーツ&amp;フルーツ</div><div class="c">パンケーキ</div></div><div class="p">¥1,485</div><span class="chip">売り切れ</span><div class="tgl"></div></div>
+<div class="arow"><div class="th"><img src="../../../public/images/cafe/c1.webp" alt=""></div><div class="t"><div class="n">ブレンドコーヒー</div><div class="c">コーヒー</div></div><div class="p">¥550</div><span class="chip">売り切れ</span><div class="tgl"></div></div>
+</div>
+<div class="pcard"><h3>伝票の枚数</h3><div class="cap">1回の注文で印刷する枚数です。変更は次の注文から効きます（刷り直しにも同じ枚数で出ます）。</div>
+<div class="opt"><div class="radio"></div><div><div class="ol">1枚</div><div class="od">厨房用に1枚だけ印刷します。</div></div></div>
+<div class="opt on"><div class="radio"></div><div><div class="ol">2枚（毎回）</div><div class="od">同じ伝票を続けて2枚印刷します（厨房伝票 1/2・2/2）。</div></div></div>
+<div class="opt"><div class="radio"></div><div><div class="ol">フードとドリンクが両方あるときだけ2枚</div><div class="od">片方だけの注文は1枚。両方あるときは「厨房伝票 1/2」「ドリンク伝票 2/2」。</div></div></div>
+</div>
+</div></div>
+</div></body></html>

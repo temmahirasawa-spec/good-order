@@ -27,6 +27,7 @@
 
 import { formatJstMdHm } from "./dateFormat";
 import { SERVING_TIMING_LABEL, type ServingTiming } from "./servingTiming";
+import { normalizeReceiptCopies } from "./receiptCopies";
 
 export interface ReceiptItem {
   name: string;
@@ -49,6 +50,11 @@ export interface ReceiptJob {
   createdAt: string;
   items: ReceiptItem[];
   itemCount: number;
+  /**
+   * 伝票の枚数の設定（stores.receipt_copies、supabase/receipt_copies.sql）。
+   * 'one' | 'two' | 'two_if_mixed'。無い・不明なら two_if_mixed（2026-09-04 からの現状）
+   */
+  receiptCopies?: string | null;
 }
 
 /**
@@ -164,12 +170,19 @@ export interface ReceiptCopy {
 }
 
 /**
- * 何枚刷るかを決める（天真の決定、2026-09-04）。
- *   FOOD と DRINK の両方が入った注文 → 同じ内容を2枚。1枚目「厨房伝票 1/2」、2枚目「ドリンク伝票 2/2」
- *   どちらか片方だけ → 従来どおり1枚「厨房伝票」
+ * 何枚刷るかを決める。店舗の設定（stores.receipt_copies、lib/receiptCopies.ts）で分岐する。
+ *   one          … 常に1枚「厨房伝票」
+ *   two          … 常に同じ内容を2枚。1枚目「厨房伝票 1/2」、2枚目「厨房伝票 2/2」
+ *                  （2026-09-12 洋輔さんの依頼。フードもドリンクも同じ伝票でよいので見出しも同じ）
+ *   two_if_mixed … FOOD と DRINK の両方が入った注文だけ2枚。1枚目「厨房伝票 1/2」、2枚目「ドリンク伝票 2/2」
+ *                  （天真の決定、2026-09-04。設定が無い・読めないときもこれ）
  * 区分が引けない明細（移行前の注文など）は food として数える。
  */
 export function receiptCopies(job: ReceiptJob): ReceiptCopy[] {
+  const mode = normalizeReceiptCopies(job.receiptCopies);
+  if (mode === "one") return [{ title: "厨房伝票" }];
+  if (mode === "two") return [{ title: "厨房伝票 1/2" }, { title: "厨房伝票 2/2" }];
+
   const hasFood  = job.items.some((i) => (i.categoryType ?? "food") !== "drink");
   const hasDrink = job.items.some((i) => i.categoryType === "drink");
   if (hasFood && hasDrink) {

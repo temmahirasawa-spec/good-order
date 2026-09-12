@@ -65,6 +65,8 @@ interface FormState {
   media: MediaItem[];       // 並び順付きメディア。先頭 = 一覧カバー
   tag: string;
   is_available: boolean;
+  /** 売り切れ。docs/specs/sold-out-and-receipt-copies.md。公開したまま注文だけ止める */
+  is_sold_out: boolean;
   is_takeout: boolean;
   display_order: string;
   /** オプション（トッピング）。docs/specs/menu-options.md。既定 OFF */
@@ -85,7 +87,7 @@ const newOptionKey = () => `opt-${Date.now()}-${Math.random().toString(36).slice
 const EMPTY_FORM: FormState = {
   category_id: "", name: "", description: "", price: "",
   media: [], tag: "",
-  is_available: true, is_takeout: false, display_order: "99",
+  is_available: true, is_sold_out: false, is_takeout: false, display_order: "99",
   options_enabled: false, options_heading: OPTIONS_HEADING_DEFAULT, options_select_mode: "multiple", options: [],
 };
 
@@ -146,7 +148,7 @@ export default function AdminMenuPage() {
         supabase
           .from("menu_items")
           .select(
-            "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, is_available, is_takeout, display_order, options_enabled, options_heading, options_select_mode"
+            "id, category_id, name, description, price, image_url, additional_images, video_url, media_order, tag, is_available, is_sold_out, is_takeout, display_order, options_enabled, options_heading, options_select_mode"
           )
           .order("display_order")
           .then(({ data }) => data ?? []),
@@ -259,6 +261,7 @@ export default function AdminMenuPage() {
       media:           buildMediaFromRow(item),
       tag:             item.tag ?? "",
       is_available:    item.is_available,
+      is_sold_out:     item.is_sold_out ?? false,
       is_takeout:      item.is_takeout,
       display_order:   String(item.display_order),
       options_enabled:     item.options_enabled ?? false,
@@ -507,6 +510,7 @@ export default function AdminMenuPage() {
         media_order:       form.media,
         tag:               form.tag || null,
         is_available:      form.is_available,
+        is_sold_out:       form.is_sold_out,
         is_takeout:        form.is_takeout,
         display_order:     parseInt(form.display_order) || 99,
         // オプション（トッピング）の設定。項目そのものは保存後に syncOptions で別表へ
@@ -584,6 +588,23 @@ export default function AdminMenuPage() {
       await loadAll();
     } finally {
       setToggling(null);
+    }
+  };
+
+  /* ── 売り切れ切替（楽観的更新: 先に画面を切り替え、失敗したときだけ戻す。CLAUDE.md 4章） ──
+     公開トグルと違って営業中に何度も押すものなので、押した瞬間に反映させる */
+  const handleToggleSoldOut = async (item: AdminMenuItem) => {
+    const next = !(item.is_sold_out ?? false);
+    setItems((list) => list.map((i) => (i.id === item.id ? { ...i, is_sold_out: next } : i)));
+    try {
+      const { error } = await supabase
+        .from("menu_items")
+        .update({ is_sold_out: next })
+        .eq("id", item.id);
+      if (error) throw error;
+    } catch (err) {
+      setItems((list) => list.map((i) => (i.id === item.id ? { ...i, is_sold_out: !next } : i)));
+      alert("売り切れの切り替えに失敗しました: " + describeDbError(err));
     }
   };
 
@@ -707,8 +728,10 @@ export default function AdminMenuPage() {
                     price={item.price}
                     thumbnailUrl={item.image_url}
                     available={item.is_available}
+                    soldOut={item.is_sold_out ?? false}
                     toggling={toggling === item.id}
                     onToggleAvailable={() => handleToggleAvailable(item)}
+                    onToggleSoldOut={() => handleToggleSoldOut(item)}
                     onEdit={() => openEdit(item)}
                     dimmed={!item.is_available}
                     reorder={reorderEnabled ? bindingsFor(item.id) : undefined}
@@ -875,6 +898,21 @@ export default function AdminMenuPage() {
                       on={form.is_available}
                       onClick={() => setForm((f) => ({ ...f, is_available: !f.is_available }))}
                       ariaLabel="公開する"
+                    />
+                  </div>
+
+                  {/* 売り切れ（docs/specs/sold-out-and-receipt-copies.md）。公開したまま注文だけ止める */}
+                  <div className="flex items-center justify-between gap-[var(--space-16)] w-full">
+                    <div className="flex flex-col gap-[var(--space-4)] min-w-0">
+                      <p className="type-jp-caption-bold text-text-primary">売り切れにする</p>
+                      <p className="type-jp-caption text-text-tertiary">
+                        注文画面に残したまま「SOLD OUT」と表示され、カートに入れられなくなります
+                      </p>
+                    </div>
+                    <ToggleSwitch
+                      on={form.is_sold_out}
+                      onClick={() => setForm((f) => ({ ...f, is_sold_out: !f.is_sold_out }))}
+                      ariaLabel="売り切れにする"
                     />
                   </div>
 

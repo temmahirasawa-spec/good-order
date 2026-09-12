@@ -11,10 +11,12 @@
  *
  * 行のタップ（名前・説明）で商品詳細を開く。＋はカートに入れる
  * （オプションのある商品は呼び出し側が商品詳細を開く）。
+ * 売り切れ（item.isSoldOut）は「＋」の代わりに押せない SOLD OUT のピル。サムネがあれば帯も被せる。
  */
 import type { MenuItem } from "@/lib/menu";
 import PlusButton from "@/components/ui/PlusButton";
 import QuantityStepper from "@/components/ui/QuantityStepper";
+import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 
 export default function MenuListRow({
   item,
@@ -43,6 +45,7 @@ export default function MenuListRow({
   const cover = item.media?.[0];
   const src = (cover?.type === "image" ? cover.url : undefined) ?? item.image;
   const desc = description === undefined ? item.description : description;
+  const soldOut = item.isSoldOut === true;
   return (
     <div
       className={`flex gap-[var(--space-12)] items-center py-[var(--space-12)] border-b border-border-divider w-full ${className}`}
@@ -54,8 +57,14 @@ export default function MenuListRow({
         >
           {src && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+            <img
+              src={src}
+              alt=""
+              loading="lazy"
+              className={`absolute inset-0 w-full h-full object-cover ${soldOut ? "opacity-40" : ""}`}
+            />
           )}
+          {soldOut && <SoldOutBand size="sm" />}
         </div>
       )}
 
@@ -72,7 +81,9 @@ export default function MenuListRow({
         </p>
       </div>
 
-      {quantity > 0 ? (
+      {soldOut ? (
+        <SoldOutPill />
+      ) : quantity > 0 ? (
         <QuantityStepper count={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
       ) : (
         <PlusButton onClick={onAdd} label={`${item.name}をカートに入れる`} />
