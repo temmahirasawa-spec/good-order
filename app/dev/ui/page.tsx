@@ -15,8 +15,13 @@ import CategoryTag, { type TagColor } from "@/components/ui/CategoryTag";
 import { Tab, TabNav } from "@/components/ui/Tab";
 import { FilterBar } from "@/components/ui/FilterBar";
 import QuantityStepper from "@/components/ui/QuantityStepper";
-import { MenuCard, MenuCardWide } from "@/components/ui/MenuCard";
-import { MenuCarousel, MenuCarouselWide, RecommendCarousel } from "@/components/ui/MenuCarousel";
+import { MenuCard, MenuCardM, MenuCardWide } from "@/components/ui/MenuCard";
+import { MenuCarousel, MenuCarouselM, MenuCarouselWide, RecommendCarousel } from "@/components/ui/MenuCarousel";
+import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
+import { SOLD_OUT_CART_NOTICE } from "@/lib/soldOut";
+import CartIconButton from "@/components/ui/CartIconButton";
+import ReceiptCopiesCard from "@/components/admin/print/ReceiptCopiesCard";
+import type { ReceiptCopiesMode } from "@/lib/receiptCopies";
 import RecommendCard from "@/components/ui/RecommendCard";
 import CartItemRow from "@/components/ui/CartItemRow";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -346,6 +351,7 @@ function MediaUploaderFieldDemo() {
 
 function AdminMenuRowDemo() {
   const [available, setAvailable] = useState(true);
+  const [soldOut, setSoldOut] = useState(false);
   return (
     <AdminMenuRow
       name="スフレパンケーキ プレーン"
@@ -353,10 +359,123 @@ function AdminMenuRowDemo() {
       price={980}
       thumbnailUrl="/images/pancake/p1.webp"
       available={available}
+      soldOut={soldOut}
       toggling={false}
       onToggleAvailable={() => setAvailable((v) => !v)}
+      onToggleSoldOut={() => setSoldOut((v) => !v)}
       onEdit={() => {}}
     />
+  );
+}
+
+/* ── 売り切れ（docs/specs/sold-out-and-receipt-copies.md 案A「帯」）。
+   お客様側の各部品に isSoldOut=true の商品を渡した状態を並べる ── */
+function SoldOutDemo() {
+  const soldOutItem: MenuItem = { ...sampleItem, isSoldOut: true };
+  const soldOutDrink: MenuItem = { ...sampleDrink, isSoldOut: true };
+  const noop = () => {};
+  return (
+    <div className="flex flex-col gap-[24px]">
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          部品単体: SoldOutBand（sm 56px サムネ用 / md カード用 / lg 商品詳細の KV 用）と SoldOutPill（sm 32 / md 36 / lg 52）
+        </p>
+        <div className="flex flex-wrap gap-[16px] items-end">
+          <div className="relative w-[56px] h-[56px] bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden"><SoldOutBand size="sm" /></div>
+          <div className="relative w-[120px] h-[120px] bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden"><SoldOutBand /></div>
+          <div className="relative w-[200px] h-[120px] bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden"><SoldOutBand size="lg" /></div>
+        </div>
+        <div className="flex flex-wrap gap-[16px] items-center mt-[12px]">
+          <SoldOutPill size="sm" />
+          <SoldOutPill />
+          <SoldOutPill size="lg" />
+        </div>
+      </div>
+
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          MenuCard（一覧のグリッド）／ MenuCardWide（ベストセラー）: 写真を薄くして墨の帯。ステッパーの代わりに押せないピル。リボン（人気）は出さない
+        </p>
+        <div className="flex gap-[16px] items-start flex-wrap">
+          <MenuCard item={soldOutItem} quantity={0} onIncrement={noop} onDecrement={noop} />
+          <MenuCardWide item={soldOutItem} quantity={0} onIncrement={noop} onDecrement={noop} />
+        </div>
+      </div>
+
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          MenuCardM（トップのカルーセル）: 売り切れ と 通常 を並べて。「ステッパー＋カートに入れる」の段が丸ごとピルになる
+        </p>
+        <div className="-mx-[16px]">
+          <MenuCarouselM count={2}>
+            <MenuCardM item={soldOutItem} quantity={1} onIncrement={noop} onDecrement={noop} onAddToCart={noop} />
+            <MenuCardM item={sampleItem} quantity={1} onIncrement={noop} onDecrement={noop} onAddToCart={noop} />
+          </MenuCarouselM>
+        </div>
+      </div>
+
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          MenuListRow（写真なしの文字の行）: 「＋」の代わりにピル。サムネつきの行は帯（sm）も
+        </p>
+        <div className="flex flex-col">
+          <MenuListRow item={soldOutDrink} quantity={0} onAdd={noop} onIncrement={noop} onDecrement={noop} />
+          <MenuListRow item={{ ...sampleDrink, name: "カフェラテ", description: "カフェ", price: 600 }} quantity={0} onAdd={noop} onIncrement={noop} onDecrement={noop} />
+          <MenuListRow item={{ ...soldOutItem, description: "サムネつきの行" }} quantity={0} showThumb onAdd={noop} onIncrement={noop} onDecrement={noop} />
+        </div>
+      </div>
+
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">RecommendCard（商品詳細の関連おすすめ）</p>
+        <div className="-mx-[16px]">
+          <RecommendCarousel>
+            <RecommendCard item={soldOutItem} />
+            <RecommendCard item={sampleItem} />
+          </RecommendCarousel>
+        </div>
+      </div>
+
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          CartItemRow（カート）: 入れた後で売り切れになった行。ステッパーの代わりにピル、削除はできる。下の案内が出て「注文を確定する」は押せない
+        </p>
+        <div className="bg-bg-warm p-[16px] rounded-[var(--radius-md)] max-w-[390px]">
+          <CartItemRow
+            image={sampleItem.image}
+            categoryLabel="パンケーキ"
+            categoryColor="yellow"
+            name={sampleItem.name}
+            price={sampleItem.price}
+            quantity={1}
+            onIncrement={noop}
+            onDecrement={noop}
+            onRemove={noop}
+            soldOut
+          />
+          <p className="type-jp-caption-bold text-status-urgent text-center mt-[12px]">{SOLD_OUT_CART_NOTICE}</p>
+        </div>
+      </div>
+
+      <div>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          商品詳細の下部バー: ステッパーと「カートに入れる」の代わりに SOLD OUT（lg）
+        </p>
+        <div className="flex gap-[12px] items-center bg-surface-white border-t border-border-divider pt-[12px] px-[16px] pb-[16px] max-w-[390px]">
+          <CartIconButton count={2} onClick={noop} />
+          <SoldOutPill size="lg" className="flex-1" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 伝票の枚数（印刷状況 ＞ 伝票の設定）。保存は画面内の state だけ ── */
+function ReceiptCopiesDemo() {
+  const [mode, setMode] = useState<ReceiptCopiesMode>("two");
+  return (
+    <div className="max-w-[560px]">
+      <ReceiptCopiesCard value={mode} onSave={async (m) => setMode(m)} />
+    </div>
   );
 }
 
@@ -698,6 +817,10 @@ export default function UiGalleryPage() {
 
       </Section>
 
+      <Section title="SOLD OUT（売り切れ。案A: 帯＋ピル。docs/specs/sold-out-and-receipt-copies.md）">
+        <SoldOutDemo />
+      </Section>
+
 
       <Section title="SeeMoreButton">
         <SeeMoreButton label="パンケーキをもっと見る" href="/order/pancake" />
@@ -897,7 +1020,7 @@ export default function UiGalleryPage() {
         <ToggleSwitchDemo />
       </Section>
 
-      <Section title="AdminMenuRow（PC=トグル / SP=編集ボタン。幅を狭めてSP表示を確認）">
+      <Section title="AdminMenuRow（PC=トグル / SP=編集ボタン。「売り切れ」チップは共通。幅を狭めてSP表示を確認）">
         <div className="max-w-[500px]">
           <AdminMenuRowDemo />
         </div>
@@ -1028,6 +1151,10 @@ export default function UiGalleryPage() {
             />
           ))}
         </ul>
+      </Section>
+
+      <Section title="ReceiptCopiesCard（印刷状況 ＞ 伝票の設定「伝票の枚数」）">
+        <ReceiptCopiesDemo />
       </Section>
 
       <BottomViewCartBar />

@@ -45,6 +45,8 @@ Supabase ダッシュボード → SQL Editor に1本ずつ貼って実行する
 | 26 | `category_heading.sql` | カテゴリー見出し（説明文・英語名・サイズ）をDB管理に。**15の後** |
 | 27 | `serving_timing.sql` | 提供タイミング（でき次第 / 先出し / 食後）と伝票の2枚出し。**26の後**。ドリンク区分の補正も含む |
 | 28 | `menu_item_options.sql` | メニューのオプション（トッピング）。`place_order` / `claim_print_job` を差し替える。**27の後** |
+| 29 | `sold_out.sql` | 売り切れ（`menu_items.is_sold_out`）。`place_order` を差し替えて売り切れの商品を弾く。**28の後** |
+| 30 | `receipt_copies.sql` | 伝票の枚数（`stores.receipt_copies`: 1枚 / 毎回2枚 / 両方あるときだけ2枚）。`claim_print_job` を差し替える。**28の後** |
 
 ### 順番が特に効くところ
 

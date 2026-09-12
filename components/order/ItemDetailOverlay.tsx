@@ -29,6 +29,7 @@ import { Video9x16 } from "@/components/ui/VideoBlock";
 import { AddToCartButton } from "@/components/ui/Buttons";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
 import MenuOptionPicker from "@/components/ui/OptionRow";
+import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
@@ -156,6 +157,9 @@ function OverlayContent() {
   const color = item ? resolveTagColor(categories, item.subcategory) : "yellow";
   const subImage = item?.images?.[1] ?? null;
   const hasVideo = (item?.media ?? []).some((m) => m.type === "video");
+  /* 売り切れ（docs/specs/sold-out-and-receipt-copies.md）。詳細は開ける（何が売り切れたかは見られる）が、
+     KV に帯を被せ、下部バーはステッパーと「カートに入れる」の代わりに押せない SOLD OUT にする */
+  const soldOut = item?.isSoldOut === true;
 
   return (
     /* 高さは inset-0（＝レイアウトビューポート）ではなく h-viewport（dvh）で取る。
@@ -197,9 +201,10 @@ function OverlayContent() {
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className={`absolute inset-0 w-full h-full object-cover ${soldOut ? "opacity-40" : ""}`}
                   />
                 )}
+                {soldOut && item.image && <SoldOutBand size="lg" />}
                 <HeaderIconButton
                   icon="close"
                   onClick={close}
@@ -212,7 +217,11 @@ function OverlayContent() {
                 {/* ── Intro（Figma 80:896: KVとの間40 / タグ+タイトル gap4 / 本文 gap12） ── */}
                 <div className="flex flex-col gap-[var(--space-12)] items-center px-[var(--space-16)] mt-[40px]">
                   <div className="flex flex-col gap-[var(--space-4)] items-center w-full">
-                    <CategoryTag label={label} color={color} />
+                    <div className="flex gap-[var(--space-8)] items-center">
+                      <CategoryTag label={label} color={color} />
+                      {/* 写真の無い商品は KV の帯が出せないので、タグの横に小さく */}
+                      {soldOut && !item.image && <SoldOutPill size="sm" />}
+                    </div>
                     <h1 className="type-jp-heading-l text-text-primary text-center w-full">
                       {item.name}
                     </h1>
@@ -306,6 +315,9 @@ function OverlayContent() {
               style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}
             >
               <CartIconButton count={totalItems} onClick={() => router.push("/cart")} />
+              {soldOut ? (
+                <SoldOutPill size="lg" className="flex-1" />
+              ) : (
               <div className="flex flex-1 gap-[var(--space-8)] items-center justify-end min-w-0">
                 <QuantityStepper
                   count={draftQty}
@@ -333,6 +345,7 @@ function OverlayContent() {
                   />
                 </div>
               </div>
+              )}
             </div>
           </>
         )}

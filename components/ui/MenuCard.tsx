@@ -7,6 +7,9 @@
  * - MenuCardM: カテゴリカルーセル用 幅200。画像は正方形 200×200。
  *   下部が「ステッパー＋カートに入れる」の2要素なので専用の小型部品を使う
  * - バッジ: 燕尾ノッチ型リボン 48×64（accent-deep 地 + 王冠 + item.tag）
+ * - 売り切れ（item.isSoldOut、docs/specs/sold-out-and-receipt-copies.md 案A）:
+ *   写真を薄くして墨の帯「SOLD OUT」、ステッパー／「カートに入れる」は押せないピルに置き換える。
+ *   タップで商品詳細は開ける（何が売り切れたかは見られる）
  */
 import type { MenuItem } from "@/lib/menu";
 import { Icon } from "@/components/Icon";
@@ -16,6 +19,7 @@ import QuantityStepperS from "@/components/ui/QuantityStepperS";
 import { AddToCartButtonS } from "@/components/ui/Buttons";
 import { resolveCategoryLabel, resolveTagColor } from "@/lib/categoryLabels";
 import { useMenuDataStore } from "@/lib/menuDataStore";
+import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 
 export interface MenuCardProps {
   item: MenuItem;
@@ -65,6 +69,7 @@ function CardImage({
 }) {
   const cover = item.media?.[0];
   const src = (cover?.type === "image" ? cover.url : undefined) ?? item.image;
+  const soldOut = item.isSoldOut === true;
   return (
     /* menu-card はホバー時の影とズームの起点。カード全体ではなく画像ブロックに
        掛けているのは、カード本体には背景が無く、影だけが浮いて見えてしまうため */
@@ -78,10 +83,11 @@ function CardImage({
           src={src}
           alt={item.name}
           loading={imageLoading}
-          className="menu-card__img absolute inset-0 w-full h-full object-cover"
+          className={`menu-card__img absolute inset-0 w-full h-full object-cover ${soldOut ? "opacity-40" : ""}`}
         />
       )}
-      {item.tag && <RibbonBadge label={item.tag} />}
+      {/* 売り切れは墨の帯。リボン（人気など）は帯と喧嘩するので出さない */}
+      {soldOut ? <SoldOutBand /> : item.tag && <RibbonBadge label={item.tag} />}
     </div>
   );
 }
@@ -112,12 +118,16 @@ function CardBody({
       <p className="type-en-price-m text-text-primary whitespace-nowrap">
         ¥{item.price.toLocaleString()}
       </p>
-      <QuantityStepper
-        count={quantity}
-        onIncrement={onIncrement}
-        onDecrement={onDecrement}
-        className="w-full"
-      />
+      {item.isSoldOut ? (
+        <SoldOutPill className="w-full" />
+      ) : (
+        <QuantityStepper
+          count={quantity}
+          onIncrement={onIncrement}
+          onDecrement={onDecrement}
+          className="w-full"
+        />
+      )}
     </>
   );
 }
@@ -179,15 +189,19 @@ export function MenuCardM({
       <p className="type-en-price-m text-text-primary whitespace-nowrap">
         ¥{item.price.toLocaleString()}
       </p>
-      <div className="flex gap-[var(--space-8)] items-center w-full">
-        <QuantityStepperS
-          count={quantity}
-          min={1}
-          onIncrement={onIncrement}
-          onDecrement={onDecrement}
-        />
-        <AddToCartButtonS onClick={onAddToCart} className="flex-1 min-w-0" />
-      </div>
+      {item.isSoldOut ? (
+        <SoldOutPill size="sm" className="w-full" />
+      ) : (
+        <div className="flex gap-[var(--space-8)] items-center w-full">
+          <QuantityStepperS
+            count={quantity}
+            min={1}
+            onIncrement={onIncrement}
+            onDecrement={onDecrement}
+          />
+          <AddToCartButtonS onClick={onAddToCart} className="flex-1 min-w-0" />
+        </div>
+      )}
     </div>
   );
 }

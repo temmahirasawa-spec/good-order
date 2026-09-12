@@ -194,6 +194,8 @@ export function useOrderPageData(): UseOrderPageDataResult {
 
   const handleAdd = useCallback(
     (item: MenuItem) => {
+      // 売り切れは入れない（カードの操作部は SOLD OUT のピルに置き換わっているが、念のため）
+      if (item.isSoldOut) return;
       // オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる
       if (hasSelectableOptions(item, menuOptions[item.id] ?? [])) {
         openItemDetail(item.id);

@@ -3356,3 +3356,67 @@ DB の `categories.name` / `caption` を優先する共通ヘルパーに寄せ�
 - 天真: SQL 3本 → PR のマージ → 本番で「カテゴリ管理」からドリンクの下に カフェ／ソフトドリンク／… を作り、各商品のカテゴリーを付け替える。
 - ドリンクの **ICE / HOT** 設定（天真のメモ）は未着手。ドリンク周りの次の実装で相談する。
 - 一覧ページの「写真グリッド＋サブカテゴリー見出し」の組み合わせは Figma に無い（文字リストのみ起こした）。必要になったら Figma を足す。
+
+---
+
+# 売り切れ（SOLD OUT）の表示と、伝票の枚数の設定（2026-09-12・実装済み、PR で天真の判断待ち）
+
+仕様: `docs/specs/sold-out-and-receipt-copies.md`。ブランチ `feat/sold-out-and-receipt-copies`。
+洋輔さんの依頼2件（天真が中継）: ①「モバイルオーダーの画面に残したまま SOLD OUT を出して注文できないように」、
+②「フードもドリンクもパンケーキも同じ1枚でいいので、1オーダーにつき同じ伝票を毎回2枚。印刷状況から設定できるように」。
+
+## 進め方
+
+1. Figma 連携（MCP）がこのセッションでは未認証で書けなかったため、2026-09-04 と同じく **HTML のたたき台**で
+   「SOLD OUT」の見せ方を3案出した（`.claude/verification/2026-09-12-sold-out/sold-out-3plans.html` / `.png`）。
+   A 帯（写真を薄くして墨の帯）／ B 角のタグ／ C 操作部だけ。**AI 推奨は A で、実装も A で入れてある。**
+2. ②は設計の分岐が無い（設定の3択）ので、そのまま実装した。
+3. CLAUDE.md 3章の「止まって確認する」に当たる（デザイン判断・お客様向け文言・注文ロジック・DB 列の追加）ため、
+   **PR を作るところまでで止め、マージと SQL 適用は天真の OK 後**。
+
+## 実装の要点
+
+| 場所 | 中身 |
+|---|---|
+| `supabase/sold_out.sql`（新規） | `menu_items.is_sold_out`（既定 false）。`place_order` を差し替え、売り切れの商品を含む注文を `DETAIL 'sold_out'` で拒否 |
+| `supabase/receipt_copies.sql`（新規） | `stores.receipt_copies`（'one' / 'two' / 'two_if_mixed'、既定 two_if_mixed ＝ 現状）。初期データで YORKYS を `two`。`claim_print_job` を差し替えて `receiptCopies` を返す。`save_receipt_copies` RPC（manager / kitchen / counter） |
+| `lib/soldOut.ts`（新規） | 文言（「SOLD OUT」／管理画面「売り切れ」／カートの案内2文）、`soldOutIdsIn()`（最新メニューで判定）、`isSoldOutError()` |
+| `lib/receiptCopies.ts` / `lib/receiptCopiesApi.ts`（新規） | 辞書と型 ／ Supabase の読み書き。伝票の組み立て（`lib/receipt.ts`）が DB クライアントを引き込まないよう分けた |
+| `components/ui/SoldOut.tsx`（新規） | `SoldOutBand`（帯。sm / md / lg）と `SoldOutPill`（押せないピル。sm 32 / md 36 / lg 52） |
+| `MenuCard` / `MenuCardM` / `MenuCardWide` / `MenuListRow` / `RecommendCard` / `ItemDetailOverlay` / `CartItemRow` | `item.isSoldOut` で帯とピルに切り替える。詳細は開ける。人気リボンは帯と喧嘩するので出さない |
+| `lib/store.ts` | `addItem` で弾く。`placeOrder` は最新メニューを見て `"sold_out"` で止める。サーバー側の拒否も `"sold_out"`（Sentry には送らない・再送しない） |
+| `app/cart/page.tsx` | 売り切れの行の判定（メニューの Realtime を購読）、赤字の案内、「注文を確定する」停止。サーバー側で弾かれたら案内してメニューを取り直す |
+| `app/history/page.tsx` | 再注文から売り切れを除く（`.eq("is_sold_out", false)`） |
+| 管理画面「メニュー管理」 | 行の価格の右に「売り切れ」チップ（PC / SP 共通、楽観的更新）。編集パネルに「売り切れにする」トグル。ON はサムネにも帯 |
+| 管理画面「印刷状況」 | 最下部に「伝票の設定 ＞ 伝票の枚数」（`components/admin/print/ReceiptCopiesCard.tsx`、3択ラジオ、楽観的更新） |
+| `lib/receipt.ts` | `receiptCopies()` を設定で分岐。'two' は「厨房伝票 1/2」「厨房伝票 2/2」 |
+| `app/dev/ui/page.tsx` | 「SOLD OUT」セクション（部品単体・カード3種・行・おすすめ・カート・詳細の下部バー）、AdminMenuRow のチップ、ReceiptCopiesCard |
+
+## 判断（天真未確認。いつでも覆せる）
+
+- 表記は洋輔さんの言葉どおり英語の **「SOLD OUT」**。管理画面は「売り切れ」
+- 売り切れの商品は**タップで詳細を開ける**（何が売り切れたか見られる）。下部バーだけ SOLD OUT
+- 「2枚（毎回）」の2枚目の見出しは「ドリンク伝票」ではなく **「厨房伝票 2/2」**（「同じ伝票」と言われているため）
+- 枚数を変えられるロールは刷り直しと同じ **manager / kitchen / counter**
+- 初期データで YORKYS を「2枚（毎回）」にする（依頼そのもの。管理画面でいつでも戻せる）
+- `BestSellerPanel` の注記「売り切れ・非表示にした商品は隠れます」→「非表示にした商品は隠れます（売り切れは SOLD OUT 付きで残ります）」
+
+## 検証
+
+- `npm run check` 通過（typecheck / lint / design / build）
+- 伝票の枚数は Next 同梱の swc で `lib/receipt.ts` を読み込み、`node scripts/fake-printer.mjs --render` で確認:
+  two → 2枚（厨房伝票 1/2・2/2）／ one → 1枚／ two_if_mixed・未設定 → 混在なら2枚（ドリンク伝票 2/2）、片方なら1枚
+- **実機のスクリーンショット（PC 1400 / SP 390）は未撮影**。dev サーバーが止まっていたため（規約どおり勝手に起動しない）。
+  天真が起動したら `node scripts/screenshot-pages.mjs`（売り切れの seed を足す）で撮って PR に足す
+
+## ⚠ 流す順番: SQL 2本 → マージ
+
+本番（`good-order` = oiropkuvaenebmlicrac）で `supabase/sold_out.sql` → `supabase/receipt_copies.sql` の順。
+アプリ側は `is_sold_out` を SELECT するので、逆にするとお客様側のメニュー取得が「列が無い」で落ちる。
+SQL だけ先に流しても壊れない（既定値が現状。ただし YORKYS の `receipt_copies='two'` はマージ後に効く）。
+
+## 残り
+
+- 天真: 3案から選ぶ（A 推奨・実装済み）／ 文言の確認／ 9章の7項目 → OK なら AI が SQL → マージ
+- Figma への起こし（`docs/specs/sold-out-and-receipt-copies.md` 10章）。決定後に別セッションで
+- 洋輔さん向けの共有資料（`docs/share/` 形式）は未作成。必要なら `report-artifact` スキルで

@@ -9,12 +9,17 @@
  * Figma: Components / 05 Cards / Cart Item Row (Timing)（2026-09-04 に天真が構造を確定。
  * 当初は情報の列の中に置いていたが、行の内側いっぱいの幅に置く形に差し替えた）。
  * そのときだけ画像を上揃えにする（Figma の Frame 4 が上揃え）。
+ *
+ * soldOut（カートに入れた後で売り切れになった行）: 画像を薄くして墨の帯、
+ * ステッパーの代わりに押せない SOLD OUT のピル。提供タイミングの切替も出さない。
+ * 行の削除はできる（カート画面はこの行があるうちは注文ボタンを止める）。
  */
 import Image from "next/image";
 import { Icon } from "@/components/Icon";
 import CategoryTag, { type TagColor } from "@/components/ui/CategoryTag";
 import QuantityStepper from "@/components/ui/QuantityStepper";
 import SegmentedControl, { type SegmentedOption } from "@/components/ui/SegmentedControl";
+import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 import { SERVING_TIMING_TITLE, type ServingTiming } from "@/lib/servingTiming";
 
 export interface CartRowServingTiming {
@@ -35,6 +40,7 @@ export default function CartItemRow({
   onRemove,
   servingTiming,
   optionsLabel,
+  soldOut = false,
 }: {
   image: string;
   categoryLabel: string;
@@ -49,6 +55,8 @@ export default function CartItemRow({
   servingTiming?: CartRowServingTiming;
   /** 選んだオプション（「＋アボカド ＋ゆで卵」）。無ければ出さない。価格はオプション込みで渡す */
   optionsLabel?: string;
+  /** カートに入れた後で売り切れになった行（docs/specs/sold-out-and-receipt-copies.md） */
+  soldOut?: boolean;
 }) {
   return (
     <div
@@ -59,12 +67,20 @@ export default function CartItemRow({
       <div className="flex-1 min-w-0 flex flex-col gap-[var(--space-16)]">
         {/* Figma の Frame 4: 画像＋情報 */}
         <div
-          className={`flex gap-[var(--space-12)] ${servingTiming ? "items-start" : "items-center"}`}
+          className={`flex gap-[var(--space-12)] ${servingTiming && !soldOut ? "items-start" : "items-center"}`}
         >
           <div className="relative shrink-0 w-[80px] h-[80px] rounded-[var(--radius-md)] overflow-hidden bg-bg-tertiary">
             {image && (
-              <Image src={image} alt={name} fill className="object-cover" sizes="80px" unoptimized />
+              <Image
+                src={image}
+                alt={name}
+                fill
+                className={`object-cover ${soldOut ? "opacity-40" : ""}`}
+                sizes="80px"
+                unoptimized
+              />
             )}
+            {soldOut && <SoldOutBand />}
           </div>
 
           <div className="flex-1 min-w-0 flex flex-col items-start gap-[2px]">
@@ -82,13 +98,17 @@ export default function CartItemRow({
               <span className="type-en-price-m text-text-primary tabular-nums">
                 ¥{price.toLocaleString()}
               </span>
-              <QuantityStepper count={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+              {soldOut ? (
+                <SoldOutPill />
+              ) : (
+                <QuantityStepper count={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+              )}
             </div>
           </div>
         </div>
 
-        {/* Figma の Timing Wrap: 行の内側いっぱいの幅 */}
-        {servingTiming && (
+        {/* Figma の Timing Wrap: 行の内側いっぱいの幅。売り切れの行では出さない（注文できないため） */}
+        {servingTiming && !soldOut && (
           <SegmentedControl
             className="w-full"
             ariaLabel={`${name}の${SERVING_TIMING_TITLE}`}

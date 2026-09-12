@@ -17,6 +17,7 @@ import { useCartStore, lineUnitPrice } from "@/lib/store";
 import { formatSelectedOptions, optionsKey } from "@/lib/menuOptions";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import { SOLD_OUT_CART_NOTICE, SOLD_OUT_ORDER_REJECTED, soldOutIdsIn } from "@/lib/soldOut";
 import {
   canChooseServingTiming,
   cartLineKey,
@@ -36,7 +37,10 @@ export default function CartPage() {
   const placeOrder = useCartStore((s) => s.placeOrder);
 
   const categories = useMenuDataStore((s) => s.categories);
+  const menuItems = useMenuDataStore((s) => s.menuItems);
   const fetchAll = useMenuDataStore((s) => s.fetchAll);
+  const startRealtime = useMenuDataStore((s) => s.startRealtime);
+  const stopRealtime = useMenuDataStore((s) => s.stopRealtime);
 
   const [confirming, setConfirming] = useState(false);
   // 同一タップ内の連打を弾く。state は反映が1拍遅れるので ref と併用する
@@ -51,6 +55,17 @@ export default function CartPage() {
     router.prefetch("/complete");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* カートを見ている間に売り切れになった商品を拾えるよう、メニューの変更を購読しておく
+     （docs/specs/sold-out-and-receipt-copies.md）。/order 配下と同じ購読を1本共有する */
+  useEffect(() => {
+    startRealtime();
+    return () => stopRealtime();
+  }, [startRealtime, stopRealtime]);
+
+  /* 売り切れの行（最新のメニューで判定）。1つでもあれば注文ボタンを止める */
+  const soldOutIds = soldOutIdsIn(items, menuItems);
+  const hasSoldOut = soldOutIds.size > 0;
 
   /* 提供タイミングを持たない行（移行前に保存されたカートや、カテゴリー読み込み前に
      入れた商品）に初期値を入れる。選べる商品なのに値が無いと、画面には初期値が出るのに
@@ -78,6 +93,7 @@ export default function CartPage() {
     //   React の state 更新は1拍遅れるので、同一タップ内の連打には効かない。
     //   そのため useRef のフラグと併用する。
     if (submittingRef.current || confirming) return;
+    if (hasSoldOut) return;   // ボタンは disabled だが、念のため
     submittingRef.current = true;
     setConfirming(true);
 
@@ -102,6 +118,11 @@ export default function CartPage() {
       submittingRef.current = false;
       if (result.reason === "closed") {
         alert(NOT_ACCEPTING_MESSAGE);
+      } else if (result.reason === "sold_out") {
+        // 売り切れの商品が入っていた（サーバー側で弾かれた場合を含む）。
+        // メニューを取り直して、該当の行に SOLD OUT を出す
+        alert(SOLD_OUT_ORDER_REJECTED);
+        void fetchAll(true);
       } else if (result.reason === "failed") {
         // 送信できなかった。カートは残っているので、そのまま再送できる。
         // ここで黙って完了画面に進むと、厨房に届かない注文をお客様が
@@ -198,6 +219,7 @@ export default function CartPage() {
                   price={lineUnitPrice(ci)}
                   quantity={ci.quantity}
                   optionsLabel={ci.options && ci.options.length > 0 ? formatSelectedOptions(ci.options) : undefined}
+                  soldOut={soldOutIds.has(ci.item.id)}
                   onIncrement={() => updateLineQuantity(ci, ci.quantity + 1)}
                   onDecrement={() => updateLineQuantity(ci, ci.quantity - 1)}
                   onRemove={() => removeLine(ci)}
@@ -246,6 +268,11 @@ export default function CartPage() {
             </span>
           </div>
 
+          {hasSoldOut && (
+            <p className="type-jp-caption-bold text-status-urgent text-center mt-[var(--space-12)]">
+              {SOLD_OUT_CART_NOTICE}
+            </p>
+          )}
           <p className="type-jp-caption text-text-secondary text-center mt-[var(--space-12)] mb-[var(--space-12)]">
             {hasTakeout
               ? "テイクアウト商品はお帰りの際にスタッフへお声がけください"
@@ -257,7 +284,7 @@ export default function CartPage() {
           <AddToCartButton
             label={confirming ? "送信中…" : "注文を確定する"}
             onClick={handleOrder}
-            disabled={confirming}
+            disabled={confirming || hasSoldOut}
           />
         </footer>
       )}

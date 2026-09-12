@@ -11,6 +11,8 @@
  * - 刷り直しは requeue_print_job RPC。print_jobs には authenticated 向けの
  *   UPDATE ポリシーを置いていないので、必ずこの関数を通す
  * - 3秒ごとに再取得する。厨房・テイクアウト画面と同じ間隔に揃えてある
+ * - 最下部に「伝票の枚数」の設定（docs/specs/sold-out-and-receipt-copies.md）。
+ *   開いたときに1回だけ読み、切り替えは楽観的更新（ReceiptCopiesCard）
  */
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +20,9 @@ import AdminPageShell from "@/components/admin/AdminPageShell";
 import TopBar from "@/components/admin/TopBar";
 import PrinterHealthCard from "@/components/admin/print/PrinterHealthCard";
 import PrintJobRowCard from "@/components/admin/print/PrintJobRowCard";
+import ReceiptCopiesCard from "@/components/admin/print/ReceiptCopiesCard";
+import { fetchReceiptCopies, saveReceiptCopies } from "@/lib/receiptCopiesApi";
+import type { ReceiptCopiesMode } from "@/lib/receiptCopies";
 import {
   describePrinterHealth,
   type PrintJobRow,
@@ -33,6 +38,22 @@ export default function PrintStatusPage() {
   const [loading, setLoading]   = useState(true);
   const [requeueing, setRequeueing] = useState<string | null>(null);
   const [now, setNow]           = useState(() => Date.now());
+  /** 伝票の枚数。null = 読み込み中 */
+  const [copies, setCopies]     = useState<ReceiptCopiesMode | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const mode = await fetchReceiptCopies();
+        if (!cancelled) setCopies(mode);
+      } catch (err) {
+        console.error("[PrintStatusPage] fetchReceiptCopies failed:", err);
+        if (!cancelled) setCopies("two_if_mixed");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -195,6 +216,19 @@ export default function PrintStatusPage() {
                       ))}
                     </ul>
                   )}
+                </section>
+
+                <section>
+                  <h2 className="type-jp-body-bold text-text-primary mb-[var(--space-12)]">
+                    伝票の設定
+                  </h2>
+                  <ReceiptCopiesCard
+                    value={copies}
+                    onSave={async (mode) => {
+                      await saveReceiptCopies(mode);
+                      setCopies(mode);
+                    }}
+                  />
                 </section>
               </div>
             )}
