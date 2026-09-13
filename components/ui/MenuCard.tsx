@@ -8,7 +8,7 @@
  *   下部が「ステッパー＋カートに入れる」の2要素なので専用の小型部品を使う
  * - バッジ: 燕尾ノッチ型リボン 48×64（accent-deep 地 + 王冠 + item.tag）
  * - 売り切れ（item.isSoldOut、docs/specs/sold-out-and-receipt-copies.md 案A）:
- *   写真は色を抜いて沈め（.sold-out-photo）、墨の帯「SOLD OUT」を重ねる。
+ *   写真を薄くして（.sold-out-photo）墨の帯「SOLD OUT」を重ねる（写真がある商品だけ）。
  *   ステッパー／「カートに入れる」は押せないピルに置き換える。
  *   タップで商品詳細は開ける（何が売り切れたかは見られる）
  */
@@ -87,8 +87,11 @@ function CardImage({
           className={`menu-card__img absolute inset-0 w-full h-full object-cover ${soldOut ? "sold-out-photo" : ""}`}
         />
       )}
-      {/* 売り切れは墨の帯。リボン（人気など）は帯と喧嘩するので出さない */}
-      {soldOut ? <SoldOutBand /> : item.tag && <RibbonBadge label={item.tag} />}
+      {/* 売り切れは墨の帯。リボン（人気など）は帯と喧嘩するので出さない。
+          **写真が無い商品では帯を出さない**。灰色の空箱に帯だけが乗ると
+          「画像の読み込みに失敗した」ように見えるため（天真の指摘、2026-09-13）。
+          この場合の「売り切れ」は下のピルが伝える。 */}
+      {soldOut ? src && <SoldOutBand /> : item.tag && <RibbonBadge label={item.tag} />}
     </div>
   );
 }

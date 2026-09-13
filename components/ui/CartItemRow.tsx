@@ -10,7 +10,7 @@
  * 当初は情報の列の中に置いていたが、行の内側いっぱいの幅に置く形に差し替えた）。
  * そのときだけ画像を上揃えにする（Figma の Frame 4 が上揃え）。
  *
- * soldOut（カートに入れた後で売り切れになった行）: 画像の色を抜いて墨の帯、
+ * soldOut（カートに入れた後で売り切れになった行）: 画像を薄くして墨の帯、
  * ステッパーの代わりに押せない SOLD OUT のピル。提供タイミングの切替も出さない。
  * 行の削除はできる（カート画面はこの行があるうちは注文ボタンを止める）。
  */
@@ -80,7 +80,8 @@ export default function CartItemRow({
                 unoptimized
               />
             )}
-            {soldOut && <SoldOutBand />}
+            {/* 写真がある商品だけ帯を出す（空箱に帯だけだと「画像なし」に見える） */}
+            {soldOut && image && <SoldOutBand />}
           </div>
 
           <div className="flex-1 min-w-0 flex flex-col items-start gap-[2px]">

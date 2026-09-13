@@ -100,7 +100,8 @@ export default function AdminMenuRow({
             unoptimized
           />
         )}
-        {soldOut && <SoldOutBand size="sm" />}
+        {/* 写真がある商品だけ帯を出す（空箱に帯だけだと「画像なし」に見える） */}
+        {soldOut && thumbnailUrl && <SoldOutBand size="sm" />}
       </div>
 
       <div className="flex flex-[1_0_0] flex-col gap-[var(--space-2)] items-start min-w-0 overflow-hidden">

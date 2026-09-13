@@ -394,11 +394,18 @@ function SoldOutDemo() {
 
       <div>
         <p className="type-jp-caption text-text-secondary mb-[8px]">
-          MenuCard（一覧のグリッド）／ MenuCardWide（ベストセラー）: 写真の色を抜いて墨の帯。ステッパーの代わりに押せないピル。リボン（人気）は出さない
+          MenuCard（一覧のグリッド）／ MenuCardWide（ベストセラー）: 写真を薄くして墨の帯。ステッパーの代わりに押せないピル。リボン（人気）は出さない
         </p>
         <div className="flex gap-[16px] items-start flex-wrap">
           <MenuCard item={soldOutItem} quantity={0} onIncrement={noop} onDecrement={noop} />
           <MenuCardWide item={soldOutItem} quantity={0} onIncrement={noop} onDecrement={noop} />
+          {/* 写真が無い商品。帯は出さず、下のピルだけで伝える（空箱に帯だけだと「画像なし」に見える） */}
+          <MenuCard
+            item={{ ...soldOutItem, name: "写真が無い商品（帯は出さない）", image: "", images: [], media: [] }}
+            quantity={0}
+            onIncrement={noop}
+            onDecrement={noop}
+          />
         </div>
       </div>
 

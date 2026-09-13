@@ -64,7 +64,8 @@ export default function MenuListRow({
               className={`absolute inset-0 w-full h-full object-cover ${soldOut ? "sold-out-photo" : ""}`}
             />
           )}
-          {soldOut && <SoldOutBand size="sm" />}
+          {/* 写真がある商品だけ帯を出す（空箱に帯だけだと「画像なし」に見える） */}
+          {soldOut && src && <SoldOutBand size="sm" />}
         </div>
       )}
 

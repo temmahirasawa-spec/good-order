@@ -40,7 +40,8 @@ export default function RecommendCard({
             className={`menu-card__img absolute inset-0 w-full h-full object-cover ${soldOut ? "sold-out-photo" : ""}`}
           />
         )}
-        {soldOut && <SoldOutBand />}
+        {/* 写真がある商品だけ帯を出す（空箱に帯だけだと「画像なし」に見える） */}
+        {soldOut && src && <SoldOutBand />}
       </div>
       <div className="flex flex-col gap-[6px] items-start pt-[14px] pb-[var(--space-16)] px-[var(--space-16)] w-full">
         <CategoryTag label={label} color={color} />
