@@ -18,6 +18,32 @@ export const SOLD_OUT_LABEL = "SOLD OUT";
 export const SOLD_OUT_ADMIN_LABEL = "売り切れ";
 
 /**
+ * 管理画面「メニュー管理」の一覧に出す**商品の状態**（2026-09-13、天真が案Aを選択）。
+ *
+ * 以前は「売り切れチップ」と「公開トグル」が別々の見た目で並んでいて、
+ * トグルが何のスイッチか分からなかった（天真の指摘）。
+ * **1列・1つのチップ**にまとめ、状態を文字で出す。
+ *
+ *   on_sale  … 販売中。押すと売り切れになる
+ *   sold_out … 売り切れ。押すと販売中に戻る
+ *   hidden   … 非表示（非公開）。押しても切り替わらない。戻すのは編集パネル
+ *              （営業中に使う操作ではないので、一覧には置かない）
+ */
+export type MenuItemState = "on_sale" | "sold_out" | "hidden";
+
+export const MENU_ITEM_STATE_LABEL: Record<MenuItemState, string> = {
+  on_sale:  "販売中",
+  sold_out: SOLD_OUT_ADMIN_LABEL,
+  hidden:   "非表示",
+};
+
+/** 公開フラグと売り切れフラグから状態を決める。非公開が優先（そもそも画面に出ない） */
+export function menuItemState(available: boolean, soldOut: boolean): MenuItemState {
+  if (!available) return "hidden";
+  return soldOut ? "sold_out" : "on_sale";
+}
+
+/**
  * カート画面: 売り切れの商品が入っているときの案内（注文ボタンの上）。
  * ⚠ お客様の目に触れる文言。天真の確認待ち（docs/specs 9章）
  */

@@ -2,8 +2,7 @@
 
 /**
  * メニュー管理一覧の行（Figma: Admin Menu Row 306:1548 / Admin Menu Row (Mobile) 418:463）
- * grip・サムネイル・商品名（1行省略）・カテゴリ名・価格は共通。右端のみ
- * PC=公開トグル／SP=編集ボタンで切り替える（Figmaの2バリアントを1コンポーネントに統合）。
+ * grip・サムネイル・商品名（1行省略）・カテゴリ名・価格は共通。SPだけ右端に編集ボタンが付く。
  *
  * 並び替えは **PC=⠿ドラッグ / SP=▲▼ボタン**（display_order を永続化。
  * hooks/useDragReorder.ts + supabase/list_reorder.sql）。
@@ -12,18 +11,21 @@
  * 「すべて」表示では呼び出し元が reorder/move を渡さないことで無効化する。
  *
  * FigmaのPC版行には編集ボタンが無いため、行全体クリックで編集パネルを開く
- * （SPは明示的な編集ボタンも併存。トグルはクリック伝播を止めて誤操作を防ぐ）。
+ * （SPは明示的な編集ボタンも併存。状態チップはクリック伝播を止めて誤操作を防ぐ）。
  *
- * 売り切れ（docs/specs/sold-out-and-receipt-copies.md）: 価格の右に「売り切れ」チップ。
- * 押すと ON/OFF が切り替わる（PC / SP 共通）。ON のときはサムネにも SOLD OUT の帯を出し、
- * お客様の画面と同じ見え方にする。公開トグルとは別の操作（隠すのではなく、残したまま止める）。
+ * **状態チップ（2026-09-13、天真が案Aを選択）**
+ * 以前は「売り切れチップ」＋「公開トグル」の2つが別々の見た目で並び、
+ * トグルが何のスイッチか分からなかった。**1列・1つのチップ**にまとめた。
+ *   販売中 → 押すと 売り切れ ／ 売り切れ → 押すと 販売中（営業中いちばん使う操作が1タップ）
+ *   非表示 → 押しても切り替わらない。戻すのは編集パネルの「公開する」
+ * 公開・非公開は営業中の操作ではないので、一覧からは外して編集パネルに集約した。
+ * 3案の比較は .claude/verification/2026-09-13-admin-state/。
  */
 import Image from "next/image";
 import { Icon } from "@/components/Icon";
 import ReorderButtons from "@/components/admin/ReorderButtons";
-import ToggleSwitch from "@/components/ui/ToggleSwitch";
 import { SoldOutBand } from "@/components/ui/SoldOut";
-import { SOLD_OUT_ADMIN_LABEL } from "@/lib/soldOut";
+import { MENU_ITEM_STATE_LABEL, menuItemState } from "@/lib/soldOut";
 import type { ReorderRowBindings } from "@/hooks/useDragReorder";
 
 export default function AdminMenuRow({
@@ -33,8 +35,7 @@ export default function AdminMenuRow({
   thumbnailUrl,
   available,
   soldOut = false,
-  toggling,
-  onToggleAvailable,
+  toggling = false,
   onToggleSoldOut,
   onEdit,
   dimmed,
@@ -45,12 +46,13 @@ export default function AdminMenuRow({
   categoryLabel: string;
   price: number;
   thumbnailUrl: string | null;
+  /** 公開（menu_items.is_available）。false なら状態は「非表示」 */
   available: boolean;
   /** 売り切れ（menu_items.is_sold_out） */
   soldOut?: boolean;
-  toggling: boolean;
-  onToggleAvailable: () => void;
-  /** 「売り切れ」チップを押したとき。未指定ならチップを出さない */
+  /** 保存中に状態チップを押せなくする。状態チップは楽観的更新なので通常は不要 */
+  toggling?: boolean;
+  /** 状態チップを押したとき（販売中 ⇄ 売り切れ）。未指定ならチップを出さない */
   onToggleSoldOut?: () => void;
   onEdit: () => void;
   dimmed?: boolean;
@@ -59,6 +61,7 @@ export default function AdminMenuRow({
   /** SPの▲▼並び替え。未指定なら並び替え不可 */
   move?: { up: () => void; down: () => void; isFirst: boolean; isLast: boolean };
 }) {
+  const state = menuItemState(available, soldOut);
   return (
     <div
       onClick={onEdit}
@@ -115,8 +118,15 @@ export default function AdminMenuRow({
         ¥{price.toLocaleString()}
       </p>
 
-      {/* 売り切れチップ（PC / SP 共通）。クリック伝播を止めて行クリック=編集と競合しないようにする */}
-      {onToggleSoldOut && (
+      {/* 状態チップ（PC / SP 共通）。クリック伝播を止めて行クリック=編集と競合しないようにする。
+          「非表示」は押しても切り替わらない（戻すのは編集パネル）ので、ボタンにせず文字で置く。 */}
+      {onToggleSoldOut && (state === "hidden" ? (
+        <span
+          className="shrink-0 h-[30px] px-[var(--space-12)] rounded-full inline-flex items-center bg-bg-tertiary text-text-tertiary type-jp-caption-bold whitespace-nowrap"
+        >
+          {MENU_ITEM_STATE_LABEL.hidden}
+        </span>
+      ) : (
         <button
           type="button"
           onClick={(e) => {
@@ -125,26 +135,16 @@ export default function AdminMenuRow({
           }}
           disabled={toggling}
           aria-pressed={soldOut}
-          aria-label={soldOut ? "売り切れを解除する" : "売り切れにする"}
-          className={`shrink-0 h-[28px] px-[var(--space-12)] rounded-full border type-jp-caption-bold whitespace-nowrap transition-colors disabled:opacity-50 ${
+          aria-label={soldOut ? "売り切れを解除して販売中にする" : "売り切れにする"}
+          className={`shrink-0 h-[30px] px-[var(--space-12)] rounded-full border type-jp-caption-bold whitespace-nowrap transition-colors disabled:opacity-50 ${
             soldOut
               ? "bg-status-urgent-subtle border-transparent text-status-urgent"
               : "bg-surface-white border-border text-text-secondary hover:bg-bg-secondary"
           }`}
         >
-          {SOLD_OUT_ADMIN_LABEL}
+          {MENU_ITEM_STATE_LABEL[state]}
         </button>
-      )}
-
-      {/* PC: 公開トグル（クリック伝播を止めて行クリック=編集と競合しないようにする） */}
-      <div onClick={(e) => e.stopPropagation()} className="hidden lg:block shrink-0">
-        <ToggleSwitch
-          on={available}
-          disabled={toggling}
-          onClick={onToggleAvailable}
-          ariaLabel={available ? "非公開にする" : "公開する"}
-        />
-      </div>
+      ))}
 
       {/* SP: 編集ボタン（表示・非表示の切り替えは編集パネル側で行う） */}
       <button
