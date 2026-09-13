@@ -9,6 +9,7 @@ import { useMenuDataStore } from "./menuDataStore";
 import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
 import { optionsKey, optionsTotal, type SelectedOption } from "./menuOptions";
 import { isSoldOut, isSoldOutError, soldOutIdsIn } from "./soldOut";
+import { calcSetDrinkDiscount, fetchSetDrinkSetting, SET_DRINK_DEFAULT, type SetDrinkSetting } from "./setDrink";
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
@@ -339,7 +340,24 @@ export const useCartStore = create<CartStore>()(
         const orderType   = get().orderType;
 
         const subtotal = current.reduce((s, i) => s + lineUnitPrice(i) * i.quantity, 0);
-        const totalAmount = Math.floor(subtotal * 1.1);
+
+        /* セットドリンク割引（docs/specs/set-drink-discount.md）。
+           **金額の正は DB 側（place_order）**。ここで同じ規則を計算するのは、
+           履歴のスナップショットと完了画面に出す金額を合わせるため。
+           設定が読めなければ割引なしとして進める（注文は止めない）。 */
+        let setDrink: SetDrinkSetting = SET_DRINK_DEFAULT;
+        try {
+          setDrink = await fetchSetDrinkSetting();
+        } catch (err) {
+          console.warn("[placeOrder] fetchSetDrinkSetting failed, no discount:", err);
+        }
+        const discountAmount = calcSetDrinkDiscount(
+          current.map((ci) => ({ item: ci.item, quantity: ci.quantity, unitPrice: lineUnitPrice(ci) })),
+          useMenuDataStore.getState().categories,
+          orderType,
+          setDrink
+        );
+        const totalAmount = Math.floor((subtotal - discountAmount) * 1.1);
         const orderId = generateUuid();
 
         // DB 書き込みの前に LocalStorage にスナップショットを先行保存
@@ -351,6 +369,7 @@ export const useCartStore = create<CartStore>()(
           tableLabel:  orderType === "takeout" ? null : tableLabel,
           orderType,
           totalAmount,
+          discountAmount,
           status: "pending",
           items: current.map((ci) => ({
             menuItemId: ci.item.id,

@@ -31,7 +31,9 @@ export interface HistoryEntry {
   /** "A1" のような卓ラベル（Step3-O）。移行前に保存された履歴には無いので optional */
   tableLabel?: string | null;
   orderType: "dine_in" | "takeout";
-  totalAmount: number;            // 税込
+  totalAmount: number;            // 税込（セットドリンク割引を引いたあと）
+  /** セットドリンク割引（税抜き）。0 or 未設定なら割引なし。docs/specs/set-drink-discount.md */
+  discountAmount?: number;
   status: "pending" | "preparing" | "served" | "picked_up" | "paid";
   items: HistoryItemSnapshot[];
   /** 受渡番号（サーバー採番）。注文直後は未取得なので null のことがある */

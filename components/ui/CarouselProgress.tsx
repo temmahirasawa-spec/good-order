@@ -11,8 +11,9 @@
  * 幅は旧ドット（最大7個 ＋ gap6）とほぼ同じ 120 に固定して、行の重さを変えない。
  *
  * 色は**さりげなく**（天真の指摘、2026-09-13。最初は墨で目立ちすぎた）。
- * 地は bg/tertiary、埋まる側は text/tertiary。商品の写真やボタンより前に出ない濃さで、
- * それでも「どこまで見たか」は分かる。
+ * 地は bg/tertiary、埋まる側は text/disabled。
+ * **この2色は天真が Figma の Carousel Progress（1547:13490）で決めた値。**
+ * 変えるときは Figma を先に直すこと。
  */
 
 /** 旧ドットの並びとほぼ同じ幅。行の見た目の重さを変えないための固定値 */
@@ -43,7 +44,7 @@ export default function CarouselProgress({
         style={{ width: TRACK_WIDTH }}
       >
         <span
-          className="absolute inset-y-0 left-0 rounded-[2px] bg-text-tertiary"
+          className="absolute inset-y-0 left-0 rounded-[2px] bg-text-disabled"
           /* 指の動きに遅れないよう、幅の追従は短く。
              スクロール中は毎フレーム更新されるので、長いと遅延に見える */
           style={{ width: `${percent}%`, transition: "width 120ms var(--ease-out)" }}
