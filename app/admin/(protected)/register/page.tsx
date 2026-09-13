@@ -11,6 +11,7 @@
  */
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { businessDateToday } from "@/lib/dateFormat";
 import { updateOrderStatusIfUnchanged } from "@/lib/api";
 import { formatJstHm } from "@/lib/dateFormat";
 import AdminPageShell from "@/components/admin/AdminPageShell";
@@ -72,6 +73,11 @@ export default function RegisterPage() {
         .from("orders")
         .select("id, pickup_no, table_number, table_id, table_label, status, order_type, created_at, updated_at, total_amount")
         .neq("status", "paid")
+        /* **今日の営業日だけ**（2026-09-13 追加）。
+           以前は日付で絞っておらず、会計されなかった注文が何日でも残り続けた
+           （9月2日の検証注文が11日間レジに出ていた）。
+           日をまたいだ会計が必要になったら、ここを「昨日まで含める」に広げる。 */
+        .eq("business_date", businessDateToday())
         .order("created_at", { ascending: true });
       if (orderErr) throw orderErr;
       if (!orderRows || orderRows.length === 0) {
