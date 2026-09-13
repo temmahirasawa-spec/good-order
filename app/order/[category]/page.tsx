@@ -14,10 +14,11 @@
  *   list  … 文字の行（Menu List Row）の縦並び
  * サブカテゴリーがあるときは、区分ごとの見出し（List Sub Heading）で区切る。
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
 import OrderHeader from "@/components/ui/OrderHeader";
 import { TabNav } from "@/components/ui/Tab";
+import { useSectionSpy } from "@/hooks/useSectionSpy";
 import { MenuCard } from "@/components/ui/MenuCard";
 import MenuListRow from "@/components/ui/MenuListRow";
 import ListSubHeading from "@/components/ui/ListSubHeading";
@@ -31,7 +32,8 @@ import { SUBCATEGORY_LABEL, SUBCATEGORY_EN_LABEL } from "@/lib/categoryLabels";
 import type { ApiCategory } from "@/lib/api";
 import type { MenuItem, Subcategory } from "@/lib/menu";
 
-/* Header(68px) + sticky TabNav(50px) */
+/* Header(68px) + sticky TabNav(50px)。**実際の貼り付き位置は DOM から測る**ので、
+   これは測れなかったときの保険（hooks/useSectionSpy.ts） */
 const SCROLL_OFFSET = 118;
 
 /* ── ローディングスケルトン（2カラム4セル） ── */
@@ -115,48 +117,21 @@ export default function CategoryListingPage() {
     return out;
   }, [children, items, cat, category]);
 
-  const tabs = groups.length >= 2 ? groups.map((g) => ({ id: g.id, label: g.title ?? "" })) : [];
+  /* サブカテゴリーが2つ以上あるときだけタブを出す */
+  const tabs = useMemo(
+    () => (groups.length >= 2 ? groups.map((g) => ({ id: g.id, label: g.title ?? "" })) : []),
+    [groups]
+  );
 
-  /* ── タブ: トップと同じ scrollspy ＋ スクロール移動 ── */
-  const [activeGroup, setActiveGroup] = useState<string>("");
-  const visibleRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (tabs.length === 0) return;
-    const ids = tabs.map((t) => t.id);
-    setActiveGroup((cur) => (ids.includes(cur) ? cur : ids[0]));
-    const els = ids
-      .map((id) => document.getElementById(`section-${id}`))
-      .filter((el): el is HTMLElement => el !== null);
-    if (els.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          const id = e.target.id.replace(/^section-/, "");
-          if (e.isIntersecting) visibleRef.current.add(id);
-          else visibleRef.current.delete(id);
-        }
-        const current = ids.find((id) => visibleRef.current.has(id));
-        if (current) setActiveGroup(current);
-      },
-      { rootMargin: `-${SCROLL_OFFSET}px 0px -50% 0px`, threshold: 0 }
-    );
-    els.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabs.map((t) => t.id).join("|"), loading]);
-
-  const handleTabSelect = (id: string) => {
-    const el = document.getElementById(`section-${id}`);
-    if (!el) return;
-    const top = Math.max(0, el.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET);
-    const startY = window.scrollY;
-    window.scrollTo({ top, behavior: "smooth" });
-    window.setTimeout(() => {
-      if (Math.abs(window.scrollY - top) > 4 && Math.abs(window.scrollY - startY) < 4) {
-        window.scrollTo(0, top);
-      }
-    }, 250);
-  };
+  /* ── タブの現在地とジャンプ（トップと同じ hooks/useSectionSpy.ts）── */
+  const tabNavRef = useRef<HTMLDivElement>(null);
+  const tabIds = useMemo(() => tabs.map((t) => t.id), [tabs]);
+  const { active: activeGroup, jumpTo: handleTabSelect } = useSectionSpy({
+    ids: tabIds,
+    navRef: tabNavRef,
+    enabled: !loading && tabIds.length > 0,
+    fallbackOffset: SCROLL_OFFSET,
+  });
 
   /* 見出しは DB（categories）から。旧データ用に辞書へフォールバック */
   const enLabel = cat?.caption ?? SUBCATEGORY_EN_LABEL[category as Subcategory] ?? category?.toUpperCase() ?? "";
@@ -202,7 +177,7 @@ export default function CategoryListingPage() {
 
   return (
     <div className="mx-auto max-w-md min-h-screen bg-bg-primary flex flex-col gap-[var(--space-20)]">
-      <div className="sticky top-0 z-30 flex flex-col">
+      <div ref={tabNavRef} className="sticky top-0 z-30 flex flex-col">
         <OrderHeader variant="close" />
         {tabs.length > 0 && (
           <TabNav tabs={tabs} activeId={activeGroup} onSelect={handleTabSelect} />

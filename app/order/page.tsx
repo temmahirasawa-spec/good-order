@@ -18,10 +18,11 @@
  * カートへの導線は右下のフローティングカートボタン1つに集約している
  * （下部の「カートを見る」バーは遷移先が同じで冗長だったため廃止）。
  */
-import { useEffect, useRef, useState, Suspense } from "react";
+import { useMemo, useRef, useState, Suspense } from "react";
 import OrderHeader from "@/components/ui/OrderHeader";
 import FloatingCartButton from "@/components/ui/FloatingCartButton";
 import { TabNav } from "@/components/ui/Tab";
+import { useSectionSpy } from "@/hooks/useSectionSpy";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Video16x9 } from "@/components/ui/VideoBlock";
 import { MenuCardM, MenuCardWide } from "@/components/ui/MenuCard";
@@ -55,6 +56,8 @@ const FILTER_CHIPS = [
 ];
 
 /* Header(68px) + sticky TabNav(50px) の下にセクション先頭が来るようにする */
+/* ヘッダー(68) + タブナビ(50)。**実際の貼り付き位置は DOM から測る**ので、
+   これは測れなかったときの保険（hooks/useSectionSpy.ts） */
 const SCROLL_OFFSET = 118;
 
 /* ── ローディングスケルトン ── */
@@ -98,62 +101,29 @@ function OrderContent() {
   const heroVideo = useStoreVideo("order_hero");
   const heroMedia = heroVideo.loaded ? toMediaItems(heroVideo.media) : [];
 
-  const [activeSection, setActiveSection] = useState<string>(BEST_SELLER.id);
+  const tabNavRef = useRef<HTMLDivElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const visibleSectionsRef = useRef<Set<string>>(new Set());
 
   /* ── サブカテゴリーの絞り込み（区画ごと）。未選択 = すべて ── */
   const [chipSelection, setChipSelection] = useState<Record<string, string>>({});
   const chipOf = (slug: string) => chipSelection[slug] ?? ALL_CHIP_ID;
 
-  /* ── scrollspy: ビューポート上部の帯に入っているセクションのうち最上位を active に ──
-     Best Seller がOFFのときはセクション自体が無いので監視対象からも外す ── */
-  useEffect(() => {
-    if (loading) return;
-    const ids = [
+  /* ── タブの現在地とジャンプ（hooks/useSectionSpy.ts）──
+     貼り付き位置を DOM から測り、「上端が境界線を越えた最後の区画」を現在地にする。
+     決め打ちの帯で判定していた頃は、押した区画に着いてもタブが前の区画のままだった。 */
+  const sectionIds = useMemo(
+    () => [
       ...(bestSellerEnabled ? [BEST_SELLER.id] : []),
       ...categorySections.map((sec) => sec.category.slug),
-    ];
-    const els = ids
-      .map((id) => document.getElementById(`section-${id}`))
-      .filter((el): el is HTMLElement => el !== null);
-    if (els.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          const id = e.target.id.replace(/^section-/, "");
-          if (e.isIntersecting) visibleSectionsRef.current.add(id);
-          else visibleSectionsRef.current.delete(id);
-        }
-        const current = ids.find((id) => visibleSectionsRef.current.has(id));
-        if (current) setActiveSection(current);
-      },
-      // 上端: ヘッダー+タブナビ分をオフセット / 下端: 画面の上半分だけを判定帯にする
-      { rootMargin: `-${SCROLL_OFFSET}px 0px -50% 0px`, threshold: 0 }
-    );
-    els.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, [loading, bestSellerEnabled, categorySections]);
-
-  const handleTabSelect = (id: string) => {
-    const el = document.getElementById(`section-${id}`);
-    if (!el) return;
-    const top = Math.max(
-      0,
-      el.getBoundingClientRect().top + window.scrollY - SCROLL_OFFSET
-    );
-    const startY = window.scrollY;
-    window.scrollTo({ top, behavior: "smooth" });
-    // 一部環境（reduced-motion 設定や自動化ブラウザ等）では smooth 指定が
-    // 無視されて一切スクロールしないことがある。少し待って開始位置から
-    // 動いていなければ即時ジャンプにフォールバックする。
-    window.setTimeout(() => {
-      if (Math.abs(window.scrollY - top) > 4 && Math.abs(window.scrollY - startY) < 4) {
-        window.scrollTo(0, top);
-      }
-    }, 250);
-  };
+    ],
+    [bestSellerEnabled, categorySections]
+  );
+  const { active: activeSection, jumpTo: handleTabSelect } = useSectionSpy({
+    ids: sectionIds,
+    navRef: tabNavRef,
+    enabled: !loading,
+    fallbackOffset: SCROLL_OFFSET,
+  });
 
   /* ── カート連携（既存 zustand ストアにそのまま反映） ── */
   const qtyOf = (id: string) =>
@@ -216,7 +186,7 @@ function OrderContent() {
       )}
 
       {/* ── ジャンプナビ（sticky・scrollspy） ── */}
-      <div className="sticky top-[68px] z-30">
+      <div ref={tabNavRef} className="sticky top-[68px] z-30">
         <TabNav
           tabs={tabs}
           activeId={activeSection}

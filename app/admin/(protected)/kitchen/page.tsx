@@ -6,6 +6,7 @@
  */
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { businessDateToday } from "@/lib/dateFormat";
 import {
   groupOrdersByTable,
   calcElapsed,
@@ -104,6 +105,9 @@ export default function KitchenPage() {
         //   （2026-08-26 の監査で判明）。
         //   提供済み（served）と受渡済み（picked_up）だけを除外する。
         .not("status", "in", "(served,picked_up)")
+        /* **今日の営業日だけ**（2026-09-13 追加）。レジと同じ理由。
+           作り忘れの注文が何日も残って、今日の注文に紛れるのを防ぐ。 */
+        .eq("business_date", businessDateToday())
         .order("created_at", { ascending: true });
       if (orderErr) throw orderErr;
 
