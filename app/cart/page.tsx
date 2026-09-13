@@ -19,6 +19,13 @@ import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
 import { SOLD_OUT_CART_NOTICE, SOLD_OUT_ORDER_REJECTED, soldOutIdsIn } from "@/lib/soldOut";
 import {
+  SET_DRINK_LABEL,
+  SET_DRINK_DEFAULT,
+  calcSetDrinkDiscount,
+  fetchSetDrinkSetting,
+  type SetDrinkSetting,
+} from "@/lib/setDrink";
+import {
   canChooseServingTiming,
   cartLineKey,
   defaultServingTiming,
@@ -66,6 +73,30 @@ export default function CartPage() {
   /* 売り切れの行（最新のメニューで判定）。1つでもあれば注文ボタンを止める */
   const soldOutIds = soldOutIdsIn(items, menuItems);
   const hasSoldOut = soldOutIds.size > 0;
+
+  /* セットドリンク割引（docs/specs/set-drink-discount.md）。
+     設定は店舗ごとなので開いたときに1回だけ読む。読めなければ割引なしで出す */
+  const [setDrink, setSetDrink] = useState<SetDrinkSetting>(SET_DRINK_DEFAULT);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const s = await fetchSetDrinkSetting();
+        if (!cancelled) setSetDrink(s);
+      } catch (err) {
+        console.warn("[cart] fetchSetDrinkSetting failed:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const discount = calcSetDrinkDiscount(
+    items.map((ci) => ({ item: ci.item, quantity: ci.quantity, unitPrice: lineUnitPrice(ci) })),
+    categories,
+    orderType,
+    setDrink
+  );
+  const taxable = Math.max(0, totalPrice - discount);
 
   /* 提供タイミングを持たない行（移行前に保存されたカートや、カテゴリー読み込み前に
      入れた商品）に初期値を入れる。選べる商品なのに値が無いと、画面には初期値が出るのに
@@ -254,17 +285,24 @@ export default function CartPage() {
               ¥{totalPrice.toLocaleString()}
             </span>
           </div>
+          {/* セットドリンク割引。付いているときだけ出す（「0円引き」は見せない） */}
+          {discount > 0 && (
+            <div className="flex items-center justify-between type-jp-body text-accent-deep mt-[var(--space-8)]">
+              <span>{SET_DRINK_LABEL}</span>
+              <span className="type-en-price-s">−¥{discount.toLocaleString()}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between type-jp-body text-text-secondary mt-[var(--space-8)]">
             <span>消費税 (10%)</span>
             <span className="type-en-price-s text-text-secondary">
-              ¥{Math.floor(totalPrice * 0.1).toLocaleString()}
+              ¥{Math.floor(taxable * 0.1).toLocaleString()}
             </span>
           </div>
           <div className="h-px bg-border-divider my-[var(--space-12)]" />
           <div className="flex items-center justify-between">
             <span className="type-jp-heading-s text-text-primary">合計（税込）</span>
             <span className="type-en-price-l text-text-primary">
-              ¥{Math.floor(totalPrice * 1.1).toLocaleString()}
+              ¥{Math.floor(taxable * 1.1).toLocaleString()}
             </span>
           </div>
 

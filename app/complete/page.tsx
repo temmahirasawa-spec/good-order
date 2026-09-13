@@ -16,6 +16,7 @@ import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
 import { cartLineKey } from "@/lib/servingTiming";
 import { formatSelectedOptions, optionsKey, optionsTotal } from "@/lib/menuOptions";
 import { useCartStore, lineUnitPrice } from "@/lib/store";
+import { SET_DRINK_LABEL } from "@/lib/setDrink";
 import { fetchOrderStatuses } from "@/lib/api";
 import { loadHistory, updateHistoryPickupNo } from "@/lib/history";
 import { PICKUP_NO_LABEL, formatPickupNo } from "@/lib/pickupNo";
@@ -40,6 +41,9 @@ export default function CompletePage() {
   // 注文種別は「その注文のスナップショット」から取る（カート側の orderType は
   // 画面遷移で変わりうるため、確定した注文の値を使う）
   const [isTakeoutOrder, setIsTakeoutOrder] = useState(false);
+  /* セットドリンク割引（税抜き）。履歴のスナップショットに入っている値を使う
+     （画面で計算し直すと、注文した時点の設定と食い違う恐れがあるため） */
+  const [discountAmount, setDiscountAmount] = useState(0);
 
   const lastOrder  = orderHistory[orderHistory.length - 1] ?? [];
   const totalItems = lastOrder.reduce((s, i) => s + i.quantity, 0);
@@ -49,6 +53,7 @@ export default function CompletePage() {
     if (!lastOrderId) return;
     const entry = loadHistory().find((e) => e.orderId === lastOrderId);
     setIsTakeoutOrder(entry?.orderType === "takeout");
+    setDiscountAmount(entry?.discountAmount ?? 0);
   }, [lastOrderId]);
 
   useEffect(() => {
@@ -157,13 +162,23 @@ export default function CompletePage() {
               ))}
             </div>
 
+            {/* セットドリンク割引。付いている注文だけ出す */}
+            {discountAmount > 0 && (
+              <div className="flex items-center justify-between px-[var(--space-24)] py-[var(--space-12)]">
+                <span className="type-jp-body text-accent-deep">{SET_DRINK_LABEL}</span>
+                <span className="type-en-price-m !font-medium text-accent-deep">
+                  −¥{discountAmount.toLocaleString()}
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between bg-bg-warm px-[var(--space-24)] py-[var(--space-16)]">
               <div className="flex items-end">
                 <span className="type-jp-heading-m text-text-primary">合計</span>
                 <span className="type-jp-caption text-text-secondary">（税込）</span>
               </div>
               <span className="type-en-price-l !font-medium text-text-primary">
-                ¥{Math.floor(totalPrice * 1.1).toLocaleString()}
+                ¥{Math.floor(Math.max(0, totalPrice - discountAmount) * 1.1).toLocaleString()}
               </span>
             </div>
           </div>
