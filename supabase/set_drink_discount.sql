@@ -68,9 +68,6 @@ DECLARE
   v_enabled  boolean;
   v_per      integer;
   v_takeout  boolean;
-  v_food     integer;
-  v_drink    integer;
-  v_n        integer;
   v_discount integer;
 BEGIN
   SELECT set_drink_enabled, set_drink_discount, set_drink_takeout
@@ -85,47 +82,38 @@ BEGIN
     RETURN 0;
   END IF;
 
-  -- 明細を「区分つき・オプション込みの単価」に開く
-  CREATE TEMP TABLE IF NOT EXISTS tmp_set_drink_items (
-    quantity   integer,
-    unit_price integer,
-    ctype      text
-  ) ON COMMIT DROP;
-  DELETE FROM tmp_set_drink_items;
-
-  INSERT INTO tmp_set_drink_items (quantity, unit_price, ctype)
-  SELECT (e->>'quantity')::integer,
-         (e->>'unit_price')::integer + COALESCE((
-           SELECT SUM(mo.price)
-             FROM public.menu_item_options mo
-            WHERE mo.id IN (
-              SELECT (o->>'option_id')::uuid
-                FROM jsonb_array_elements(COALESCE(e->'options', '[]'::jsonb)) AS o
-            )
-         ), 0),
-         COALESCE(c.category_type, 'food')
-    FROM jsonb_array_elements(p_items) AS e
-    JOIN public.menu_items m ON m.id = (e->>'menu_item_id')::uuid
-    LEFT JOIN public.categories c ON c.id = m.category_id;
-
-  SELECT COALESCE(SUM(quantity), 0) INTO v_food  FROM tmp_set_drink_items WHERE ctype <> 'drink';
-  SELECT COALESCE(SUM(quantity), 0) INTO v_drink FROM tmp_set_drink_items WHERE ctype =  'drink';
-
-  v_n := LEAST(v_food, v_drink);
-  IF v_n <= 0 THEN
-    RETURN 0;
-  END IF;
-
-  -- 安い順に v_n 杯。1杯あたり「割引額」と「その杯の単価」の小さいほう
-  SELECT COALESCE(SUM(LEAST(v_per, unit_price)), 0)
-    INTO v_discount
-    FROM (
-      SELECT t.unit_price
-        FROM tmp_set_drink_items t, generate_series(1, t.quantity)
-       WHERE t.ctype = 'drink'
-       ORDER BY t.unit_price
-       LIMIT v_n
-    ) AS cheapest;
+  /* 明細を「区分つき・オプション込みの単価」に開いて、安い順に v_n 杯ぶん引く。
+     ⚠ 一時テーブルは使わないこと。**STABLE の関数の中では CREATE TEMP TABLE が
+     禁止**されており（0A000）、割引を ON にした瞬間に注文が通らなくなる。
+     2026-09-13 に本番へ流した直後の検証で踏んだ。CTE だけで書く。 */
+  WITH items AS (
+    SELECT (e->>'quantity')::integer AS quantity,
+           (e->>'unit_price')::integer + COALESCE((
+             SELECT SUM(mo.price)
+               FROM public.menu_item_options mo
+              WHERE mo.id IN (
+                SELECT (o->>'option_id')::uuid
+                  FROM jsonb_array_elements(COALESCE(e->'options', '[]'::jsonb)) AS o
+              )
+           ), 0) AS unit_price,
+           COALESCE(c.category_type, 'food') AS ctype
+      FROM jsonb_array_elements(p_items) AS e
+      JOIN public.menu_items m ON m.id = (e->>'menu_item_id')::uuid
+      LEFT JOIN public.categories c ON c.id = m.category_id
+  ),
+  totals AS (
+    SELECT COALESCE(SUM(quantity) FILTER (WHERE ctype <> 'drink'), 0) AS food_qty,
+           COALESCE(SUM(quantity) FILTER (WHERE ctype =  'drink'), 0) AS drink_qty
+      FROM items
+  ),
+  cheapest AS (
+    SELECT i.unit_price
+      FROM items i, generate_series(1, i.quantity)
+     WHERE i.ctype = 'drink'
+     ORDER BY i.unit_price
+     LIMIT (SELECT LEAST(food_qty, drink_qty) FROM totals)
+  )
+  SELECT COALESCE(SUM(LEAST(v_per, unit_price)), 0) INTO v_discount FROM cheapest;
 
   RETURN GREATEST(0, COALESCE(v_discount, 0));
 END;
