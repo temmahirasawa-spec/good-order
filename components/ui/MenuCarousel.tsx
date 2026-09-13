@@ -8,12 +8,17 @@
  * スクロール領域は `carousel-hover-room`（globals.css）でクリップ範囲を下に
  * 12px広げている。これが無いとPCホバー時にカード下端のボタンの影が切れる。
  *
+ * 進捗バー（CarouselProgress）は、スクロールできる余地があるときだけ下に出る。
+ * 2026-09-13 にドットから置き換えた（右端まで寄せても最後のドットが点灯しなかったため）。
+ * 自動で往復する RecommendCarousel だけは出さない（勝手に動くバーは進捗に読めない）。
+ *
  * RecommendCarousel のみ、ゆっくり自動横スクロール（左→右、端で反転して往復）する。
  * スクロールできる余地が無い場合（画像1枚等）は自動で無効。
  * ユーザーが触っている間は止まり、指を離してしばらくすると再開する。
  */
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import CarouselDots from "@/components/ui/CarouselDots";
+import { type ReactNode, useEffect, useRef } from "react";
+import CarouselProgress from "@/components/ui/CarouselProgress";
+import { useScrollProgress } from "@/hooks/useScrollProgress";
 
 /* かなりゆっくり: 1秒あたり30px（300px幅カード1枚分に約10秒） */
 const AUTO_SCROLL_SPEED_PX_PER_SEC = 30;
@@ -24,12 +29,16 @@ function ScrollRow({
   children,
   className = "",
   autoScroll = false,
+  showProgress = false,
 }: {
   children: ReactNode;
   className?: string;
   autoScroll?: boolean;
+  /** 下に進捗バーを出す。自動スクロールするカルーセルでは使わない */
+  showProgress?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const progress = useScrollProgress(scrollRef);
 
   useEffect(() => {
     if (!autoScroll) return;
@@ -96,10 +105,10 @@ function ScrollRow({
     };
   }, [autoScroll]);
 
-  return (
+  const row = (
     <div
       ref={scrollRef}
-      className={`carousel-hover-room overflow-x-auto overflow-y-hidden ${className}`}
+      className={`carousel-hover-room overflow-x-auto overflow-y-hidden ${showProgress ? "" : className}`}
       style={{ scrollbarWidth: "none" }}
     >
       <div
@@ -110,14 +119,23 @@ function ScrollRow({
       </div>
     </div>
   );
+
+  if (!showProgress) return row;
+  return (
+    <div className={className}>
+      {row}
+      <CarouselProgress ratio={progress} className="mt-[var(--space-12)]" />
+    </div>
+  );
 }
 
 export function MenuCarousel(props: { children: ReactNode; className?: string }) {
-  return <ScrollRow {...props} />;
+  return <ScrollRow {...props} showProgress />;
 }
 
+/** ベストセラーの横スライド。2026-09-13 に進捗バーを追加（天真の指示） */
 export function MenuCarouselWide(props: { children: ReactNode; className?: string }) {
-  return <ScrollRow {...props} />;
+  return <ScrollRow {...props} showProgress />;
 }
 
 export function RecommendCarousel(props: { children: ReactNode; className?: string }) {
@@ -127,50 +145,25 @@ export function RecommendCarousel(props: { children: ReactNode; className?: stri
 /* Menu Card M（200）＋ カード間12。1枚目 x=16、2枚目 x=228 なので
    画面幅390に対して2枚目の右が38pxはみ出す。この「見切れ」が
    スライドできることの手がかりなので、scroll-snap 等で潰さないこと。 */
-const CARD_M_WIDTH = 200;
 const CARD_M_GAP = 12;
 
 /**
- * カテゴリごとの横スワイプカルーセル（Menu Card M 用）＋ ドットページネーション。
- * ドットはスクロール量から現在地を割り出す（IntersectionObserverだとカードが
- * 常に2枚見えている状態で「どちらがアクティブか」を決めきれないため）。
+ * カテゴリごとの横スワイプカルーセル（Menu Card M 用）＋ 進捗バー。
+ *
+ * 以前はカード幅からの割り算で「何枚目か」を出してドットを点けていたが、
+ * **一番右まで寄せても最後のドットが点灯しなかった**（天真の指摘、2026-09-13）。
+ * スクロール量そのものから比率を出す方式に変え、右端で必ず 100% になるようにした。
+ * カードの枚数・幅・ガターに依存しないので、商品が増えても崩れない。
  */
 export function MenuCarouselM({
-  count,
   children,
   className = "",
 }: {
-  /** ドットの数＝カード枚数 */
-  count: number;
   children: ReactNode;
   className?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-
-  const update = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const step = CARD_M_WIDTH + CARD_M_GAP;
-    const max = Math.max(0, count - 1);
-    setActive(Math.min(max, Math.max(0, Math.round(el.scrollLeft / step))));
-  }, [count]);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => { frame = 0; update(); });
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    update();
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [update]);
+  const progress = useScrollProgress(scrollRef);
 
   return (
     <div className={className}>
@@ -186,7 +179,7 @@ export function MenuCarouselM({
           {children}
         </div>
       </div>
-      <CarouselDots total={count} active={active} className="mt-[var(--space-12)]" />
+      <CarouselProgress ratio={progress} className="mt-[var(--space-12)]" />
     </div>
   );
 }

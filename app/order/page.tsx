@@ -320,7 +320,7 @@ function OrderContent() {
                     </div>
                   ) : (
                     items.length > 0 && (
-                      <MenuCarouselM count={items.length} className="mt-[16px]">
+                      <MenuCarouselM className="mt-[16px]">
                         {items.map((item) => (
                           <MenuCardM
                             key={item.id}

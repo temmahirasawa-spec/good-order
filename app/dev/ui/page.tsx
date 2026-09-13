@@ -414,7 +414,7 @@ function SoldOutDemo() {
           MenuCardM（トップのカルーセル）: 売り切れ と 通常 を並べて。「ステッパー＋カートに入れる」の段が丸ごとピルになる
         </p>
         <div className="-mx-[16px]">
-          <MenuCarouselM count={2}>
+          <MenuCarouselM>
             <MenuCardM item={soldOutItem} quantity={1} onIncrement={noop} onDecrement={noop} onAddToCart={noop} />
             <MenuCardM item={sampleItem} quantity={1} onIncrement={noop} onDecrement={noop} onAddToCart={noop} />
           </MenuCarouselM>
@@ -737,7 +737,7 @@ export default function UiGalleryPage() {
         />
       </Section>
 
-      <Section title="MenuCarousel (MenuCard x3)">
+      <Section title="MenuCarousel (MenuCard x3)。下の進捗バーは右端で100%になる（2026-09-13、ドットから置き換え）">
         <div className="-mx-[16px]">
           <MenuCarousel>
             {menuItems.slice(0, 3).map((m) => (
@@ -747,7 +747,7 @@ export default function UiGalleryPage() {
         </div>
       </Section>
 
-      <Section title="MenuCardWide (300) in Carousel">
+      <Section title="MenuCardWide (300) in Carousel（ベストセラー。進捗バーを追加）">
         <div className="-mx-[16px]">
           <MenuCarouselWide>
             {menuItems.slice(0, 2).map((m) => (
