@@ -349,22 +349,43 @@ function MediaUploaderFieldDemo() {
   );
 }
 
+/* 状態チップ（販売中 ⇄ 売り切れ／非表示）の3状態を並べる。
+   1行目は押すと切り替わる。3行目（非表示）は押しても変わらない＝編集パネルで戻す */
 function AdminMenuRowDemo() {
-  const [available, setAvailable] = useState(true);
   const [soldOut, setSoldOut] = useState(false);
   return (
-    <AdminMenuRow
-      name="スフレパンケーキ プレーン"
-      categoryLabel="パンケーキ"
-      price={980}
-      thumbnailUrl="/images/pancake/p1.webp"
-      available={available}
-      soldOut={soldOut}
-      toggling={false}
-      onToggleAvailable={() => setAvailable((v) => !v)}
-      onToggleSoldOut={() => setSoldOut((v) => !v)}
-      onEdit={() => {}}
-    />
+    <div className="flex flex-col">
+      <AdminMenuRow
+        name="スフレパンケーキ プレーン"
+        categoryLabel="パンケーキ"
+        price={980}
+        thumbnailUrl="/images/pancake/p1.webp"
+        available
+        soldOut={soldOut}
+        onToggleSoldOut={() => setSoldOut((v) => !v)}
+        onEdit={() => {}}
+      />
+      <AdminMenuRow
+        name="パンケーキ ティラミス"
+        categoryLabel="パンケーキ"
+        price={1760}
+        thumbnailUrl="/images/pancake/p3.webp"
+        available
+        soldOut
+        onToggleSoldOut={() => {}}
+        onEdit={() => {}}
+      />
+      <AdminMenuRow
+        name="フレンチトースト プレーン"
+        categoryLabel="フレンチトースト"
+        price={1870}
+        thumbnailUrl="/images/pancake/ft1.webp"
+        available={false}
+        onToggleSoldOut={() => {}}
+        onEdit={() => {}}
+        dimmed
+      />
+    </div>
   );
 }
 
@@ -1027,7 +1048,7 @@ export default function UiGalleryPage() {
         <ToggleSwitchDemo />
       </Section>
 
-      <Section title="AdminMenuRow（PC=トグル / SP=編集ボタン。「売り切れ」チップは共通。幅を狭めてSP表示を確認）">
+      <Section title="AdminMenuRow（状態チップ 1列。販売中 ⇄ 売り切れ は1タップ、非表示は編集パネルで戻す。2026-09-13 に案Aへ）">
         <div className="max-w-[500px]">
           <AdminMenuRowDemo />
         </div>

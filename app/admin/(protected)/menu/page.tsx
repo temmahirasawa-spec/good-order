@@ -118,7 +118,6 @@ export default function AdminMenuPage() {
   const [deleting,      setDeleting]      = useState(false);
   const [imgUploading,  setImgUploading]  = useState(false);
   const [videoUploading, setVideoUploading] = useState(false);
-  const [toggling,      setToggling]      = useState<string | null>(null);
   const [compressPrompt, setCompressPrompt] = useState<{
     file: File;
     info: ImageInfo;
@@ -576,20 +575,9 @@ export default function AdminMenuPage() {
     }
   };
 
-  /* ── 公開フラグ切替 ── */
-  const handleToggleAvailable = async (item: AdminMenuItem) => {
-    setToggling(item.id);
-    try {
-      const { error } = await supabase
-        .from("menu_items")
-        .update({ is_available: !item.is_available })
-        .eq("id", item.id);
-      if (error) throw error;
-      await loadAll();
-    } finally {
-      setToggling(null);
-    }
-  };
+  /* 公開・非公開の切り替えは**編集パネルに集約した**（2026-09-13、天真が案Aを選択）。
+     一覧の右端は「状態」1列だけにして、営業中に何度も押す 販売中⇄売り切れ を1タップにする。
+     非公開に戻すのは営業中の操作ではないので、一覧からは外した。 */
 
   /* ── 売り切れ切替（楽観的更新: 先に画面を切り替え、失敗したときだけ戻す。CLAUDE.md 4章） ──
      公開トグルと違って営業中に何度も押すものなので、押した瞬間に反映させる */
@@ -729,8 +717,6 @@ export default function AdminMenuPage() {
                     thumbnailUrl={item.image_url}
                     available={item.is_available}
                     soldOut={item.is_sold_out ?? false}
-                    toggling={toggling === item.id}
-                    onToggleAvailable={() => handleToggleAvailable(item)}
                     onToggleSoldOut={() => handleToggleSoldOut(item)}
                     onEdit={() => openEdit(item)}
                     dimmed={!item.is_available}
