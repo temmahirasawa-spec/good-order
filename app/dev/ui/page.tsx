@@ -143,8 +143,8 @@ const sampleDrink: MenuItem = {
 };
 
 const sampleVideo = [
-  { type: "image" as const, url: "/images/pancake/p1.webp" },
-  { type: "video" as const, url: "/images/hero/background.mp4" },
+  { type: "image" as const, url: asset("/images/pancake/p1.webp") },
+  { type: "video" as const, url: asset("/images/hero/background.mp4") },
 ];
 
 /* ── 印刷状況（/admin/print）のサンプル ──
@@ -245,8 +245,8 @@ function TagSelectFieldDemo() {
 
 const DEMO_MEDIA: StoreMedia = {
   enabled: true,
-  url: "/images/hero/background.mp4",
-  posterUrl: "/images/pancake/p1.webp",
+  url: asset("/images/hero/background.mp4"),
+  posterUrl: asset("/images/pancake/p1.webp"),
   updatedAt: "2026-08-03T14:32:00+09:00",
   backgroundType: "video",
   backgroundColor: null,
@@ -359,7 +359,7 @@ function AdminMenuRowDemo() {
         name="スフレパンケーキ プレーン"
         categoryLabel="パンケーキ"
         price={980}
-        thumbnailUrl="/images/pancake/p1.webp"
+        thumbnailUrl={asset("/images/pancake/p1.webp")}
         available
         soldOut={soldOut}
         onToggleSoldOut={() => setSoldOut((v) => !v)}
@@ -369,7 +369,7 @@ function AdminMenuRowDemo() {
         name="パンケーキ ティラミス"
         categoryLabel="パンケーキ"
         price={1760}
-        thumbnailUrl="/images/pancake/p3.webp"
+        thumbnailUrl={asset("/images/pancake/p3.webp")}
         available
         soldOut
         onToggleSoldOut={() => {}}
@@ -379,7 +379,7 @@ function AdminMenuRowDemo() {
         name="フレンチトースト プレーン"
         categoryLabel="フレンチトースト"
         price={1870}
-        thumbnailUrl="/images/pancake/ft1.webp"
+        thumbnailUrl={asset("/images/pancake/ft1.webp")}
         available={false}
         onToggleSoldOut={() => {}}
         onEdit={() => {}}
@@ -1100,7 +1100,7 @@ export default function UiGalleryPage() {
           tag="人気"
           categoryLabel={sampleCat.name}
           categoryColor={sampleCat.tag_color}
-          imageUrl="/images/pancake/p1.webp"
+          imageUrl={asset("/images/pancake/p1.webp")}
         />
       </Section>
 

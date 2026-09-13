@@ -7,7 +7,7 @@
  * 一番右まで寄せても最後のドットが点灯しない取りこぼしがあった。
  * バーなら枚数に関係なく「右端＝100%」で必ず埋まりきる。
  *
- * 見た目は旧ドットの寸法を引き継ぐ（高さ6・角丸3・上下パディング4）。
+ * 高さ4・角丸2・上下パディング4（天真の指示 2026-09-13。6px は太かった）。
  * 幅は旧ドット（最大7個 ＋ gap6）とほぼ同じ 120 に固定して、行の重さを変えない。
  *
  * 色は**さりげなく**（天真の指摘、2026-09-13。最初は墨で目立ちすぎた）。
@@ -39,11 +39,11 @@ export default function CarouselProgress({
       role="presentation"
     >
       <span
-        className="relative block h-[6px] rounded-[3px] bg-bg-tertiary overflow-hidden"
+        className="relative block h-[4px] rounded-[2px] bg-bg-tertiary overflow-hidden"
         style={{ width: TRACK_WIDTH }}
       >
         <span
-          className="absolute inset-y-0 left-0 rounded-[3px] bg-text-tertiary"
+          className="absolute inset-y-0 left-0 rounded-[2px] bg-text-tertiary"
           /* 指の動きに遅れないよう、幅の追従は短く。
              スクロール中は毎フレーム更新されるので、長いと遅延に見える */
           style={{ width: `${percent}%`, transition: "width 120ms var(--ease-out)" }}

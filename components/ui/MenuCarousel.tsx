@@ -124,7 +124,9 @@ function ScrollRow({
   return (
     <div className={className}>
       {row}
-      <CarouselProgress ratio={progress} className="mt-[var(--space-12)]" />
+      {/* カルーセルとバーの間は 24（= mt 20 ＋ バー自身の上パディング 4）。
+          天真の指示 2026-09-13。16 だと詰まって見える */}
+      <CarouselProgress ratio={progress} className="mt-[var(--space-20)]" />
     </div>
   );
 }
@@ -179,7 +181,7 @@ export function MenuCarouselM({
           {children}
         </div>
       </div>
-      <CarouselProgress ratio={progress} className="mt-[var(--space-12)]" />
+      <CarouselProgress ratio={progress} className="mt-[var(--space-20)]" />
     </div>
   );
 }
