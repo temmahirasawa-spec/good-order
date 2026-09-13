@@ -18,6 +18,7 @@ import { Icon } from "@/components/Icon";
 const SUB_ITEMS = [
   { href: "/admin/menu", label: "メニュー管理" },
   { href: "/admin/menu/categories", label: "カテゴリ管理" },
+  { href: "/admin/menu/set-drink", label: "セットドリンク" },
 ] as const;
 
 export default function MenuAccordionNavItem({
