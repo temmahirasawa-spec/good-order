@@ -138,8 +138,29 @@ export default function KitchenPage() {
         itemsByOrder.set(row.order_id, arr);
       });
 
+      /* **会計が済んでいて、全品の調理も終わった注文は厨房から下げる**（2026-09-14）。
+
+         注文の状態を持つ欄は1つしかなく、レジで会計すると 'served' が 'paid' に
+         上書きされて「提供済みだった」という記憶が消える。そのため上の抽出条件
+         （served / picked_up を除く）をすり抜け、**会計した瞬間に、提供も会計も
+         終わった注文が厨房へ戻ってきていた**（洋輔さんの動画で判明）。
+         状態の欄を分けるのが本筋だが、それは注文まわりの作り替えになるので、
+         ここでは「調理が終わったか」を明細の cooking_status で見て判断する。
+
+         ⚠ **先に支払われた、まだ作っていない注文は今までどおり厨房に残す。**
+         2026-08-26 の決定（テイクアウトで先に会計されたときに、未調理の注文が
+         厨房から消えて「お金は払ったのに商品が出てこない」が起きるのを防ぐ）を
+         崩さないため、消すのは「全品 done」のときだけに限る。 */
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const orders: OrderWithItems[] = (orderRows ?? []).map((o: any) => ({
+      const isFinished = (o: any): boolean => {
+        if (o.status !== "paid") return false;
+        const items = itemsByOrder.get(o.id) ?? [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return items.length > 0 && items.every((i: any) => i.cooking_status === "done");
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const orders: OrderWithItems[] = (orderRows ?? []).filter((o: any) => !isFinished(o)).map((o: any) => ({
         id: o.id,
         table_number: o.table_number ?? null,
         table_id:     o.table_id ?? null,
