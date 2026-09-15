@@ -15,12 +15,13 @@
  */
 import { Tab } from "@/components/ui/Tab";
 
-export type DisplayTabId = "video" | "bestseller" | "brand";
+export type DisplayTabId = "video" | "bestseller" | "brand" | "features";
 
 export const DISPLAY_TABS: { id: DisplayTabId; label: string }[] = [
   { id: "video", label: "動画設定" },
   { id: "bestseller", label: "ベストセラー" },
   { id: "brand", label: "ブランドカラー" },
+  { id: "features", label: "使う機能" },
 ];
 
 export default function DisplayTabs({

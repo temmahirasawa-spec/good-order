@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
+import { fetchFeatureToggles, FEATURES_DEFAULT, type FeatureToggles } from "@/lib/features";
 import FloatingStaffCall from "@/components/FloatingStaffCall";
 import CartButton from "@/components/CartButton";
 import { supabase } from "@/lib/supabase";
@@ -47,6 +48,16 @@ function formatDate(iso: string): string {
 }
 
 export default function HistoryPage() {
+  /* 使わない機能の導線は出さない（管理画面「表示設定 ＞ 使う機能」） */
+  const [features, setFeatures] = useState<FeatureToggles>(FEATURES_DEFAULT);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchFeatureToggles()
+      .then((f) => { if (!cancelled) setFeatures(f); })
+      .catch((err) => console.warn("[history] fetchFeatureToggles failed:", err));
+    return () => { cancelled = true; };
+  }, []);
+
   const router = useRouter();
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
   const [reorderPrompt, setReorderPrompt] = useState<HistoryEntry | null>(null);
@@ -274,7 +285,8 @@ export default function HistoryPage() {
         </div>
       )}
 
-      <FloatingStaffCall />
+      {/* 使わない設定のときは出さない（lib/features.ts） */}
+      {features.staffCall && <FloatingStaffCall />}
       <CartButton />
     </div>
   );

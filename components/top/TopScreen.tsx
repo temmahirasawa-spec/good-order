@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useCartStore } from "@/lib/store";
+import { beginVisit } from "@/lib/visitSession";
 import { resolveTable } from "@/lib/tables";
 import { useStoreVideo } from "@/lib/useStoreMedia";
 import { resolveLandingBackground } from "@/lib/storeMedia";
@@ -35,6 +36,10 @@ function TopContent() {
   const [resolvedLabel, setResolvedLabel] = useState<string | null>(null);
   const [tableResolved, setTableResolved] = useState(false);
   const tableDisplay = resolvedLabel ?? (legacyNumber !== null ? String(legacyNumber) : null);
+
+  /* 二次元コードから入り直したら、**新しいご来店として開き直す**
+     （前のお客様のぶんが残っていたら消す）。lib/visitSession.ts */
+  useEffect(() => { beginVisit(); }, []);
 
   useEffect(() => {
     if (isTakeoutOnly) return;
