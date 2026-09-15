@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useUiStore } from "@/lib/uiStore";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import InfoRow from "@/components/ui/InfoRow";
+import { fetchStoreInfo, STORE_INFO_DEFAULT, type StoreInfo } from "@/lib/storeInfo";
 import SeeMoreButton from "@/components/ui/SeeMoreButton";
 /* 店舗情報の実体は lib/siteConfig.ts に集約している。
    同じ住所・営業時間が構造化データ（JSON-LD）と meta description にも出るため、
    ここで別に持つと必ずどれかが古くなる。 */
-import { STORE } from "@/lib/siteConfig";
 
 interface Props {
   open: boolean;
@@ -16,6 +16,18 @@ interface Props {
 }
 
 export default function StoreInfoModal({ open, onClose }: Props) {
+  /* 店舗情報は管理画面「店舗情報」で変えられる（lib/storeInfo.ts）。
+     読めないときは siteConfig の既定値のまま出す */
+  const [info, setInfo] = useState<StoreInfo>(STORE_INFO_DEFAULT);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void fetchStoreInfo()
+      .then((i) => { if (!cancelled) setInfo(i); })
+      .catch((err) => console.warn("[StoreInfoModal] fetchStoreInfo failed:", err));
+    return () => { cancelled = true; };
+  }, [open]);
+
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
@@ -73,27 +85,27 @@ export default function StoreInfoModal({ open, onClose }: Props) {
           <div className="relative w-full h-[171px] rounded-[var(--radius-sm)] overflow-hidden bg-bg-tertiary mt-[16px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={STORE.heroImage}
-              alt={STORE.name}
+              src={info.imageUrl}
+              alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />
           </div>
 
           {/* ── 店名 ── */}
           <h3 className="type-jp-heading-l text-text-primary mt-[24px]">
-            {STORE.name}
+            {info.name}
           </h3>
 
           {/* ── 店舗情報リスト ── */}
           <div className="flex flex-col gap-[20px] mt-[20px]">
-            <InfoRow icon="map-pin" label="住所"     value={STORE.address} />
-            <InfoRow icon="clock"   label="営業時間" value={STORE.hours} />
-            <InfoRow icon="clock"   label="定休日"   value={STORE.holiday} />
-            <InfoRow icon="phone"   label="電話番号" value={STORE.phone} />
+            <InfoRow icon="map-pin" label="住所"     value={info.address} />
+            <InfoRow icon="clock"   label="営業時間" value={info.hours} />
+            <InfoRow icon="clock"   label="定休日"   value={info.holiday} />
+            <InfoRow icon="phone"   label="電話番号" value={info.phone} />
           </div>
 
           {/* ── 地図で見る ── */}
-          <SeeMoreButton label="地図で見る" href={STORE.mapUrl} className="mt-[24px]" />
+          <SeeMoreButton label="地図で見る" href={info.mapUrl} className="mt-[24px]" />
 
           <div className="h-2 safe-bottom" />
         </div>
