@@ -63,7 +63,7 @@ table.tight th,table.tight td{white-space:nowrap;padding:8px 10px}
 </header>
 
 <div class="summary">
-  <div class="sum"><div class="n">01 / STORE</div><div class="t">店舗情報が自由に</div><p>項目を増やしたり消したりできます。店名から住所と地図が自動で入ります。</p></div>
+  <div class="sum"><div class="n">01 / STORE</div><div class="t">店舗情報が自由に</div><p>項目を増やしたり消したりできます。店名から住所と地図が自動で入ります（動作確認済み）。</p></div>
   <div class="sum"><div class="n">02 / HISTORY</div><div class="t">注文履歴を読みやすく</div><p>1行に1品ずつ並べ、区分けと再注文ボタンをなくしました。</p></div>
   <div class="sum"><div class="n">03 / CART</div><div class="t">誤って消えません</div><p>個数1のときはマイナスを押せなくしました。</p></div>
 </div>
@@ -86,7 +86,11 @@ table.tight th,table.tight td{white-space:nowrap;padding:8px 10px}
       <li>選ぶと<b>住所の欄と地図のURLが同時に入ります</b>。地図のURLは手で直すこともできます</li>
       <li>安全のため、<b>店長のアカウントからしか検索できません</b>（勝手に使われて費用がかさむのを防ぐため）</li>
     </ul>
-    <div class="callout" style="border-left-color:var(--old)"><b>ひとつだけお願いがあります。</b> この検索を動かすには、Googleの利用キーの設定が1つ必要です。天真さんに手順をお伝えしてあります。<b>設定が済むまでは、地図のURLを手で入力していただく形になります</b>（画面にもその案内が出ます。エラーにはなりません）。</div>
+    <div class="callout"><b>設定が完了し、本番で動くことを確認しました。</b> 実際に「YORKYS BRUNCH 夙川」で検索したところ、<b>夙川本店が候補に出て、住所と地図のURLが正しく入りました</b>。そのまま今日からお使いいただけます。</div>
+    <div class="band">
+      <b>VERIFIED</b>
+      <p>候補: YORKYS BRUNCH（ヨーキーズ ブランチ）夙川本店<br>住所: 〒662-0052 兵庫県西宮市霞町5−44 ビンテージ夙川 2F</p>
+    </div>
   </div>
 </section>
 
@@ -166,8 +170,8 @@ table.tight th,table.tight td{white-space:nowrap;padding:8px 10px}
     <div class="mine"><b>Googleの検索は店長のアカウントからのみに限定しました。</b><br>
       この検索はGoogleへの支払いが発生します。誰でも叩ける状態だと費用がかさむため、鍵はお客様のブラウザに配らず、サーバー側だけで使っています。</div>
 
-    <div class="mine"><b>キーが未設定のときは、エラーで止めず手入力に切り替わるようにしました。</b><br>
-      設定が済むまで店舗情報がまったく編集できない、という状態を避けるためです。</div>
+    <div class="mine"><b>キーが使えないときは、エラーで止めず手入力に切り替わるようにしました。</b><br>
+      いまは設定済みで動いていますが、将来キーが切れたときに店舗情報がまったく編集できなくなる、という状態を避けるためです。</div>
 
     <div class="mine"><b>注文履歴の「状態」は画面から消しましたが、記録は続けています。</b><br>
       いま出さないだけで、将来また出したくなったときに困らないようにするためです。</div>
@@ -181,7 +185,7 @@ table.tight th,table.tight td{white-space:nowrap;padding:8px 10px}
   <div class="sh"><span class="eye">これから</span><span class="en">NEXT</span><span class="ja">設定していただきたいこと</span></div>
   <table class="tight">
     <tr><th>項目</th><th>状態</th></tr>
-    <tr><td>店舗情報の項目 / 地図の自動入力</td><td><b>反映済み</b>（Googleのキー設定待ち）</td></tr>
+    <tr><td>店舗情報の項目 / 地図の自動入力</td><td><b>反映済み・動作確認済み</b></td></tr>
     <tr><td>テイクアウトの見え方・導線</td><td><b>反映済み・確認済み</b></td></tr>
     <tr><td>注文履歴</td><td><b>反映済み</b></td></tr>
     <tr><td>カートのマイナスボタン</td><td><b>反映済み</b></td></tr>
