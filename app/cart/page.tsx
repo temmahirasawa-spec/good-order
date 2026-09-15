@@ -17,7 +17,10 @@ import { useCartStore, lineUnitPrice } from "@/lib/store";
 import { formatSelectedOptions, optionsKey } from "@/lib/menuOptions";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
-import { SOLD_OUT_CART_NOTICE, SOLD_OUT_ORDER_REJECTED, soldOutIdsIn } from "@/lib/soldOut";
+import {
+  SOLD_OUT_CART_NOTICE, SOLD_OUT_ORDER_REJECTED, UNAVAILABLE_CART_NOTICE,
+  soldOutIdsIn, unavailableIdsIn,
+} from "@/lib/soldOut";
 import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "@/lib/tax";
 import {
   SET_DRINK_LABEL,
@@ -46,6 +49,8 @@ export default function CartPage() {
 
   const categories = useMenuDataStore((s) => s.categories);
   const menuItems = useMenuDataStore((s) => s.menuItems);
+  /* メニューを一度でも読み終えたか。読み込み中に「取扱終了」と誤判定しないため */
+  const menuLoadedAt = useMenuDataStore((s) => s.loadedAt);
   const fetchAll = useMenuDataStore((s) => s.fetchAll);
   const startRealtime = useMenuDataStore((s) => s.startRealtime);
   const stopRealtime = useMenuDataStore((s) => s.stopRealtime);
@@ -74,6 +79,16 @@ export default function CartPage() {
   /* 売り切れの行（最新のメニューで判定）。1つでもあれば注文ボタンを止める */
   const soldOutIds = soldOutIdsIn(items, menuItems);
   const hasSoldOut = soldOutIds.size > 0;
+
+  /* **メニューから消えた商品**がカートに残っていないか（2026-09-15 の障害）。
+     残っていると注文が必ず失敗するのに、画面には「通信エラー」としか出ず、
+     何度押しても進めない状態になっていた。先に気づいて消してもらう。
+     メニューが読めるまでは判定しない（読み込み中に誤って出さないため）。 */
+  const menuLoaded = Boolean(menuLoadedAt) && menuItems.length > 0;
+  const unavailableIds = unavailableIdsIn(items, menuItems, menuLoaded);
+  const hasUnavailable = unavailableIds.size > 0;
+  /* どちらも「その行を消さないと進めない」なので、同じ扱いで止める */
+  const blocked = hasSoldOut || hasUnavailable;
 
   /* セットドリンク割引（docs/specs/set-drink-discount.md）。
      設定は店舗ごとなので開いたときに1回だけ読む。読めなければ割引なしで出す */
@@ -141,7 +156,7 @@ export default function CartPage() {
     //   React の state 更新は1拍遅れるので、同一タップ内の連打には効かない。
     //   そのため useRef のフラグと併用する。
     if (submittingRef.current || confirming) return;
-    if (hasSoldOut) return;   // ボタンは disabled だが、念のため
+    if (blocked) return;   // ボタンは disabled だが、念のため
     submittingRef.current = true;
     setConfirming(true);
 
@@ -151,9 +166,13 @@ export default function CartPage() {
     //   では丸ごと1往復（0.3〜0.8秒）が待ち時間になっていた。受付停止の判定は
     //   書き込み直前の placeOrder 側に一本化する（停止中は "closed" が返る）。
     //   placeOrder が例外を投げた場合も UI が固まらないよう、ここで受け止める。
-    const pending = placeOrder().catch(
-      () => ({ ok: false, reason: "failed" }) as const
-    );
+    const pending = placeOrder().catch((err) => {
+      /* **握りつぶさない。** 以前はここで理由ごと捨てていたため、
+         本当は何が起きたのか（通信なのか、注文の中身なのか）を
+         あとから追えなかった（2026-09-15 の障害の調査が難航した理由）。 */
+      console.error("[cart] placeOrder が例外で終わりました:", err);
+      return { ok: false, reason: "failed" } as const;
+    });
 
     // 視覚演出のウェイト（ボタン沈み込み → ゴールドの光）。
     // この 300ms は通信と**並行**に流す。直列に待つと演出の分だけ完了が遅れる。
@@ -170,6 +189,14 @@ export default function CartPage() {
         // 売り切れの商品が入っていた（サーバー側で弾かれた場合を含む）。
         // メニューを取り直して、該当の行に SOLD OUT を出す
         alert(SOLD_OUT_ORDER_REJECTED);
+        void fetchAll(true);
+      } else if (result.reason === "unavailable") {
+        /* メニューから消えた商品が入っていた。**再送しても直らない**ので、
+           「もう一度押してください」とは言わない。取り直して行を示す */
+        alert(
+          "お取り扱いが終わった商品が含まれていたため、ご注文を送信できませんでした。\n" +
+          "お手数ですが、赤く表示された商品をカートから削除して、もう一度お試しください。"
+        );
         void fetchAll(true);
       } else if (result.reason === "failed") {
         // 送信できなかった。カートは残っているので、そのまま再送できる。
@@ -267,7 +294,7 @@ export default function CartPage() {
                   price={lineUnitPrice(ci)}
                   quantity={ci.quantity}
                   optionsLabel={ci.options && ci.options.length > 0 ? formatSelectedOptions(ci.options) : undefined}
-                  soldOut={soldOutIds.has(ci.item.id)}
+                  soldOut={soldOutIds.has(ci.item.id) || unavailableIds.has(ci.item.id)}
                   onIncrement={() => updateLineQuantity(ci, ci.quantity + 1)}
                   onDecrement={() => updateLineQuantity(ci, ci.quantity - 1)}
                   onRemove={() => removeLine(ci)}
@@ -337,6 +364,11 @@ export default function CartPage() {
               {SOLD_OUT_CART_NOTICE}
             </p>
           )}
+          {hasUnavailable && (
+            <p className="type-jp-caption-bold text-status-urgent text-center mt-[var(--space-12)]">
+              {UNAVAILABLE_CART_NOTICE}
+            </p>
+          )}
           <p className="type-jp-caption text-text-secondary text-center mt-[var(--space-12)] mb-[var(--space-12)]">
             {hasTakeout
               ? "テイクアウト商品はお帰りの際にスタッフへお声がけください"
@@ -348,7 +380,7 @@ export default function CartPage() {
           <AddToCartButton
             label={confirming ? "送信中…" : "注文を確定する"}
             onClick={handleOrder}
-            disabled={confirming || hasSoldOut}
+            disabled={confirming || blocked}
           />
         </footer>
       )}
