@@ -1,41 +1,56 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+/**
+ * テイクアウトメニュー（ハンバーガーメニュー ＞ テイクアウト）
+ *
+ * **2026-09-15 に新デザインへ作り替えた。** それまでこの画面だけ旧デザイン
+ * （Header / CartButton / FloatingStaffCall / 自前のカード）のまま取り残されていて、
+ * 他の一覧と見た目がまるで違った（洋輔さんの指摘）。
+ * いまはカテゴリー一覧（app/order/[category]/page.tsx）と同じ器を使う。
+ *
+ * 空のときの扱い:
+ *   テイクアウト対象の商品が1つも無いときは、そもそもハンバーガーメニュー側の導線を
+ *   「テイクアウト（準備中）」にして押せなくしてある（app/order/menu/page.tsx）。
+ *   それでも直接この URL に来られるので、ここでも**次にどうすればいいかが分かる**
+ *   空の画面を出す。以前は「現在、テイクアウトメニューはありません」の1行だけだった。
+ */
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { hasSelectableOptions } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
-import Header from "@/components/Header";
-import ItemModal from "@/components/ItemModal";
-import FloatingStaffCall from "@/components/FloatingStaffCall";
-import CartButton from "@/components/CartButton";
+import OrderHeader from "@/components/ui/OrderHeader";
+import { MenuCard } from "@/components/ui/MenuCard";
+import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
+import { AddToCartButton } from "@/components/ui/Buttons";
 import type { MenuItem } from "@/lib/menu";
 
-/* ── スケルトン ── */
-function ItemSkeleton() {
+/* ── ローディング（カテゴリー一覧と同じ2カラム4セル） ── */
+function GridSkeleton() {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-soft">
-      <div className="bg-gray-200 animate-pulse w-full" style={{ aspectRatio: "16/9" }} />
-      <div className="px-4 py-3 space-y-2">
-        <div className="h-3 bg-gray-200 animate-pulse rounded w-1/4" />
-        <div className="h-4 bg-gray-200 animate-pulse rounded w-3/4" />
-        <div className="h-4 bg-gray-200 animate-pulse rounded w-1/3" />
-      </div>
+    <div className="grid grid-cols-2 justify-items-center gap-y-[16px] px-[var(--space-16)]">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="w-full max-w-[175px]">
+          <div className="aspect-square rounded-[var(--radius-sm)] bg-bg-tertiary animate-pulse" />
+          <div className="h-3 mt-[8px] rounded bg-bg-tertiary animate-pulse" />
+          <div className="h-3 mt-[6px] w-1/2 rounded bg-bg-tertiary animate-pulse" />
+        </div>
+      ))}
     </div>
   );
 }
 
 export default function TakeoutMenuPage() {
-  const router      = useRouter();
-  const addItem      = useCartStore((s) => s.addItem);
-  const orderType    = useCartStore((s) => s.orderType);
+  const router        = useRouter();
+  const addItem       = useCartStore((s) => s.addItem);
+  const orderType     = useCartStore((s) => s.orderType);
   const isTakeoutMode = useCartStore((s) => s.isTakeoutMode);
+  const setTakeoutMode = useCartStore((s) => s.setTakeoutMode);
 
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [addedId,      setAddedId]      = useState<string | null>(null);
+  const cartItems     = useCartStore((s) => s.items);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
 
-  /* ── 共有ストアから取得（takeout のみフィルタ） ── */
   const allMenuItems  = useMenuDataStore((s) => s.menuItems);
   const menuOptions   = useMenuDataStore((s) => s.menuOptions);
   const storeLoading  = useMenuDataStore((s) => s.loading);
@@ -57,153 +72,79 @@ export default function TakeoutMenuPage() {
   );
   const loading = storeLoading && !storeLoaded;
 
-  const handleDirectAdd = (item: MenuItem) => {
-    // オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる
-    if (hasSelectableOptions(item, menuOptions[item.id] ?? [])) {
-      openItemDetail(item.id);
-      return;
-    }
-    addItem(item);
-    setAddedId(item.id);
-    setTimeout(() => setAddedId(null), 700);
+  /* カテゴリー一覧と同じ操作にそろえる（数量の増減・詳細を開く） */
+  const qtyOf = (id: string) => cartItems.find((ci) => ci.item.id === id)?.quantity ?? 0;
+  /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる */
+  const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
+  const cardHandlers = (item: MenuItem) => ({
+    quantity: qtyOf(item.id),
+    onIncrement: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1)),
+    onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
+    onClick: () => openItemDetail(item.id),
+  });
+
+  /* 店内のお客様が店内メニューに戻るときは、テイクアウトの追加モードを解く。
+     解かないと、次に足した店内商品までテイクアウト扱いに見えてしまう */
+  const backToDineIn = () => {
+    setTakeoutMode(false);
+    router.push("/order");
   };
 
-  const onBack = () => {
-    if (orderType === "takeout") {
-      // テイクアウト専用モードでは戻る先はトップ
-      router.push("/");
-    } else {
-      router.push("/order");
-    }
-  };
-
-  // 店内利用者（dine_in）でテイクアウトメニューを見ているときだけ目立つバナーを出す
+  /* 店内のお客様がテイクアウトメニューを見ている最中だけ、いま何をしているかを出す */
   const showMixBanner = orderType === "dine_in" && isTakeoutMode;
 
   return (
-    <div className="mx-auto max-w-md min-h-screen bg-gray-50 flex flex-col">
-      <Header mode="sub" title="🛍 テイクアウトメニュー" onBack={onBack} />
-
-      {showMixBanner && (
-        <div className="bg-amber-500 text-white text-xs font-semibold px-4 py-2.5 text-center tracking-wide">
-          🛍 テイクアウトメニューをカートに追加中
-        </div>
-      )}
-
-      {/* ── メニューカードリスト ── */}
-      <main className="flex-1 px-4 py-4 space-y-4">
-        {loading ? (
-          <>
-            <ItemSkeleton />
-            <ItemSkeleton />
-            <ItemSkeleton />
-          </>
-        ) : items.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-16">
-            現在、テイクアウトメニューはありません
-          </p>
-        ) : (
-          items.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-2xl overflow-hidden shadow-soft"
-            >
-              {/* 上部：カバーメディア（media 先頭） */}
-              <div
-                className="relative w-full bg-gray-100 cursor-pointer"
-                style={{ aspectRatio: "16/9" }}
-                onClick={() => setSelectedItem(item)}
-              >
-                {(() => {
-                  const cover = item.media?.[0];
-                  if (cover?.type === "video") {
-                    return (
-                      // eslint-disable-next-line jsx-a11y/media-has-caption
-                      <video
-                        src={cover.url}
-                        poster={item.image || undefined}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      />
-                    );
-                  }
-                  const src = cover?.url ?? item.image;
-                  return src ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={src}
-                      alt={item.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-3xl">🛍</div>
-                  );
-                })()}
-                <span className="absolute top-2.5 left-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500 text-white">
-                  🛍 テイクアウト
-                </span>
-              </div>
-
-              {/* 下部：テキスト + ボタン */}
-              <div className="px-4 py-3">
-                <div className="min-w-0 mb-3">
-                  <h3 className="text-sm font-bold text-gray-900 leading-snug">
-                    {item.name}
-                  </h3>
-                  <p className="font-price text-base mt-1" style={{ color: "var(--ink)" }}>
-                    ¥{item.price.toLocaleString()}
-                  </p>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedItem(item)}
-                    className="btn-secondary flex-1 text-xs"
-                  >
-                    詳細を見る
-                  </button>
-
-                  <button
-                    onClick={() => handleDirectAdd(item)}
-                    className={`btn-primary flex-1 text-xs ${addedId === item.id ? "scale-95" : ""}`}
-                  >
-                    {addedId === item.id ? "✓ 追加しました" : "＋ カートに追加"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
+    <div className="mx-auto max-w-md min-h-screen bg-bg-primary flex flex-col gap-[var(--space-20)]">
+      <div className="sticky top-0 z-30 flex flex-col">
+        <OrderHeader variant="close" />
+        {showMixBanner && (
+          <div className="bg-accent-subtle border-b border-border-divider px-[var(--space-16)] py-[var(--space-8)]">
+            <p className="type-jp-caption-bold text-accent-deep text-center">
+              テイクアウトの商品をカートに追加しています
+            </p>
+          </div>
         )}
+      </div>
 
-        {/* 戻るボタン（店内利用者のみ） */}
-        {orderType === "dine_in" && (
-          <div className="pt-2 pb-6">
-            <button
-              onClick={() => router.push("/order")}
-              className="w-full py-3.5 rounded-2xl border border-warm-400 text-warm-700 text-sm font-medium flex items-center justify-center gap-2 active:bg-warm-50 transition-colors"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5"
-                  strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              店内メニューに戻る
-            </button>
+      {/* ── 見出し ── */}
+      <div className="flex flex-col gap-[var(--space-4)] pt-[4px] px-[var(--space-24)]">
+        <p className="type-en-display-l text-text-primary">TAKEOUT</p>
+        <p className="type-jp-body-small text-text-primary">テイクアウト</p>
+      </div>
+
+      <main className="pb-[96px]">
+        {loading ? (
+          <GridSkeleton />
+        ) : items.length === 0 ? (
+          /* 空。**行き止まりにしない。** 次にどうすればいいかを出す */
+          <div className="flex flex-col items-center gap-[var(--space-16)] px-[var(--space-24)] py-[var(--space-48)]">
+            <p className="type-jp-heading-s text-text-primary text-center">
+              ただいま準備中です
+            </p>
+            <p className="type-jp-body text-text-secondary text-center">
+              お持ち帰りいただけるメニューは、いまご用意がありません。
+              店内でお召し上がりいただけるメニューからお選びください。
+            </p>
+            <div className="w-full max-w-[280px] mt-[var(--space-8)]">
+              <AddToCartButton label="店内メニューを見る" onClick={backToDineIn} />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 justify-items-center gap-y-[16px] px-[var(--space-16)]">
+            {items.map((item) => (
+              <MenuCard
+                key={item.id}
+                item={item}
+                {...cardHandlers(item)}
+                imageLoading="lazy"
+                hideTag
+              />
+            ))}
           </div>
         )}
       </main>
 
-      {/* ── ハーフモーダル ── */}
-      <ItemModal
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
-      />
-
-      <FloatingStaffCall />
-      <CartButton />
+      <BottomViewCartBar />
     </div>
   );
 }
