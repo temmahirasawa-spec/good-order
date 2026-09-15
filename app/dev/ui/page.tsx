@@ -454,11 +454,18 @@ function SoldOutDemo() {
       </div>
 
       <div>
-        <p className="type-jp-caption text-text-secondary mb-[8px]">RecommendCard（商品詳細の関連おすすめ）</p>
+        <p className="type-jp-caption text-text-secondary mb-[8px]">
+          RecommendCard（商品詳細の関連おすすめ）: 写真あり / **写真なし** / 売り切れ を混ぜて。
+          写真が無い商品はカテゴリのタグ色を地にして商品名を大きく出す（高さは写真ありと揃う）。
+          価格は写真の有無にかかわらず必ず出る
+        </p>
         <div className="-mx-[16px]">
           <RecommendCarousel>
-            <RecommendCard item={soldOutItem} />
             <RecommendCard item={sampleItem} />
+            <RecommendCard item={{ ...sampleDrink, image: "", media: [], name: "アメリカーノ", description: "セットドリンクのみ おかわり無料", price: 550 }} />
+            <RecommendCard item={{ ...sampleDrink, image: "", media: [], name: "ほうじ茶バニラクリームラテ", description: "長い商品名でも枠から出ないこと", price: 770 }} />
+            <RecommendCard item={{ ...sampleDrink, image: "", media: [], name: "カフェモカ", description: "写真なしの売り切れ", price: 770, isSoldOut: true }} />
+            <RecommendCard item={soldOutItem} />
           </RecommendCarousel>
         </div>
       </div>

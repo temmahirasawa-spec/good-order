@@ -26,7 +26,9 @@ export function AddToCartButton({
       disabled={disabled}
       className={`btn-pill flex gap-[var(--space-8)] h-[var(--size-control-lg)] items-center justify-center rounded-full bg-accent-primary active:bg-accent-pressed disabled:opacity-40 w-full shadow-[var(--shadow-card)] ${className}`}
     >
-      <span className="type-jp-body-bold text-accent-contrast whitespace-nowrap">
+      {/* 320px のような極端に狭い端末でボタンから文字がはみ出さないようにする。
+          390px では収まるので省略記号は出ない（2026-09-16） */}
+      <span className="type-jp-body-bold text-accent-contrast whitespace-nowrap overflow-hidden text-ellipsis px-[var(--space-4)]">
         {label}
       </span>
     </button>
