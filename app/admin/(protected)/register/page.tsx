@@ -47,6 +47,8 @@ interface RegisterOrder {
   created_at: string;
   updated_at: string;
   total_amount: number;
+  /** セットドリンク割引（税抜）。place_order が保存した実際に引いた額 */
+  discount_amount: number;
   items: RegisterOrderItem[];
 }
 
@@ -71,7 +73,7 @@ export default function RegisterPage() {
     try {
       const { data: orderRows, error: orderErr } = await supabase
         .from("orders")
-        .select("id, pickup_no, table_number, table_id, table_label, status, order_type, created_at, updated_at, total_amount")
+        .select("id, pickup_no, table_number, table_id, table_label, status, order_type, created_at, updated_at, total_amount, discount_amount")
         .neq("status", "paid")
         /* **今日の営業日だけ**（2026-09-13 追加）。
            以前は日付で絞っておらず、会計されなかった注文が何日でも残り続けた
@@ -121,6 +123,7 @@ export default function RegisterPage() {
           created_at: o.created_at,
           updated_at: o.updated_at,
           total_amount: o.total_amount,
+          discount_amount: o.discount_amount ?? 0,
           items: itemsByOrder[o.id] ?? [],
         }))
       );
@@ -202,8 +205,21 @@ export default function RegisterPage() {
       (sum, it) => sum + it.unit_price * it.quantity,
       0
     );
-    const tax = Math.floor(subtotal * 0.1);
-    const total = subtotal + tax;
+
+    /* セットドリンク割引（docs/specs/set-drink-discount.md）。
+       2026-09-15 まで、ここは明細から計算し直すだけで**割引を見ていなかった**ため、
+       お客様の画面に出た金額より高い額をレジに出していた（洋輔さんの指摘）。
+
+       **合計は orders.total_amount の合計をそのまま使う。** これは place_order が
+       サーバー側で計算して保存した値＝お客様に提示した金額そのもので、ここが正。
+       画面で足し引きし直すと、また食い違いが生まれる。
+       消費税は「合計 −（小計 − 割引）」で逆算する。3つの行が必ず足して合うようにするため。 */
+    const discount = targetOrders.reduce((sum, o) => sum + (o.discount_amount ?? 0), 0);
+    const stored = targetOrders.reduce((sum, o) => sum + o.total_amount, 0);
+    const taxable = Math.max(0, subtotal - discount);
+    /* total_amount が未設定の古い注文だけ、従来どおり計算して出す */
+    const total = stored > 0 ? stored : taxable + Math.floor(taxable * 0.1);
+    const tax = Math.max(0, total - taxable);
     const earliestCreatedAt = targetOrders
       .map((o) => o.created_at)
       .sort()[0];
@@ -223,6 +239,7 @@ export default function RegisterPage() {
       internalRefs: targetOrders.map((o) => internalOrderRef(o.id)),
       items: allItems,
       subtotal,
+      discount,
       tax,
       total,
     };
@@ -340,6 +357,7 @@ export default function RegisterPage() {
                     isTakeout: it.is_takeout,
                   }))}
                   subtotal={selectedData.subtotal}
+                  discount={selectedData.discount}
                   tax={selectedData.tax}
                   total={selectedData.total}
                 />

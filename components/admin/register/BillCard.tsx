@@ -5,6 +5,7 @@
  * わずかに異なるため、Tailwindのlg:で出し分けている。
  */
 import OrderGroupHeader from "@/components/admin/register/OrderGroupHeader";
+import { SET_DRINK_LABEL } from "@/lib/setDrink";
 
 export interface BillCardItem {
   id: string;
@@ -33,11 +34,14 @@ function BillItemRow({ item }: { item: BillCardItem }) {
 export default function BillCard({
   items,
   subtotal,
+  discount = 0,
   tax,
   total,
 }: {
   items: BillCardItem[];
   subtotal: number;
+  /** セットドリンク割引（税抜）。0 のときは行ごと出さない */
+  discount?: number;
   tax: number;
   total: number;
 }) {
@@ -78,6 +82,14 @@ export default function BillCard({
             ¥{subtotal.toLocaleString()}
           </span>
         </div>
+        {discount > 0 && (
+          <div className="flex items-center justify-between w-full">
+            <span className="type-jp-caption text-accent-deep">{SET_DRINK_LABEL}</span>
+            <span className="font-en font-semibold text-[14px] leading-[1.2] text-accent-deep">
+              −¥{discount.toLocaleString()}
+            </span>
+          </div>
+        )}
         <div className="flex items-center justify-between w-full">
           <span className="type-jp-caption text-text-secondary">消費税（10%）</span>
           <span className="font-en font-semibold text-[14px] leading-[1.2] text-text-primary">
