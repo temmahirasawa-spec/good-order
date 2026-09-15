@@ -96,13 +96,15 @@ export default function StoreInfoModal({ open, onClose }: Props) {
             {info.name}
           </h3>
 
-          {/* ── 店舗情報リスト ── */}
-          <div className="flex flex-col gap-[20px] mt-[20px]">
-            <InfoRow icon="map-pin" label="住所"     value={info.address} />
-            <InfoRow icon="clock"   label="営業時間" value={info.hours} />
-            <InfoRow icon="clock"   label="定休日"   value={info.holiday} />
-            <InfoRow icon="phone"   label="電話番号" value={info.phone} />
-          </div>
+          {/* ── 店舗情報リスト ──
+                 **項目は店舗が決める**（管理画面「店舗情報」）。載せない項目は行ごと出ない */}
+          {info.rows.length > 0 && (
+            <div className="flex flex-col gap-[20px] mt-[20px]">
+              {info.rows.map((r, i) => (
+                <InfoRow key={i} icon={r.icon} label={r.label} value={r.value} />
+              ))}
+            </div>
+          )}
 
           {/* ── 地図で見る ── */}
           <SeeMoreButton label="地図で見る" href={info.mapUrl} className="mt-[24px]" />
