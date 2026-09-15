@@ -5,15 +5,21 @@
  * 画面名はサイドバー・Top Barとも「テイクアウト」。商品CRUDの /admin/takeout を
  * /admin/menu に統合して区別の必要が無くなったため Step3-N で短縮した。
  *
- * 調理完了（order_type=takeout かつ status=served）の注文を一覧し、
- * 既存の markOrderPickedUp()（served → picked_up）を呼ぶ。
+ * 受渡待ち（order_type=takeout で、まだ渡していない＝picked_up_at が空）の注文を
+ * 一覧し、markOrderPickedUp() を呼ぶ。
+ *
+ * **「渡したかどうか」は status ではなく orders.picked_up_at で見る**
+ * （2026-09-14 の修正。supabase/pickup_completed.sql）。
+ * status は1つしかなく、会計すると 'served' が 'paid' に上書きされるため、
+ * 以前の `status = 'served'` 完全一致では**まだ渡していないのに、会計した瞬間に
+ * この画面から消えていた**（「お金は払ったのに受け取れない」）。
  *
  * - 受渡番号は orders.pickup_no（サーバー側トリガーの日次連番、01〜99循環。
  *   supabase/pickup_no.sql）。注文IDの先頭6桁は"内部照合用ID"であって
  *   受渡番号ではないので、この画面では使わない。
- * - 経過時間は orders.updated_at（statusがservedになった時刻。updated_atは
- *   staff_foundation.sqlのトリガーで自動更新される）からの経過。厨房画面と
- *   同じ calcElapsed() を使う。
+ * - 経過時間は orders.updated_at（最後に動きがあった時刻。staff_foundation.sql の
+ *   トリガーで自動更新される）からの経過。厨房画面と同じ calcElapsed() を使う。
+ *   先に会計を済ませた注文では「会計した時刻」からの経過になる。
  * - 「受渡完了」後は即座に一覧から消す（楽観的更新）。競合・RLSブロックで
  *   0件更新だった場合は再取得でカードが戻る。
  * - このページにアクセスできるのは counter / kitchen / manager
@@ -47,9 +53,13 @@ export default function PickupPage() {
     try {
       const { data: orderRows, error: orderErr } = await supabase
         .from("orders")
-        .select("id, updated_at, pickup_no")
+        .select("id, updated_at, pickup_no, status")
         .eq("order_type", "takeout")
-        .eq("status", "served")
+        /* まだ渡していないものだけ。status ではなくこの欄で見る（上の注記） */
+        .is("picked_up_at", null)
+        /* served = 調理が終わって会計はまだ / paid = 先に会計を済ませた。
+           paid は「まだ作っていない」ことがあるので、下で全品の調理完了を確かめる。 */
+        .in("status", ["served", "paid"])
         .order("updated_at", { ascending: true });
       if (orderErr) throw orderErr;
 
@@ -62,11 +72,14 @@ export default function PickupPage() {
       const orderIds = orderRows.map((o) => o.id);
       const { data: itemRows, error: itemErr } = await supabase
         .from("order_items")
-        .select("id, order_id, quantity, menu_items (name)")
+        .select("id, order_id, quantity, cooking_status, menu_items (name)")
         .in("order_id", orderIds);
       if (itemErr) throw itemErr;
 
       const itemsByOrder = new Map<string, PickupItem[]>();
+      /* 全品の調理が終わっているか。先に会計だけ済ませた注文を、
+         まだ作っていないうちに受渡画面へ出さないために使う */
+      const allCooked = new Map<string, boolean>();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (itemRows ?? []).forEach((row: any) => {
         const arr = itemsByOrder.get(row.order_id) ?? [];
@@ -76,15 +89,24 @@ export default function PickupPage() {
           quantity: row.quantity ?? 0,
         });
         itemsByOrder.set(row.order_id, arr);
+        allCooked.set(
+          row.order_id,
+          (allCooked.get(row.order_id) ?? true) && row.cooking_status === "done"
+        );
       });
 
       setOrders(
-        orderRows.map((o) => ({
-          id: o.id,
-          pickupNo: o.pickup_no ?? null,
-          updatedAt: o.updated_at,
-          items: itemsByOrder.get(o.id) ?? [],
-        }))
+        orderRows
+          /* served は調理が終わっている印なのでそのまま。
+             paid は会計だけ先に済ませた可能性があるので、全品の調理完了を確かめる。
+             （厨房画面とちょうど裏返しの関係。あちらは「会計済み＋全品調理済み」を下げる） */
+          .filter((o) => o.status !== "paid" || allCooked.get(o.id) === true)
+          .map((o) => ({
+            id: o.id,
+            pickupNo: o.pickup_no ?? null,
+            updatedAt: o.updated_at,
+            items: itemsByOrder.get(o.id) ?? [],
+          }))
       );
     } catch (err) {
       console.error("[PickupPage] loadOrders failed:", err);
@@ -112,7 +134,7 @@ export default function PickupPage() {
     };
   }, [loadOrders]);
 
-  /* ── 受渡完了（served → picked_up） ── */
+  /* ── 受渡完了（picked_up_at を入れる。会計済みなら status は触らない） ── */
   const handlePickedUp = async (order: PickupOrder) => {
     const prev = orders;
     // 楽観：一覧から即座に消す

@@ -404,14 +404,28 @@ export async function fetchOrderStatuses(orderIds: string[]): Promise<OrderStatu
 }
 
 /* ── 4. テイクアウトの受け渡し状態 ──
- * served（調理完了）→ picked_up（受け渡し済み）。
- * 呼び出し元で order_type === "takeout" であることを確認してから呼ぶ想定
- * （このAPI自体はorder_typeをチェックしない）。 */
+ * 「受け渡した」は **orders.picked_up_at**（supabase/pickup_completed.sql）に持つ。
+ *
+ * 以前は status を 'picked_up' に書き換えるだけだった。しかし status は1つしかなく
+ * 会計済み（paid）と同じ欄を奪い合うため、**会計済みのテイクアウトを受渡完了にすると
+ * 会計の記録が消えて、レジに未会計として戻ってしまう**。
+ * そこで受渡完了は RPC に寄せ、会計済みのときは status を触らず picked_up_at だけ
+ * 入れるようにした（判断はすべて DB 側。RPC のコメントを参照）。
+ *
+ * order_type や二重受渡のチェックも RPC の中で行う。
+ * 戻り値は従来どおり conflict を含む形。**RPC が NULL を返したら競合**
+ * （他端末が先に更新した／既に受渡済み）で、画面は取り直す。 */
 export async function markOrderPickedUp(
   orderId: string,
   expectedUpdatedAt: string
 ): Promise<ConditionalUpdateResult> {
-  return updateOrderStatusIfUnchanged(orderId, "picked_up", expectedUpdatedAt);
+  const { data, error } = await supabase.rpc("mark_order_picked_up", {
+    p_order_id: orderId,
+    p_expected_updated_at: expectedUpdatedAt,
+  });
+  if (error) throw error;
+  const updatedAt = typeof data === "string" ? data : undefined;
+  return { ok: updatedAt !== undefined, conflict: updatedAt === undefined, updatedAt };
 }
 
 /* ── 2. スタッフ呼び出しの個別対応 ── */
