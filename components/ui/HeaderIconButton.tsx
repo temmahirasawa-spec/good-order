@@ -2,7 +2,8 @@
 
 /**
  * 全画面共通のヘッダーボタン（Figma: Header Icon Button 115:161）
- * 円形48・白地・枠線・影。Menu=ハンバーガー、Close=メニュー画面/ドロワー開時用。
+ * 円形48・白地・枠線・影。Menu=ハンバーガー、Close=メニュー画面/ドロワー開時用、
+ * arrow-left=商品詳細シートで「前に見ていた商品」へ戻る（2026-09-16）。
  * 48pxなのはiOSの最小推奨44ptを上回らせて押しやすくするため（Back/Modal Closeとも共通）。
  * 配置は親側で行う（Figma基準: 右上 x326 y10）。
  */
@@ -14,7 +15,7 @@ export default function HeaderIconButton({
   label,
   className = "",
 }: {
-  icon: "menu" | "close";
+  icon: "menu" | "close" | "arrow-left";
   onClick: () => void;
   label?: string;
   className?: string;
