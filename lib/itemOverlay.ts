@@ -20,11 +20,22 @@ export const ITEM_PARAM = "item";
  *  アプリ外なので、閉じるときに history.back() してはいけない。 */
 let pushedByApp = false;
 
-export function openItemDetail(id: string) {
+export function openItemDetail(id: string, opts?: { replace?: boolean }) {
   const params = new URLSearchParams(window.location.search);
   params.set(ITEM_PARAM, id);
+  const url = `${window.location.pathname}?${params.toString()}`;
+
+  /* **おすすめから別の商品へ移るときは置き換える（pushState しない）。**
+     以前は毎回 push していたので、おすすめを4回たどると履歴が4枚たまり、
+     × を4回押さないと一覧に戻れなかった（2026-09-16、洋輔さんが報告）。
+     詳細は「一覧の上に重ねた1枚のシート」なので、履歴も常に1枚でよい。
+     ブラウザの戻る・スワイプバックも、何回たどっていても一発で一覧に戻る。 */
+  if (opts?.replace) {
+    window.history.replaceState(null, "", url);
+    return;
+  }
   pushedByApp = true;
-  window.history.pushState(null, "", `${window.location.pathname}?${params.toString()}`);
+  window.history.pushState(null, "", url);
 }
 
 /** 直近の open がアプリ由来だったかを取り出す（1回きり） */
