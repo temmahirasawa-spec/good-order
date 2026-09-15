@@ -20,7 +20,7 @@
  */
 import { useMemo, useRef, useState, Suspense } from "react";
 import OrderHeader from "@/components/ui/OrderHeader";
-import FloatingCartButton from "@/components/ui/FloatingCartButton";
+import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
 import { TabNav } from "@/components/ui/Tab";
 import { useSectionSpy } from "@/hooks/useSectionSpy";
 import { FilterBar } from "@/components/ui/FilterBar";
@@ -36,6 +36,7 @@ import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { hasSelectableOptions } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
+import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import { applyTopLimit, hasImage } from "@/lib/orderHome";
 import { useOrderPageData, type CategorySection } from "@/hooks/useOrderPageData";
 import { useStoreVideo } from "@/lib/useStoreMedia";
@@ -85,9 +86,7 @@ function TopSkeleton() {
 function OrderContent() {
   const orderType     = useCartStore((s) => s.orderType);
   const isTakeoutMode = useCartStore((s) => s.isTakeoutMode);
-  const cartItems      = useCartStore((s) => s.items);
   const addItem        = useCartStore((s) => s.addItem);
-  const updateQuantity = useCartStore((s) => s.updateQuantity);
   const menuOptions    = useMenuDataStore((s) => s.menuOptions);
   /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる（docs/specs/menu-options.md 3-2） */
   const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
@@ -125,13 +124,25 @@ function OrderContent() {
     fallbackOffset: SCROLL_OFFSET,
   });
 
-  /* ── カート連携（既存 zustand ストアにそのまま反映） ── */
-  const qtyOf = (id: string) =>
-    cartItems.find((ci) => ci.item.id === id)?.quantity ?? 0;
+  /* ── カート連携 ──
+     ステッパーは**下書きの数量**で、カートに入るのは「カートに入れる」を押したときだけ。
+     カルーセル（MenuCardM）が先にこの形だったのを、2026-09-16 に
+     カード・行のすべてへ広げた（天真の指示）。hooks/useDraftQuantities.ts */
+  const { draftOf, bump: bumpDraft, reset: resetDraft } = useDraftQuantities();
+  const addToCart = (item: MenuItem) => {
+    /* オプションや提供タイミングを選ぶ必要がある商品は、一覧からは入れずに詳細を開く */
+    if (needsDetail(item)) {
+      openItemDetail(item.id);
+      return;
+    }
+    addItem(item, draftOf(item.id));
+    resetDraft(item.id);
+  };
   const cardHandlers = (item: MenuItem) => ({
-    quantity: qtyOf(item.id),
-    onIncrement: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1)),
-    onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
+    quantity: draftOf(item.id),
+    onIncrement: () => bumpDraft(item.id, 1),
+    onDecrement: () => bumpDraft(item.id, -1),
+    onAddToCart: () => addToCart(item),
     onClick: () => openItemDetail(item.id),
   });
 
@@ -141,22 +152,6 @@ function OrderContent() {
     ...categorySections.map((sec) => ({ id: sec.category.slug, label: sec.category.name })),
   ];
 
-  /* ── カルーセルカードのステッパーは「何個入れるか」の下書き ──
-     カートの現在数量を直接いじる従来のグリッドと違い、
-     ステッパーで数を決めて「カートに入れる」で確定する（商品詳細の下部バーと同じ操作感）。
-     0個追加は意味がないので下限は1。 */
-  const [draftQty, setDraftQty] = useState<Record<string, number>>({});
-  const draftOf = (id: string) => draftQty[id] ?? 1;
-  const bumpDraft = (id: string, delta: number) =>
-    setDraftQty((d) => ({ ...d, [id]: Math.max(1, (d[id] ?? 1) + delta) }));
-
-  const carouselCardHandlers = (item: MenuItem) => ({
-    quantity: draftOf(item.id),
-    onIncrement: () => bumpDraft(item.id, 1),
-    onDecrement: () => bumpDraft(item.id, -1),
-    onAddToCart: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, draftOf(item.id))),
-    onClick: () => openItemDetail(item.id),
-  });
 
   /* ── 区画に出す商品: チップで絞ってから上位 N 件 ── */
   const itemsFor = (sec: CategorySection) => {
@@ -278,12 +273,12 @@ function OrderContent() {
                         <MenuListRow
                           key={item.id}
                           item={item}
-                          quantity={qtyOf(item.id)}
+                          quantity={draftOf(item.id)}
                           description={rowDescription(sec, item)}
                           showThumb={showThumb}
-                          onAdd={() => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1))}
-                          onIncrement={() => addItem(item, 1)}
-                          onDecrement={() => updateQuantity(item.id, qtyOf(item.id) - 1)}
+                          onAdd={() => addToCart(item)}
+                          onIncrement={() => bumpDraft(item.id, 1)}
+                          onDecrement={() => bumpDraft(item.id, -1)}
                           onClick={() => openItemDetail(item.id)}
                         />
                       ))}
@@ -295,7 +290,7 @@ function OrderContent() {
                           <MenuCardM
                             key={item.id}
                             item={item}
-                            {...carouselCardHandlers(item)}
+                            {...cardHandlers(item)}
                             imageLoading="lazy"
                           />
                         ))}
@@ -315,7 +310,9 @@ function OrderContent() {
       )}
 
       {/* ── フローティング（カートへの導線はこれ1つ） ── */}
-      <FloatingCartButton />
+      {/* 左下に小さくアイコンを置くのをやめ、他のページと同じ下部固定バーにそろえた
+          （2026-09-16、天真の指示） */}
+      <BottomViewCartBar />
     </div>
   );
 }
