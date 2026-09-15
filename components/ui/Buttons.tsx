@@ -126,6 +126,8 @@ export function LinkButton({
   onClick,
   /** 行き先が無いときは押せなくする（例: テイクアウトの商品が1つも無い） */
   disabled = false,
+  /** ラベルの後ろに小さく添える補足（例「準備中」）。長い文字で行が詰まらないように分ける */
+  note,
   className = "",
 }: {
   icon: IconName;
@@ -133,11 +135,14 @@ export function LinkButton({
   href?: string;
   onClick?: () => void;
   disabled?: boolean;
+  note?: string;
   className?: string;
 }) {
   /* Link は <a> なので、button 前提の共通プレスが効かない。pressable を明示する */
   const tone = disabled ? "border-border text-text-tertiary" : "border-text-secondary";
-  const base = `flex gap-[var(--space-4)] items-center justify-center p-[var(--space-16)] rounded-xs border ${tone} ${
+  /* 左右の余白は px-12 に抑える。p-16 だと「テイクアウト（準備中）」のような
+     長いラベルで文字が枠に張り付いて見えた（天真の指摘 2026-09-15） */
+  const base = `flex gap-[var(--space-4)] items-center justify-center px-[var(--space-12)] py-[var(--space-16)] rounded-xs border ${tone} ${
     disabled ? "opacity-60 cursor-default" : "pressable"
   } ${className}`;
   const content = (
@@ -147,12 +152,18 @@ export function LinkButton({
         className={`w-4 h-4 shrink-0 ${disabled ? "text-text-tertiary" : "text-text-secondary"}`}
       />
       <span
-        className={`type-jp-body-bold whitespace-nowrap ${
+        className={`type-jp-body-bold whitespace-nowrap min-w-0 truncate ${
           disabled ? "text-text-tertiary" : "text-text-secondary"
         }`}
       >
         {label}
       </span>
+      {/* 補足は一段小さく。ラベルと同じ大きさだと2つの用件が並んで見える */}
+      {note && (
+        <span className="type-jp-caption text-text-tertiary whitespace-nowrap shrink-0">
+          {note}
+        </span>
+      )}
     </>
   );
   if (href && !disabled) {

@@ -99,10 +99,18 @@ export default function CartItemRow({
               <span className="type-en-price-m text-text-primary tabular-nums">
                 ¥{price.toLocaleString()}
               </span>
+              {/* **1個のときはマイナスを押せなくする**（min=1、天真の指示 2026-09-15）。
+                  それまで 1 → マイナスで行ごと消えていた。右上に削除ボタンがあるので、
+                  消すときはそちらを使ってもらう。誤操作で消える事故を防ぐ */}
               {soldOut ? (
                 <SoldOutPill />
               ) : (
-                <QuantityStepper count={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
+                <QuantityStepper
+                  count={quantity}
+                  min={1}
+                  onIncrement={onIncrement}
+                  onDecrement={onDecrement}
+                />
               )}
             </div>
           </div>

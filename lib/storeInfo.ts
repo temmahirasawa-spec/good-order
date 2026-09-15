@@ -22,70 +22,135 @@ import type { IconName } from "@/components/Icon";
 
 /* ── 店舗情報 ───────────────────────────────────────────── */
 
+/**
+ * 店舗情報の1項目。**数も内容も店舗が決める**（2026-09-15、洋輔さんの依頼）。
+ * それまで 住所/営業時間/定休日/電話番号 の4つ固定で、「載せない」ができなかった。
+ */
+export interface StoreInfoRow {
+  /** 見出し。例「営業時間」 ⚠ お客様の目に触れる */
+  label: string;
+  value: string;
+  /** 左に出すアイコン。components/Icon.tsx の名前 */
+  icon: IconName;
+}
+
 export interface StoreInfo {
   name: string;
   /** ヒーロー写真の URL。未設定なら既定の写真 */
   imageUrl: string;
-  address: string;
-  hours: string;
-  holiday: string;
-  phone: string;
+  /** 「地図で見る」の行き先。店名から自動で入る（Google Places） */
   mapUrl: string;
+  /** 並び順はこの配列の順。追加・削除・並べ替えができる */
+  rows: StoreInfoRow[];
 }
+
+/** 項目に選べるアイコン */
+export const STORE_INFO_ICONS: { value: IconName; label: string }[] = [
+  { value: "map-pin", label: "地図" },
+  { value: "clock",   label: "時計" },
+  { value: "phone",   label: "電話" },
+  { value: "list",    label: "情報" },
+  { value: "card",    label: "支払い" },
+  { value: "bag",     label: "持ち帰り" },
+];
+const STORE_ICON_SET = new Set(STORE_INFO_ICONS.map((i) => i.value));
 
 /** コードに入っている既定値。管理画面が空のときはこれが出る */
 export const STORE_INFO_DEFAULT: StoreInfo = {
   name: STORE.name,
   imageUrl: asset(STORE.heroImage),
-  address: STORE.address,
-  hours: STORE.hours,
-  holiday: STORE.holiday,
-  phone: STORE.phone,
   mapUrl: STORE.mapUrl,
+  rows: [
+    { label: "住所",     value: STORE.address, icon: "map-pin" },
+    { label: "営業時間", value: STORE.hours,   icon: "clock" },
+    { label: "定休日",   value: STORE.holiday, icon: "clock" },
+    { label: "電話番号", value: STORE.phone,   icon: "phone" },
+  ],
 };
 
 export async function fetchStoreInfo(): Promise<StoreInfo> {
   const { data, error } = await supabase
     .from("stores")
-    .select("name, info_image_url, address, hours, holiday, phone, map_url")
+    .select("name, info_image_url, map_url, info_rows")
     .eq("id", STORE_ID)
     .maybeSingle();
   if (error) {
     if (error.code === "42703") {
-      console.warn("[storeInfo] stores の列がありません。supabase/store_info_and_staff_calls.sql を流してください。");
+      console.warn("[storeInfo] stores.info_rows がありません。supabase/store_info_rows.sql を流してください。");
       return STORE_INFO_DEFAULT;
     }
     throw error;
   }
-  const row = (data ?? {}) as Record<string, string | null>;
-  const pick = (v: string | null | undefined, fallback: string) =>
-    v && v.trim() ? v.trim() : fallback;
+  const row = (data ?? {}) as Record<string, unknown>;
+  const pick = (v: unknown, fallback: string) =>
+    typeof v === "string" && v.trim() ? v.trim() : fallback;
+
+  /* 項目は**空でも既定値に戻さない**。「1つも載せない」も選べるようにするため。
+     列がまだ無い（SQL 未適用）ときだけ既定値を使う */
+  const raw = Array.isArray(row.info_rows) ? (row.info_rows as unknown[]) : null;
+  const rows: StoreInfoRow[] = raw
+    ? raw
+        .map((r) => (r && typeof r === "object" ? (r as Record<string, unknown>) : null))
+        .filter((r): r is Record<string, unknown> => r !== null)
+        .map((r) => ({
+          label: String(r.label ?? "").trim(),
+          value: String(r.value ?? "").trim(),
+          /* 知らないアイコン名でも画面を壊さない */
+          icon: (STORE_ICON_SET.has(r.icon as IconName) ? r.icon : "list") as IconName,
+        }))
+        .filter((r) => r.label !== "")
+    : STORE_INFO_DEFAULT.rows;
+
   return {
     name:     pick(row.name,           STORE_INFO_DEFAULT.name),
     imageUrl: pick(row.info_image_url, STORE_INFO_DEFAULT.imageUrl),
-    address:  pick(row.address,        STORE_INFO_DEFAULT.address),
-    hours:    pick(row.hours,          STORE_INFO_DEFAULT.hours),
-    holiday:  pick(row.holiday,        STORE_INFO_DEFAULT.holiday),
-    phone:    pick(row.phone,          STORE_INFO_DEFAULT.phone),
     mapUrl:   pick(row.map_url,        STORE_INFO_DEFAULT.mapUrl),
+    rows,
   };
 }
 
-/** 保存（manager のみ）。空にした欄は既定値に戻る */
-export async function saveStoreInfo(info: {
-  name: string; imageUrl: string; address: string;
-  hours: string; holiday: string; phone: string; mapUrl: string;
-}): Promise<void> {
-  const { error } = await supabase.rpc("save_store_info", {
+/** 保存（manager のみ）。項目は**丸ごと置き換える** */
+export async function saveStoreInfo(info: StoreInfo): Promise<void> {
+  const { error } = await supabase.rpc("save_store_info_v2", {
     p_name:      info.name,
     p_image_url: info.imageUrl,
-    p_address:   info.address,
-    p_hours:     info.hours,
-    p_holiday:   info.holiday,
-    p_phone:     info.phone,
     p_map_url:   info.mapUrl,
+    p_rows:      info.rows.map((r) => ({ label: r.label, value: r.value, icon: r.icon })),
   });
   if (error) throw error;
+}
+
+/* ── 店名から Google の店舗候補を探す ───────────────────────── */
+
+export interface PlaceCandidate {
+  placeId: string;
+  name: string;
+  address: string;
+}
+
+/** Places の候補から「地図で見る」のURLを作る */
+export function mapUrlForPlace(placeId: string): string {
+  return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(placeId)}`;
+}
+
+/**
+ * 店名で検索する。**鍵が未設定のときは null** を返す（エラーにしない）。
+ * 画面側は null なら「この機能は使えません」と出して手入力に切り替える。
+ */
+export async function searchPlaces(query: string): Promise<PlaceCandidate[] | null> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return null;
+
+  const res = await fetch(asset("/api/admin/places/search"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ query }),
+  });
+  if (res.status === 501) return null;   // 鍵が未設定
+  if (!res.ok) throw new Error(`places search failed: ${res.status}`);
+  const json = (await res.json()) as { candidates?: PlaceCandidate[] };
+  return json.candidates ?? [];
 }
 
 /* ── スタッフ呼び出しの項目 ───────────────────────────────── */

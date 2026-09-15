@@ -134,7 +134,8 @@ export default function OrderMenuPage() {
               「押したら『ありません』と言われる」を無くすため（洋輔さんの指摘、2026-09-15） */}
           <LinkButton
             icon="bag"
-            label={hasTakeoutItems ? "テイクアウト" : "テイクアウト（準備中）"}
+            label="テイクアウト"
+            note={hasTakeoutItems ? undefined : "準備中"}
             onClick={hasTakeoutItems ? goTakeout : undefined}
             disabled={!hasTakeoutItems}
           />
