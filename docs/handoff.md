@@ -4070,9 +4070,20 @@ GOOD_ORDER にはサーバー側の Supabase クライアントが無いので�
 **未設定なら 501 を返し、画面は手入力に切り替わる**（エラーで止めない）。
 地図URLは `https://www.google.com/maps/place/?q=place_id:<id>`。
 
-> ⚠ **本番の Vercel にまだ `GOOGLE_PLACES_API_KEY` を入れていない。** 天真の作業。
-> 未設定のあいだは検索が使えず手入力になる（それ以外は普通に動く）。
-> 鍵は GOOD_LOOP の `.env.local` に同名で入っている。
+**2026-09-15 深夜: 天真が鍵を設定し、本番で動作確認済み。**
+
+| 確かめたこと | 結果 |
+|---|---|
+| ローカル `.env.local` / Vercel Production に鍵がある | 両方あり（Vercel は Sensitive 指定） |
+| 鍵が Google に通るか（直接叩いて確認） | 200。「YORKYS BRUNCH 夙川」で夙川本店が返る |
+| 受け口が接頭辞つきURLで届くか | `/yorkys-shukugawa/api/...` は届く、接頭辞なしは 404 |
+| トークン無し・不正トークン | どちらも 401 |
+| **manager のトークンで本番の受け口** | **200・候補1件（夙川本店＋住所）** |
+| 自動で入る地図URL | `https://www.google.com/maps/place/?q=place_id:…` が 200 で開ける |
+
+検証用のトークンは、service role キーで `admin/generate_link`（メールは送られない）→
+`auth/v1/verify` で一時セッションを作って使った。**天真自身のアカウント**で、値は残していない。
+同じ確認をやり直すときはこの手順で。
 
 ## 2. ハンバーガーメニューのテイクアウト導線
 
