@@ -47,8 +47,12 @@ interface RegisterOrder {
   created_at: string;
   updated_at: string;
   total_amount: number;
-  /** セットドリンク割引（税抜）。place_order が保存した実際に引いた額 */
+  /** セットドリンク割引。place_order が保存した実際に引いた額 */
   discount_amount: number;
+  /** 消費税額。内税なら total_amount に含まれている分 */
+  tax_amount: number;
+  /** 適用した税率（%） */
+  tax_rate: number;
   items: RegisterOrderItem[];
 }
 
@@ -73,7 +77,7 @@ export default function RegisterPage() {
     try {
       const { data: orderRows, error: orderErr } = await supabase
         .from("orders")
-        .select("id, pickup_no, table_number, table_id, table_label, status, order_type, created_at, updated_at, total_amount, discount_amount")
+        .select("id, pickup_no, table_number, table_id, table_label, status, order_type, created_at, updated_at, total_amount, discount_amount, tax_amount, tax_rate")
         .neq("status", "paid")
         /* **今日の営業日だけ**（2026-09-13 追加）。
            以前は日付で絞っておらず、会計されなかった注文が何日でも残り続けた
@@ -124,6 +128,8 @@ export default function RegisterPage() {
           updated_at: o.updated_at,
           total_amount: o.total_amount,
           discount_amount: o.discount_amount ?? 0,
+          tax_amount: o.tax_amount ?? 0,
+          tax_rate: o.tax_rate ?? 10,
           items: itemsByOrder[o.id] ?? [],
         }))
       );
@@ -215,11 +221,15 @@ export default function RegisterPage() {
        画面で足し引きし直すと、また食い違いが生まれる。
        消費税は「合計 −（小計 − 割引）」で逆算する。3つの行が必ず足して合うようにするため。 */
     const discount = targetOrders.reduce((sum, o) => sum + (o.discount_amount ?? 0), 0);
-    const stored = targetOrders.reduce((sum, o) => sum + o.total_amount, 0);
-    const taxable = Math.max(0, subtotal - discount);
-    /* total_amount が未設定の古い注文だけ、従来どおり計算して出す */
-    const total = stored > 0 ? stored : taxable + Math.floor(taxable * 0.1);
-    const tax = Math.max(0, total - taxable);
+    const total = targetOrders.reduce((sum, o) => sum + o.total_amount, 0);
+    /* 消費税は place_order が保存した値（orders.tax_amount）を使う。
+       内税か外税か、税率がいくつかは注文した時点の設定で決まっているので、
+       ここで計算し直さない（2026-09-15。画面で計算し直して食い違った反省）。 */
+    const tax = targetOrders.reduce((sum, o) => sum + (o.tax_amount ?? 0), 0);
+    /* 内税のときは「合計に税が含まれている」ので、足し算の行としては出さない。
+       同じ注文の中で内税・外税が混ざることは無いので、先頭の注文で判定してよい */
+    const taxIncluded = total <= Math.max(0, subtotal - discount);
+    const taxRate = targetOrders[0]?.tax_rate ?? 10;
     const earliestCreatedAt = targetOrders
       .map((o) => o.created_at)
       .sort()[0];
@@ -241,6 +251,8 @@ export default function RegisterPage() {
       subtotal,
       discount,
       tax,
+      taxIncluded,
+      taxRate,
       total,
     };
   }, [orders, selected]);
@@ -359,6 +371,8 @@ export default function RegisterPage() {
                   subtotal={selectedData.subtotal}
                   discount={selectedData.discount}
                   tax={selectedData.tax}
+                  taxIncluded={selectedData.taxIncluded}
+                  taxRate={selectedData.taxRate}
                   total={selectedData.total}
                 />
 
