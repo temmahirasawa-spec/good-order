@@ -32,8 +32,12 @@ export interface HistoryEntry {
   tableLabel?: string | null;
   orderType: "dine_in" | "takeout";
   totalAmount: number;            // 税込（セットドリンク割引を引いたあと）
-  /** セットドリンク割引（税抜き）。0 or 未設定なら割引なし。docs/specs/set-drink-discount.md */
+  /** セットドリンク割引。0 or 未設定なら割引なし。docs/specs/set-drink-discount.md */
   discountAmount?: number;
+  /** 消費税額。内税なら totalAmount に含まれている分。lib/tax.ts */
+  taxAmount?: number;
+  /** 適用した税率（%）。店内10 / テイクアウト8 など */
+  taxRate?: number;
   status: "pending" | "preparing" | "served" | "picked_up" | "paid";
   items: HistoryItemSnapshot[];
   /** 受渡番号（サーバー採番）。注文直後は未取得なので null のことがある */

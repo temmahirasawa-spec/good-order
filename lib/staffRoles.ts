@@ -71,6 +71,9 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   // 旧「店舗設定」（/admin/settings）から改名・移動した。旧URLは next.config.mjs で
   // /admin/display にリダイレクトしている。
   { href: "/admin/display",   label: "表示設定",       roles: ["manager"],                        group: "manage" },
+  // 税の設定（内税/外税・税率）。2026-09-15 に追加。表示設定と同じく manage 群の末尾で、
+  // 先頭には入れない（上のコメントの着地先の話と同じ理由）
+  { href: "/admin/tax",       label: "税の設定",       roles: ["manager"],                        group: "manage" },
   { href: "/admin/dashboard", label: "ダッシュボード", roles: ["manager"],                        group: "review" },
 ];
 // /admin/takeout（テイクアウト商品のCRUD）は /admin/menu に統合して廃止した。

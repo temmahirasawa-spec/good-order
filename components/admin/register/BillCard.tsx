@@ -36,13 +36,19 @@ export default function BillCard({
   subtotal,
   discount = 0,
   tax,
+  taxIncluded = false,
+  taxRate = 10,
   total,
 }: {
   items: BillCardItem[];
   subtotal: number;
-  /** セットドリンク割引（税抜）。0 のときは行ごと出さない */
+  /** セットドリンク割引。0 のときは行ごと出さない */
   discount?: number;
   tax: number;
+  /** 内税（価格に税が含まれる）か。true なら消費税は足し算の行にせず、合計の下に添える */
+  taxIncluded?: boolean;
+  /** 適用した税率（%） */
+  taxRate?: number;
   total: number;
 }) {
   const dineIn = items.filter((i) => !i.isTakeout);
@@ -77,7 +83,9 @@ export default function BillCard({
 
       <div className="bg-bg-secondary flex flex-col gap-[var(--space-8)] items-start p-[var(--space-12)] lg:p-[var(--space-16)] rounded-[var(--radius-md)] w-full">
         <div className="flex items-center justify-between w-full">
-          <span className="type-jp-caption text-text-secondary">小計（税抜）</span>
+          <span className="type-jp-caption text-text-secondary">
+            {taxIncluded ? "小計（税込）" : "小計（税抜）"}
+          </span>
           <span className="font-en font-semibold text-[14px] leading-[1.2] text-text-primary">
             ¥{subtotal.toLocaleString()}
           </span>
@@ -90,12 +98,15 @@ export default function BillCard({
             </span>
           </div>
         )}
-        <div className="flex items-center justify-between w-full">
-          <span className="type-jp-caption text-text-secondary">消費税（10%）</span>
-          <span className="font-en font-semibold text-[14px] leading-[1.2] text-text-primary">
-            ¥{tax.toLocaleString()}
-          </span>
-        </div>
+        {/* 外税のときだけ足し算の行として出す。内税は合計の下に添える */}
+        {!taxIncluded && (
+          <div className="flex items-center justify-between w-full">
+            <span className="type-jp-caption text-text-secondary">消費税（{taxRate}%）</span>
+            <span className="font-en font-semibold text-[14px] leading-[1.2] text-text-primary">
+              ¥{tax.toLocaleString()}
+            </span>
+          </div>
+        )}
         <div className="bg-border h-px w-full" />
         <div className="flex items-center justify-between w-full">
           <span className="font-jp font-bold text-[15px] lg:text-[17px] leading-[1.4] tracking-[0.01em] text-text-primary">
@@ -105,6 +116,13 @@ export default function BillCard({
             ¥{total.toLocaleString()}
           </span>
         </div>
+        {taxIncluded && (
+          <div className="flex items-center justify-end w-full">
+            <span className="type-jp-caption text-text-tertiary">
+              うち消費税（{taxRate}%） ¥{tax.toLocaleString()}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

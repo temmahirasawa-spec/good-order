@@ -17,6 +17,7 @@ import { cartLineKey } from "@/lib/servingTiming";
 import { formatSelectedOptions, optionsKey, optionsTotal } from "@/lib/menuOptions";
 import { useCartStore, lineUnitPrice } from "@/lib/store";
 import { SET_DRINK_LABEL } from "@/lib/setDrink";
+import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "@/lib/tax";
 import { fetchOrderStatuses } from "@/lib/api";
 import { loadHistory, updateHistoryPickupNo } from "@/lib/history";
 import { PICKUP_NO_LABEL, formatPickupNo } from "@/lib/pickupNo";
@@ -44,6 +45,9 @@ export default function CompletePage() {
   /* セットドリンク割引（税抜き）。履歴のスナップショットに入っている値を使う
      （画面で計算し直すと、注文した時点の設定と食い違う恐れがあるため） */
   const [discountAmount, setDiscountAmount] = useState(0);
+  /* 消費税。履歴に残っていればそれを使い、無ければ設定から計算し直す（古い履歴用） */
+  const [taxSetting, setTaxSetting] = useState<TaxSetting>(TAX_DEFAULT);
+  const [storedTotal, setStoredTotal] = useState<number | null>(null);
 
   const lastOrder  = orderHistory[orderHistory.length - 1] ?? [];
   const totalItems = lastOrder.reduce((s, i) => s + i.quantity, 0);
@@ -54,6 +58,13 @@ export default function CompletePage() {
     const entry = loadHistory().find((e) => e.orderId === lastOrderId);
     setIsTakeoutOrder(entry?.orderType === "takeout");
     setDiscountAmount(entry?.discountAmount ?? 0);
+    setStoredTotal(entry?.totalAmount ?? null);
+    /* 履歴に合計が無い古い注文のときだけ、設定を読んで計算し直す */
+    if (entry?.totalAmount == null) {
+      void fetchTaxSetting().then(setTaxSetting).catch((err) =>
+        console.warn("[complete] fetchTaxSetting failed:", err)
+      );
+    }
   }, [lastOrderId]);
 
   useEffect(() => {
@@ -178,7 +189,12 @@ export default function CompletePage() {
                 <span className="type-jp-caption text-text-secondary">（税込）</span>
               </div>
               <span className="type-en-price-l !font-medium text-text-primary">
-                ¥{Math.floor(Math.max(0, totalPrice - discountAmount) * 1.1).toLocaleString()}
+                ¥{(storedTotal ?? calcOrderTotals({
+                  subtotal: totalPrice,
+                  discount: discountAmount,
+                  orderType: isTakeoutOrder ? "takeout" : "dine_in",
+                  setting: taxSetting,
+                }).total).toLocaleString()}
               </span>
             </div>
           </div>

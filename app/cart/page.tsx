@@ -18,6 +18,7 @@ import { formatSelectedOptions, optionsKey } from "@/lib/menuOptions";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
 import { SOLD_OUT_CART_NOTICE, SOLD_OUT_ORDER_REJECTED, soldOutIdsIn } from "@/lib/soldOut";
+import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "@/lib/tax";
 import {
   SET_DRINK_LABEL,
   SET_DRINK_DEFAULT,
@@ -96,7 +97,23 @@ export default function CartPage() {
     orderType,
     setDrink
   );
-  const taxable = Math.max(0, totalPrice - discount);
+
+  /* 消費税（lib/tax.ts）。内税なら合計はそのまま、外税なら加算する */
+  const [taxSetting, setTaxSetting] = useState<TaxSetting>(TAX_DEFAULT);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const t = await fetchTaxSetting();
+        if (!cancelled) setTaxSetting(t);
+      } catch (err) {
+        console.warn("[cart] fetchTaxSetting failed:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const totals = calcOrderTotals({ subtotal: totalPrice, discount, orderType, setting: taxSetting });
 
   /* 提供タイミングを持たない行（移行前に保存されたカートや、カテゴリー読み込み前に
      入れた商品）に初期値を入れる。選べる商品なのに値が無いと、画面には初期値が出るのに
@@ -292,19 +309,28 @@ export default function CartPage() {
               <span className="type-en-price-s">−¥{discount.toLocaleString()}</span>
             </div>
           )}
-          <div className="flex items-center justify-between type-jp-body text-text-secondary mt-[var(--space-8)]">
-            <span>消費税 (10%)</span>
-            <span className="type-en-price-s text-text-secondary">
-              ¥{Math.floor(taxable * 0.1).toLocaleString()}
-            </span>
-          </div>
+          {/* 外税のときだけ「消費税」を足し算の行として出す。
+              内税のときは合計の下に「うち消費税」として添える（二重に見えないように） */}
+          {!totals.included && (
+            <div className="flex items-center justify-between type-jp-body text-text-secondary mt-[var(--space-8)]">
+              <span>消費税 ({totals.rate}%)</span>
+              <span className="type-en-price-s text-text-secondary">
+                ¥{totals.tax.toLocaleString()}
+              </span>
+            </div>
+          )}
           <div className="h-px bg-border-divider my-[var(--space-12)]" />
           <div className="flex items-center justify-between">
             <span className="type-jp-heading-s text-text-primary">合計（税込）</span>
             <span className="type-en-price-l text-text-primary">
-              ¥{Math.floor(taxable * 1.1).toLocaleString()}
+              ¥{totals.total.toLocaleString()}
             </span>
           </div>
+          {totals.included && (
+            <div className="flex items-center justify-end type-jp-caption text-text-tertiary mt-[var(--space-4)]">
+              <span>うち消費税 ({totals.rate}%) ¥{totals.tax.toLocaleString()}</span>
+            </div>
+          )}
 
           {hasSoldOut && (
             <p className="type-jp-caption-bold text-status-urgent text-center mt-[var(--space-12)]">

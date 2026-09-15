@@ -10,6 +10,7 @@ import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./serv
 import { optionsKey, optionsTotal, type SelectedOption } from "./menuOptions";
 import { isSoldOut, isSoldOutError, soldOutIdsIn } from "./soldOut";
 import { calcSetDrinkDiscount, fetchSetDrinkSetting, SET_DRINK_DEFAULT, type SetDrinkSetting } from "./setDrink";
+import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "./tax";
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
@@ -357,7 +358,17 @@ export const useCartStore = create<CartStore>()(
           orderType,
           setDrink
         );
-        const totalAmount = Math.floor((subtotal - discountAmount) * 1.1);
+        /* 消費税（lib/tax.ts）。内税なら合計はそのまま、外税なら加算する。
+           税率は注文の種別で決まる（テイクアウトは軽減税率）。
+           **金額の正は DB 側（place_order）**。ここは履歴と完了画面のため */
+        let taxSetting: TaxSetting = TAX_DEFAULT;
+        try {
+          taxSetting = await fetchTaxSetting();
+        } catch (err) {
+          console.warn("[placeOrder] fetchTaxSetting failed, using default:", err);
+        }
+        const totals = calcOrderTotals({ subtotal, discount: discountAmount, orderType, setting: taxSetting });
+        const totalAmount = totals.total;
         const orderId = generateUuid();
 
         // DB 書き込みの前に LocalStorage にスナップショットを先行保存
@@ -370,6 +381,8 @@ export const useCartStore = create<CartStore>()(
           orderType,
           totalAmount,
           discountAmount,
+          taxAmount: totals.tax,
+          taxRate: totals.rate,
           status: "pending",
           items: current.map((ci) => ({
             menuItemId: ci.item.id,
