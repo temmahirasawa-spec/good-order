@@ -124,15 +124,22 @@ export default function OrderCard({
             <button
               type="button"
               onClick={() => onItemClick(item)}
-              className="flex h-[52px] items-center justify-between px-[var(--space-16)] w-full text-left"
+              className="flex h-[52px] items-center justify-between gap-[var(--space-8)] px-[var(--space-16)] w-full text-left"
             >
-              <span className="flex gap-[var(--space-8)] items-center whitespace-nowrap">
+              {/* ⚠ **min-w-0 を外さないこと。** これが無いと、品名が長い商品
+                  （例「グラス赤ワイン（マスカット・ベリーA 日本の赤）」）で行が縮まらず、
+                  右の状態バッジが枠の外へ押し出され、カードごと崩れる
+                  （2026-09-15、洋輔さんの写真で判明）。 */}
+              <span className="flex gap-[var(--space-8)] items-center min-w-0 flex-1 whitespace-nowrap">
                 {item.isTakeoutItem && !isTakeout && (
                   <Icon name="bag" className="shrink-0 w-3.5 h-3.5 text-text-secondary" />
                 )}
-                <span className="type-jp-heading-s text-text-primary">{item.name}</span>
-                <span className="font-en font-semibold text-text-secondary">×{item.quantity}</span>
-                <ServingTimingBadge timing={item.servingTiming} />
+                {/* 品名は長いときだけ末尾を省略する。数量・タイミングは必ず出す */}
+                <span className="type-jp-heading-s text-text-primary truncate">{item.name}</span>
+                <span className="font-en font-semibold text-text-secondary shrink-0">×{item.quantity}</span>
+                <span className="shrink-0">
+                  <ServingTimingBadge timing={item.servingTiming} />
+                </span>
                 {/* オプションは幅 140px で末尾省略（Figma の Order Item Row と同じ）。長い組み合わせでも状態バッジを押し出さない */}
                 {item.options && item.options.length > 0 && (
                   <span className="type-jp-caption text-text-secondary truncate max-w-[140px]">
@@ -140,7 +147,9 @@ export default function OrderCard({
                   </span>
                 )}
               </span>
-              <StatusBadge state={STATUS_MAP[item.cookingStatus]} />
+              <span className="shrink-0">
+                <StatusBadge state={STATUS_MAP[item.cookingStatus]} />
+              </span>
             </button>
             {idx < items.length - 1 && <div className="bg-border-divider h-px w-full" />}
           </div>
