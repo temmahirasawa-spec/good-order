@@ -320,14 +320,24 @@ function OverlayContent() {
               ) : (
               <div className="flex flex-1 gap-[var(--space-8)] items-center justify-end min-w-0">
                 <QuantityStepper
+                  className="shrink-0"
                   count={draftQty}
                   min={1}
                   onIncrement={() => setDraftQty((q) => q + 1)}
                   onDecrement={() => setDraftQty((q) => Math.max(1, q - 1))}
                 />
                 {/* 幅は AddToCartButton 側が w-full なのでラッパーで持つ。
-                    オプションのある商品は金額つき（「カートに入れる ¥1,100」）なので少し広げる */}
-                <div className={`shrink-0 ${optionsSelectable ? "w-[190px]" : "w-[154px]"}`}>
+                    オプションのある商品は金額つき（「カートに入れる ¥1,100」）なので少し広げる。
+
+                    ⚠ **固定幅にしない。** 390px 幅では
+                      左右padding 32 + カート 48 + gap 12 + ステッパー 124 + gap 8 = 224 しか残らず、
+                    190px 固定だと 24px あふれる。この段は justify-end なので、
+                    あふれた分は**左へ出てカートアイコンに重なる**（2026-09-16、洋輔さんが発見）。
+                    余白いっぱいまで伸ばし、Figma の幅で頭打ちにする。
+                    文字自体は「カートに入れる ¥550」で 136px なので 390px でも収まる。 */}
+                <div
+                  className={`flex-1 min-w-0 ${optionsSelectable ? "max-w-[190px]" : "max-w-[154px]"}`}
+                >
                   <AddToCartButton
                     label={
                       optionsSelectable
