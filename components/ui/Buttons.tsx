@@ -124,25 +124,38 @@ export function LinkButton({
   label,
   href,
   onClick,
+  /** 行き先が無いときは押せなくする（例: テイクアウトの商品が1つも無い） */
+  disabled = false,
   className = "",
 }: {
   icon: IconName;
   label: string;
   href?: string;
   onClick?: () => void;
+  disabled?: boolean;
   className?: string;
 }) {
   /* Link は <a> なので、button 前提の共通プレスが効かない。pressable を明示する */
-  const base = `pressable flex gap-[var(--space-4)] items-center justify-center p-[var(--space-16)] rounded-xs border border-text-secondary ${className}`;
+  const tone = disabled ? "border-border text-text-tertiary" : "border-text-secondary";
+  const base = `flex gap-[var(--space-4)] items-center justify-center p-[var(--space-16)] rounded-xs border ${tone} ${
+    disabled ? "opacity-60 cursor-default" : "pressable"
+  } ${className}`;
   const content = (
     <>
-      <Icon name={icon} className="w-4 h-4 text-text-secondary shrink-0" />
-      <span className="type-jp-body-bold text-text-secondary whitespace-nowrap">
+      <Icon
+        name={icon}
+        className={`w-4 h-4 shrink-0 ${disabled ? "text-text-tertiary" : "text-text-secondary"}`}
+      />
+      <span
+        className={`type-jp-body-bold whitespace-nowrap ${
+          disabled ? "text-text-tertiary" : "text-text-secondary"
+        }`}
+      >
         {label}
       </span>
     </>
   );
-  if (href) {
+  if (href && !disabled) {
     return (
       <Link href={href} onClick={onClick} className={base}>
         {content}
@@ -150,7 +163,7 @@ export function LinkButton({
     );
   }
   return (
-    <button type="button" onClick={onClick} className={base}>
+    <button type="button" onClick={disabled ? undefined : onClick} disabled={disabled} className={base}>
       {content}
     </button>
   );
