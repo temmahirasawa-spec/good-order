@@ -24,9 +24,12 @@ import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 
 export interface MenuCardProps {
   item: MenuItem;
+  /** **これから何個入れるか**の下書き（カートの中身ではない）。hooks/useDraftQuantities.ts */
   quantity: number;
   onIncrement: () => void;
   onDecrement: () => void;
+  /** 「カートに入れる」。下書きの数ぶんを一度に入れる */
+  onAddToCart: () => void;
   onClick?: () => void;
   /** 画像の読み込み方法。長いページで下部に並ぶカードは "lazy"（デフォルト）を推奨 */
   imageLoading?: "eager" | "lazy";
@@ -101,6 +104,7 @@ function CardBody({
   quantity,
   onIncrement,
   onDecrement,
+  onAddToCart,
   onClick,
   hideTag,
   nameClassName,
@@ -125,12 +129,20 @@ function CardBody({
       {item.isSoldOut ? (
         <SoldOutPill className="w-full" />
       ) : (
-        <QuantityStepper
-          count={quantity}
-          onIncrement={onIncrement}
-          onDecrement={onDecrement}
-          className="w-full"
-        />
+        /* **縦に積む**（天真の決定 2026-09-16）。
+           「カートに入れる（小）」108 ＋ gap 8 ＋ ステッパー（小）84 = 200 で、
+           このカードの幅 171 には横並びで入らない。TOP のカルーセル（幅200）だけが入る。
+           ステッパーは**下書きの数量**で、カートに入るのは下のボタンを押したときだけ */
+        <div className="flex flex-col gap-[var(--space-8)] w-full">
+          <QuantityStepper
+            count={quantity}
+            min={1}
+            onIncrement={onIncrement}
+            onDecrement={onDecrement}
+            className="w-full"
+          />
+          <AddToCartButtonS onClick={onAddToCart} className="w-full" />
+        </div>
       )}
     </>
   );

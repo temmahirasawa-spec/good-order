@@ -5,17 +5,19 @@
  * docs/specs/menu-text-rows.md 案A「行リスト」。紙のメニューのような一覧。
  *
  * - 左: 商品名（JP/Heading/S）・説明（JP/Caption 1行省略）・価格（EN/Price/M）
- * - 右: カートに入っていなければ「＋」（Plus Button）、入っていれば数量ステッパー
+ * - 右: 数量ステッパー（小）の下に「カートに入れる」（小）を縦に積む。
+ *   ⚠ **ステッパーは「これから何個入れるか」の下書き。**押してもカートには入らない
+ *   （2026-09-16、天真の指示。それまで「＋」が即カート投入だった）
  * - Thumb: 写真がある商品が混ざるときだけ 56px のサムネを左に付ける（showThumb）
  * - 高さ 88、下に境界線
  *
- * 行のタップ（名前・説明）で商品詳細を開く。＋はカートに入れる
- * （オプションのある商品は呼び出し側が商品詳細を開く）。
- * 売り切れ（item.isSoldOut）は「＋」の代わりに押せない SOLD OUT のピル。サムネがあれば帯も被せる。
+ * 行のタップ（名前・説明）で商品詳細を開く
+ * （オプションのある商品は「カートに入れる」でも商品詳細を開く。呼び出し側の判断）。
+ * 売り切れ（item.isSoldOut）は操作の代わりに押せない SOLD OUT のピル。サムネがあれば帯も被せる。
  */
 import type { MenuItem } from "@/lib/menu";
-import PlusButton from "@/components/ui/PlusButton";
-import QuantityStepper from "@/components/ui/QuantityStepper";
+import QuantityStepperS from "@/components/ui/QuantityStepperS";
+import { AddToCartButtonS } from "@/components/ui/Buttons";
 import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 
 export default function MenuListRow({
@@ -84,10 +86,22 @@ export default function MenuListRow({
 
       {soldOut ? (
         <SoldOutPill />
-      ) : quantity > 0 ? (
-        <QuantityStepper count={quantity} onIncrement={onIncrement} onDecrement={onDecrement} />
       ) : (
-        <PlusButton onClick={onAdd} label={`${item.name}をカートに入れる`} />
+        /* 右側は 108px の列に縦2段。横に並べると 84+8+108=200 必要で、
+           サムネ付きの行では商品名の幅が残らない（2026-09-16） */
+        <div className="flex flex-col gap-[var(--space-8)] items-end shrink-0 w-[108px]">
+          <QuantityStepperS
+            count={quantity}
+            min={1}
+            onIncrement={onIncrement}
+            onDecrement={onDecrement}
+          />
+          <AddToCartButtonS
+            onClick={onAdd}
+            label={`カートに入れる`}
+            className="w-full"
+          />
+        </div>
       )}
     </div>
   );

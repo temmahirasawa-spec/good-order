@@ -20,6 +20,7 @@ import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { hasSelectableOptions } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
+import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import OrderHeader from "@/components/ui/OrderHeader";
 import { MenuCard } from "@/components/ui/MenuCard";
 import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
@@ -48,8 +49,6 @@ export default function TakeoutMenuPage() {
   const isTakeoutMode = useCartStore((s) => s.isTakeoutMode);
   const setTakeoutMode = useCartStore((s) => s.setTakeoutMode);
 
-  const cartItems     = useCartStore((s) => s.items);
-  const updateQuantity = useCartStore((s) => s.updateQuantity);
 
   const allMenuItems  = useMenuDataStore((s) => s.menuItems);
   const menuOptions   = useMenuDataStore((s) => s.menuOptions);
@@ -72,14 +71,24 @@ export default function TakeoutMenuPage() {
   );
   const loading = storeLoading && !storeLoaded;
 
-  /* カテゴリー一覧と同じ操作にそろえる（数量の増減・詳細を開く） */
-  const qtyOf = (id: string) => cartItems.find((ci) => ci.item.id === id)?.quantity ?? 0;
+  /* カテゴリー一覧と同じ操作にそろえる。
+     ステッパーは**下書きの数量**で、カートに入るのは「カートに入れる」を押したときだけ */
+  const { draftOf, bump: bumpDraft, reset: resetDraft } = useDraftQuantities();
   /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる */
   const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
+  const addToCart = (item: MenuItem) => {
+    if (needsDetail(item)) {
+      openItemDetail(item.id);
+      return;
+    }
+    addItem(item, draftOf(item.id));
+    resetDraft(item.id);
+  };
   const cardHandlers = (item: MenuItem) => ({
-    quantity: qtyOf(item.id),
-    onIncrement: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1)),
-    onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
+    quantity: draftOf(item.id),
+    onIncrement: () => bumpDraft(item.id, 1),
+    onDecrement: () => bumpDraft(item.id, -1),
+    onAddToCart: () => addToCart(item),
     onClick: () => openItemDetail(item.id),
   });
 

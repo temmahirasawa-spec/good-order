@@ -418,14 +418,15 @@ function SoldOutDemo() {
           MenuCard（一覧のグリッド）／ MenuCardWide（ベストセラー）: 写真を薄くして墨の帯。ステッパーの代わりに押せないピル。リボン（人気）は出さない
         </p>
         <div className="flex gap-[16px] items-start flex-wrap">
-          <MenuCard item={soldOutItem} quantity={0} onIncrement={noop} onDecrement={noop} />
-          <MenuCardWide item={soldOutItem} quantity={0} onIncrement={noop} onDecrement={noop} />
+          <MenuCard item={soldOutItem} quantity={1} onIncrement={noop} onDecrement={noop} onAddToCart={noop} />
+          <MenuCardWide item={soldOutItem} quantity={1} onIncrement={noop} onDecrement={noop} onAddToCart={noop} />
           {/* 写真が無い商品。帯は出さず、下のピルだけで伝える（空箱に帯だけだと「画像なし」に見える） */}
           <MenuCard
             item={{ ...soldOutItem, name: "写真が無い商品（帯は出さない）", image: "", images: [], media: [] }}
-            quantity={0}
+            quantity={1}
             onIncrement={noop}
             onDecrement={noop}
+            onAddToCart={noop}
           />
         </div>
       </div>
@@ -760,7 +761,8 @@ export default function UiGalleryPage() {
           item={sampleItem}
           quantity={qty}
           onIncrement={() => setQty(qty + 1)}
-          onDecrement={() => setQty(Math.max(0, qty - 1))}
+          onDecrement={() => setQty(Math.max(1, qty - 1))}
+          onAddToCart={() => {}}
           onClick={() => {}}
         />
       </Section>
@@ -769,7 +771,7 @@ export default function UiGalleryPage() {
         <div className="-mx-[16px]">
           <MenuCarousel>
             {menuItems.slice(0, 3).map((m) => (
-              <MenuCard key={m.id} item={{ ...m, tag: m.tag }} quantity={0} onIncrement={() => {}} onDecrement={() => {}} />
+              <MenuCard key={m.id} item={{ ...m, tag: m.tag }} quantity={1} onIncrement={() => {}} onDecrement={() => {}} onAddToCart={() => {}} />
             ))}
           </MenuCarousel>
         </div>
@@ -779,7 +781,7 @@ export default function UiGalleryPage() {
         <div className="-mx-[16px]">
           <MenuCarouselWide>
             {menuItems.slice(0, 2).map((m) => (
-              <MenuCardWide key={m.id} item={{ ...m, tag: "人気" }} quantity={0} onIncrement={() => {}} onDecrement={() => {}} />
+              <MenuCardWide key={m.id} item={{ ...m, tag: "人気" }} quantity={1} onIncrement={() => {}} onDecrement={() => {}} onAddToCart={() => {}} />
             ))}
           </MenuCarouselWide>
         </div>

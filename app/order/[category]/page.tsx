@@ -25,6 +25,7 @@ import ListSubHeading from "@/components/ui/ListSubHeading";
 import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
 import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
+import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { hasSelectableOptions } from "@/lib/menuOptions";
 import { childCategories, itemsOfCategory, resolveListStyle, hasImage } from "@/lib/orderHome";
@@ -69,9 +70,7 @@ export default function CategoryListingPage() {
   const startRealtime = useMenuDataStore((s) => s.startRealtime);
   const stopRealtime  = useMenuDataStore((s) => s.stopRealtime);
 
-  const cartItems      = useCartStore((s) => s.items);
   const addItem        = useCartStore((s) => s.addItem);
-  const updateQuantity = useCartStore((s) => s.updateQuantity);
   const menuOptions    = useMenuDataStore((s) => s.menuOptions);
   /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる */
   const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
@@ -137,11 +136,24 @@ export default function CategoryListingPage() {
   const enLabel = cat?.caption ?? SUBCATEGORY_EN_LABEL[category as Subcategory] ?? category?.toUpperCase() ?? "";
   const jpLabel = cat?.name ?? SUBCATEGORY_LABEL[category] ?? category;
 
-  const qtyOf = (id: string) => cartItems.find((ci) => ci.item.id === id)?.quantity ?? 0;
+  const { draftOf, bump: bumpDraft, reset: resetDraft } = useDraftQuantities();
+
+  /* ステッパーは**下書きの数量**。カートに入るのは「カートに入れる」を押したときだけ
+     （2026-09-16、天真の指示。それまで ＋ が即カート投入だった） */
+  const addToCart = (item: MenuItem) => {
+    /* オプションや提供タイミングを選ぶ必要がある商品は、一覧からは入れずに詳細を開く */
+    if (needsDetail(item)) {
+      openItemDetail(item.id);
+      return;
+    }
+    addItem(item, draftOf(item.id));
+    resetDraft(item.id);
+  };
   const cardHandlers = (item: MenuItem) => ({
-    quantity: qtyOf(item.id),
-    onIncrement: () => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1)),
-    onDecrement: () => updateQuantity(item.id, qtyOf(item.id) - 1),
+    quantity: draftOf(item.id),
+    onIncrement: () => bumpDraft(item.id, 1),
+    onDecrement: () => bumpDraft(item.id, -1),
+    onAddToCart: () => addToCart(item),
     onClick: () => openItemDetail(item.id),
   });
 
@@ -152,11 +164,11 @@ export default function CategoryListingPage() {
           <MenuListRow
             key={item.id}
             item={item}
-            quantity={qtyOf(item.id)}
+            quantity={draftOf(item.id)}
             showThumb={showThumb}
-            onAdd={() => (needsDetail(item) ? openItemDetail(item.id) : addItem(item, 1))}
-            onIncrement={() => addItem(item, 1)}
-            onDecrement={() => updateQuantity(item.id, qtyOf(item.id) - 1)}
+            onAdd={() => addToCart(item)}
+            onIncrement={() => bumpDraft(item.id, 1)}
+            onDecrement={() => bumpDraft(item.id, -1)}
             onClick={() => openItemDetail(item.id)}
           />
         ))}

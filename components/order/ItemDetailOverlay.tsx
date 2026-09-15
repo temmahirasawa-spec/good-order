@@ -31,7 +31,7 @@ import QuantityStepper from "@/components/ui/QuantityStepper";
 import RecommendCard from "@/components/ui/RecommendCard";
 import { RecommendCarousel } from "@/components/ui/MenuCarousel";
 import { Video9x16 } from "@/components/ui/VideoBlock";
-import { AddToCartButton } from "@/components/ui/Buttons";
+import { AddToCartButton, ViewCartButton } from "@/components/ui/Buttons";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
 import MenuOptionPicker from "@/components/ui/OptionRow";
 import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
@@ -98,6 +98,10 @@ function OverlayContent() {
   /* おすすめでたどってきた商品の並び。**履歴（history）には積まない**ので、
      戻る矢印はこれを見る。× は常に一覧まで一発で閉じる（2026-09-16） */
   const [trail, setTrail]       = useState<string[]>([]);
+  /* 「カートに入れる」を押したあと。下部バーが丸ごと「カートを見る」に切り替わる。
+     **シートを閉じるまで戻らない**（天真の決定 2026-09-16）。
+     おすすめで別の商品へ移ったときは別の商品なので、下の effect で false に戻す */
+  const [added, setAdded]       = useState(false);
   /* 実際に見えている領域（Chrome の下部ツールバーの出入りで変わる）。null なら dvh に任せる */
   const [viewport, setViewport] = useState<{ top: number; height: number } | null>(null);
   const dragYRef   = useRef(0);
@@ -150,6 +154,7 @@ function OverlayContent() {
     setDraftQty(1);
     setDraftTiming(null);
     setDraftOptionIds(null);
+    setAdded(false);
     setDragY(0);
     dragYRef.current = 0;
     openedByPushRef.current = takePushedByApp() || openedByPushRef.current;
@@ -536,9 +541,21 @@ function OverlayContent() {
                 白地＋上辺罫線にしたのは、透明だと本文と地続きに見えて操作対象だと
                 気づきにくいため。 */}
             <div
-              className="shrink-0 flex gap-[var(--space-12)] items-center bg-surface-white border-t border-border-divider pt-[var(--space-12)] px-[var(--space-16)]"
+              className="shrink-0 bg-surface-white border-t border-border-divider pt-[var(--space-12)] px-[var(--space-16)]"
               style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))" }}
             >
+             {/* ── 「カートに入れる」を押すと、この段が丸ごと「カートを見る」に変わる ──
+                 2026-09-16、天真の決定。カートアイコンと「カートを見る」は
+                 **行き先が同じなので1つのボタンにまとめる**。
+                 2枚を重ねて、下の層（カートを見る）を CTA の位置から左いっぱいまで
+                 伸ばしながら入れ替える。幅を transform で変えると文字が歪むので、
+                 left を動かしている。 */}
+             <div className="relative h-[var(--size-control-lg)]">
+              <div
+                className={`absolute inset-0 flex gap-[var(--space-12)] items-center transition-opacity duration-200 ${
+                  added ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+              >
               <CartIconButton count={totalItems} onClick={() => router.push("/cart")} />
               {soldOut ? (
                 <SoldOutPill size="lg" className="flex-1" />
@@ -565,18 +582,32 @@ function OverlayContent() {
                 <div className="flex-1 min-w-0 max-w-[190px]">
                   <AddToCartButton
                     label={`カートに入れる ¥${(unitPriceWithOptions * draftQty).toLocaleString()}`}
-                    onClick={() =>
+                    onClick={() => {
                       addItem(
                         item,
                         draftQty,
                         timingSelectable ? selectedTiming : null,
                         optionsSelectable ? selectedOptions : []
-                      )
-                    }
+                      );
+                      setAdded(true);
+                    }}
                   />
                 </div>
               </div>
               )}
+              </div>
+
+              <div
+                className="absolute inset-y-0 right-0 transition-[left,opacity] duration-300 ease-out"
+                style={{
+                  left: added ? 0 : "58%",
+                  opacity: added ? 1 : 0,
+                  pointerEvents: added ? "auto" : "none",
+                }}
+              >
+                <ViewCartButton count={totalItems} onClick={() => router.push("/cart")} />
+              </div>
+             </div>
             </div>
           </>
         )}

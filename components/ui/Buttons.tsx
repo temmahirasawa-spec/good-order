@@ -94,6 +94,45 @@ export function CartButton({
   );
 }
 
+/* ── 「カートを見る」（大）。アクセント地のピルに、カートのアイコン＋個数バッジ＋文字。
+ *  商品詳細シートで「カートに入れる」を押したあと、下部バーが丸ごとこれに切り替わる。
+ *
+ *  ⚠ **カートアイコンと文字を分けない。** 2026-09-16、天真の指示:
+ *    「この2つのリンク先は同じなので分離してるとおかしい」
+ *    それまで下部バーは「カートアイコン」と「カートに入れる」が別部品で並んでいた。 ── */
+export function ViewCartButton({
+  count,
+  onClick,
+  className = "",
+}: {
+  count: number;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={count > 0 ? `カートを見る（${count}点）` : "カートを見る"}
+      className={`btn-pill flex gap-[var(--space-8)] h-[var(--size-control-lg)] items-center justify-center rounded-full bg-accent-primary active:bg-accent-pressed w-full shadow-[var(--shadow-card)] ${className}`}
+    >
+      <span className="relative block w-[26px] h-[22px] shrink-0">
+        <Icon name="cart" className="absolute left-0 top-[6px] w-4 h-4 text-accent-contrast" />
+        {count > 0 && (
+          <span className="absolute left-[10px] top-0 bg-surface-white rounded-full px-[5px] py-px">
+            <span className="font-en font-semibold text-[10px] leading-normal text-text-primary whitespace-nowrap tabular-nums">
+              {count}
+            </span>
+          </span>
+        )}
+      </span>
+      <span className="type-jp-body-bold text-accent-contrast whitespace-nowrap">
+        カートを見る
+      </span>
+    </button>
+  );
+}
+
 /* ── 円形の戻る/閉じるボタン（48px）。カート・詳細ページのヘッダー用 ── */
 export function BackButton({
   onClick,
