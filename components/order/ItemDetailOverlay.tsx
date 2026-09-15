@@ -98,6 +98,8 @@ function OverlayContent() {
   /* おすすめでたどってきた商品の並び。**履歴（history）には積まない**ので、
      戻る矢印はこれを見る。× は常に一覧まで一発で閉じる（2026-09-16） */
   const [trail, setTrail]       = useState<string[]>([]);
+  /* 実際に見えている領域（Chrome の下部ツールバーの出入りで変わる）。null なら dvh に任せる */
+  const [viewport, setViewport] = useState<{ top: number; height: number } | null>(null);
   const dragYRef   = useRef(0);
   const closingRef = useRef(false);
   const sheetRef   = useRef<HTMLDivElement>(null);
@@ -167,6 +169,33 @@ function OverlayContent() {
       document.body.style.overflow = prevOverflow;
     };
   }, [itemId, setOverlay]);
+
+  /* ⚠ **100dvh を信用しない。**
+     Chrome(iOS) は下のツールバーが引っ込むと、100dvh が実際に見えている高さと
+     ずれる。シートの下に隙間が空いて背面の一覧が覗いた（2026-09-16、洋輔さんが発見。
+     ツールバーが出ているときは正常、引っ込むと崩れる、という出方だった）。
+     visualViewport の実寸をそのまま使う。無い環境では h-viewport(dvh) が効く。
+
+     scroll は指を動かすたびに飛んでくるので、**値が変わったときだけ** state を更新する
+     （毎回更新するとシート全体が再描画されてスクロールが重くなる）。 */
+  useEffect(() => {
+    if (!itemId) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const sync = () =>
+      setViewport((prev) =>
+        prev && prev.top === vv.offsetTop && prev.height === vv.height
+          ? prev
+          : { top: vv.offsetTop, height: vv.height }
+      );
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+    };
+  }, [itemId]);
 
   /* シートを下へ引っ込めてから、実際に閉じる。
      ここは touch のリスナーからも呼ぶので useCallback で安定させている */
@@ -311,6 +340,8 @@ function OverlayContent() {
     <div
       className="fixed left-0 right-0 top-0 h-viewport z-50 flex items-end justify-center"
       style={{
+        /* visualViewport が取れたら実寸を優先する（上の useEffect のコメント参照） */
+        ...(viewport ? { top: viewport.top, height: viewport.height } : null),
         /* 指で引いている間はオーバーレイも一緒に薄くする（閉じる手応えを出すため） */
         background: `rgba(0, 0, 0, ${visible ? Math.max(0, 0.5 * (1 - dragY / 400)) : 0})`,
         transition: dragging ? "none" : `background ${CLOSE_MS}ms linear`,
@@ -410,6 +441,15 @@ function OverlayContent() {
                       {item.name}
                     </h1>
                   </div>
+
+                  {/* ⚠ **価格。2026-09-16 まで詳細に価格がどこにも出ていなかった。**
+                      オプションのある商品だけ「カートに入れる ¥550」の文字に混ざって
+                      出ていただけで、オプションの無い商品（ハンバーガー等）は
+                      **一度も値段を見ないままカートに入る**状態だった（洋輔さんが発見）。
+                      選んだオプション込みの単価を出すので、オプションを変えるとここも変わる。 */}
+                  <p className="type-en-price-l text-text-primary">
+                    ¥{unitPriceWithOptions.toLocaleString()}
+                  </p>
                   {item.description && (
                     <p className="type-jp-body text-text-secondary w-full">
                       {item.description}
@@ -512,7 +552,7 @@ function OverlayContent() {
                   onDecrement={() => setDraftQty((q) => Math.max(1, q - 1))}
                 />
                 {/* 幅は AddToCartButton 側が w-full なのでラッパーで持つ。
-                    オプションのある商品は金額つき（「カートに入れる ¥1,100」）なので少し広げる。
+                    金額つき（「カートに入れる ¥1,100」）なので少し広げる。
 
                     ⚠ **固定幅にしない。** 390px 幅では
                       左右padding 32 + カート 48 + gap 12 + ステッパー 124 + gap 8 = 224 しか残らず、
@@ -520,15 +560,11 @@ function OverlayContent() {
                     あふれた分は**左へ出てカートアイコンに重なる**（2026-09-16、洋輔さんが発見）。
                     余白いっぱいまで伸ばし、Figma の幅で頭打ちにする。
                     文字自体は「カートに入れる ¥550」で 136px なので 390px でも収まる。 */}
-                <div
-                  className={`flex-1 min-w-0 ${optionsSelectable ? "max-w-[190px]" : "max-w-[154px]"}`}
-                >
+                {/* **オプションの有無にかかわらず金額を出す。**
+                    数量をかけた「いま入れる分の合計」なので、押す前に必ず金額が見える */}
+                <div className="flex-1 min-w-0 max-w-[190px]">
                   <AddToCartButton
-                    label={
-                      optionsSelectable
-                        ? `カートに入れる ¥${(unitPriceWithOptions * draftQty).toLocaleString()}`
-                        : "カートに入れる"
-                    }
+                    label={`カートに入れる ¥${(unitPriceWithOptions * draftQty).toLocaleString()}`}
                     onClick={() =>
                       addItem(
                         item,
