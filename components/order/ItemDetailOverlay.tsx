@@ -95,6 +95,9 @@ function OverlayContent() {
   /* 下スワイプ中の移動量(px)。指に追従させるためだけの値 */
   const [dragY, setDragY]       = useState(0);
   const [dragging, setDragging] = useState(false);
+  /* おすすめでたどってきた商品の並び。**履歴（history）には積まない**ので、
+     戻る矢印はこれを見る。× は常に一覧まで一発で閉じる（2026-09-16） */
+  const [trail, setTrail]       = useState<string[]>([]);
   const dragYRef   = useRef(0);
   const closingRef = useRef(false);
   const sheetRef   = useRef<HTMLDivElement>(null);
@@ -138,6 +141,8 @@ function OverlayContent() {
   useEffect(() => {
     if (!itemId) {
       setVisible(false);
+      /* 閉じたら「たどってきた並び」も捨てる。次に開いたときは戻る矢印が出ない */
+      setTrail((t) => (t.length ? [] : t));
       return;
     }
     setDraftQty(1);
@@ -185,10 +190,10 @@ function OverlayContent() {
     }, CLOSE_MS);
   }, []);
 
-  /* おすすめから別の商品へ。天真の決定（2026-09-16）で、
+  /* 別の商品へ移る動き。天真の決定（2026-09-16）で、
      **いったん下へ引っ込めてから新しい商品で出し直す**。
      履歴は置き換えなので（lib/itemOverlay.ts）、何回たどっても × 一発で一覧に戻る */
-  const goToItem = useCallback((id: string) => {
+  const transitionTo = useCallback((id: string) => {
     if (closingRef.current) return;
     closingRef.current = true;
     setDragging(false);
@@ -200,6 +205,23 @@ function OverlayContent() {
       closingRef.current = false;
     }, CLOSE_MS);
   }, []);
+
+  /* おすすめから先へ。いま見ている商品を「たどってきた並び」に積む */
+  const goToItem = useCallback((id: string) => {
+    if (closingRef.current || !itemId) return;
+    setTrail((t) => [...t, itemId]);
+    transitionTo(id);
+  }, [itemId, transitionTo]);
+
+  /* 左上の戻る矢印。**history.back() ではない。**
+     履歴は1枚のままにしてあるので（× が一発で閉じるため）、
+     ひとつ前の商品は自前の並びから取り出す */
+  const goBack = useCallback(() => {
+    const prev = trail[trail.length - 1];
+    if (!prev || closingRef.current) return;
+    setTrail((t) => t.slice(0, -1));
+    transitionTo(prev);
+  }, [trail, transitionTo]);
 
   /* 下スワイプで閉じる。
      ⚠ **中身が先頭にあるときだけ**ドラッグを始める。そうしないと、
@@ -313,12 +335,7 @@ function OverlayContent() {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* つまみ。「下へ引けば閉じる」ことを伝えるための印。
-            KV 写真の上ではなく**写真の上の帯**に置いている。写真の上に重ねると
-            明るい写真で見えなくなるため（写真の無い商品もあるので条件分岐も増える） */}
-        <div className="shrink-0 flex justify-center pt-[10px] pb-[6px]">
-          <span className="block w-[36px] h-[4px] rounded-full bg-border" />
-        </div>
+
         {!item ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-[var(--space-16)] px-[var(--space-16)]">
             <p className="type-jp-body text-text-secondary">商品が見つかりませんでした</p>
@@ -350,6 +367,28 @@ function OverlayContent() {
                   />
                 )}
                 {soldOut && item.image && <SoldOutBand size="lg" />}
+
+                {/* つまみ。**写真の上に重ねる**（天真の指示 2026-09-16）。
+                    以前は写真の上に帯を1本敷いていたが、シート上部に隙間が空いて
+                    綺麗でなかった。写真を上まで敷き詰め、つまみは白抜きにする。
+                    写真の無い商品（薄い帯だけ）は白だと見えないので、そのときだけ枠線色。 */}
+                <span
+                  className={`absolute left-1/2 -translate-x-1/2 top-[8px] w-[36px] h-[4px] rounded-full ${
+                    item.image ? "bg-surface-white" : "bg-border"
+                  }`}
+                  style={item.image ? { boxShadow: "0 1px 3px rgba(0, 0, 0, 0.35)" } : undefined}
+                />
+
+                {/* 左上の戻る矢印。おすすめでたどってきたときだけ出す。
+                    右上の × と同じ部品・同じ大きさ（48）で左右対称にしている */}
+                {trail.length > 0 && (
+                  <HeaderIconButton
+                    icon="arrow-left"
+                    onClick={goBack}
+                    label="前に見ていた商品に戻る"
+                    className="absolute left-[16px] top-[12px]"
+                  />
+                )}
                 <HeaderIconButton
                   icon="close"
                   onClick={close}
