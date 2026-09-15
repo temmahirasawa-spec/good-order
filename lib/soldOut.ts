@@ -84,6 +84,56 @@ export function soldOutIdsIn(
   return ids;
 }
 
+/** ⚠ お客様の目に触れる文言 */
+export const UNAVAILABLE_CART_NOTICE =
+  "お取り扱いが終わった商品が含まれています。削除してからご注文ください。";
+
+/**
+ * **いまメニューに無い商品**がカートに残っていないか。
+ *
+ * 2026-09-15 の障害の原因。カートは端末に残り続けるので、商品が削除されたり
+ * 非公開になったりすると、その行を抱えたまま注文ボタンを押すことになる。
+ * サーバー側は外部キー違反で弾くが、画面には「通信エラー」としか出ないため、
+ * **何度押しても失敗し続けてお客様が詰む**（洋輔さんが遭遇）。
+ *
+ * ここで先に気づいて、行を消してもらう。
+ * `menuItems` は公開中の商品だけなので、一時的に非公開にしたものも含まれる。
+ * どちらにせよ注文は通らないので、同じ扱いでよい。
+ *
+ * ⚠ **メニューがまだ読めていないときは何も返さない。** 読み込み中に
+ * 「取り扱いが終わりました」と出すと、正常な商品まで消させてしまう。
+ */
+export function unavailableIdsIn(
+  cart: ReadonlyArray<{ item: Pick<MenuItem, "id"> }>,
+  menuItems: ReadonlyArray<Pick<MenuItem, "id">>,
+  menuLoaded: boolean
+): Set<string> {
+  const ids = new Set<string>();
+  if (!menuLoaded || menuItems.length === 0) return ids;
+  const known = new Set(menuItems.map((m) => m.id));
+  for (const line of cart) {
+    if (!known.has(line.item.id)) ids.add(line.item.id);
+  }
+  return ids;
+}
+
+/**
+ * place_order が「注文の中身が今のメニューと合わない」で弾いたか。
+ * 外部キー違反（商品が消えている）と、明細・オプションの検証エラーをまとめて見る。
+ * **これは通信エラーではないので、再送しても直らない。**
+ */
+export function isUnavailableError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as { code?: string; message?: string };
+  if (e.code === "23503") return true;   // foreign_key_violation = 商品が存在しない
+  const m = e.message ?? "";
+  return (
+    m.includes("選べないオプション") ||
+    m.includes("明細の数量・単価・商品IDが不正") ||
+    m.includes("violates foreign key constraint")
+  );
+}
+
 /** Supabase のエラーが place_order の「売り切れ」拒否か */
 export function isSoldOutError(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false;

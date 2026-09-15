@@ -8,7 +8,7 @@ import { isAcceptingOrders } from "./api";
 import { useMenuDataStore } from "./menuDataStore";
 import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
 import { optionsKey, optionsTotal, type SelectedOption } from "./menuOptions";
-import { isSoldOut, isSoldOutError, soldOutIdsIn } from "./soldOut";
+import { isSoldOut, isSoldOutError, isUnavailableError, soldOutIdsIn } from "./soldOut";
 import { calcSetDrinkDiscount, fetchSetDrinkSetting, SET_DRINK_DEFAULT, type SetDrinkSetting } from "./setDrink";
 import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "./tax";
 
@@ -59,7 +59,7 @@ async function saveOrderToDb(
   tableLabel: string | null,
   orderType: "dine_in" | "takeout",
   totalAmount: number
-): Promise<"saved" | "sold_out" | "failed"> {
+): Promise<"saved" | "sold_out" | "unavailable" | "failed"> {
   try {
     const { error } = await supabase.rpc("place_order", {
       p_order_id:     orderId,
@@ -88,6 +88,18 @@ async function saveOrderToDb(
   } catch (err) {
     // 売り切れで弾かれた。通信エラーではないので Sentry には送らず、再送もしない
     if (isSoldOutError(err)) return "sold_out";
+    /* **メニューから消えた商品が入っていた。** 再送しても永久に直らないので、
+       ここで通信エラーと分けて返す。分けていなかったせいで、お客様には
+       「通信エラー」としか出ず、何度押しても失敗し続ける状態になっていた
+       （2026-09-15 の障害）。原因は追えるよう Sentry には送る。 */
+    if (isUnavailableError(err)) {
+      console.error("[saveOrderToDb] 注文の中身が今のメニューと合わない:", err);
+      Sentry.captureException(err, {
+        tags: { feature: "order-submit", kind: "unavailable" },
+        extra: { orderId, orderType, itemCount: items.length },
+      });
+      return "unavailable";
+    }
     // placeOrder はこの戻り値を待ち、false なら再試行 → それでも駄目なら
     // お客様に「送信できませんでした」と出して完了画面に進めない。
     // ただし「なぜ失敗したか」は画面には出ないので、原因を追えるよう
@@ -167,7 +179,9 @@ export type PlaceOrderResult =
   //   画面は「ご注文を承りました」に進み、厨房には何も届かないまま
   //   誰も気づけなかった（2026-08-26 の監査で判明）。
   // "sold_out" … 売り切れの商品が含まれていて送らなかった／サーバー側で弾かれた。カートは残す
-  | { ok: false; reason: "empty" | "closed" | "failed" | "sold_out" };
+  // "unavailable" … **メニューから消えた商品**がカートに残っていた。再送しても直らないので
+  //   お客様には「その行を消してください」と伝える（2026-09-15 の障害）
+  | { ok: false; reason: "empty" | "closed" | "failed" | "sold_out" | "unavailable" };
 
 interface CartStore {
   items: CartItem[];
@@ -406,11 +420,12 @@ export const useCartStore = create<CartStore>()(
         // リトライしても安全な理由: place_order は同じ p_order_id なら
         // ON CONFLICT DO NOTHING で何もしない（supabase/order_insert_rpc.sql）。
         // orderId は上で1回だけ採番しているので、何度呼んでも二重登録にならない。
-        let saved: "saved" | "sold_out" | "failed" = "failed";
+        let saved: "saved" | "sold_out" | "unavailable" | "failed" = "failed";
         for (let attempt = 1; attempt <= 3; attempt++) {
           saved = await saveOrderToDb(
             orderId, current, tableNumber, tableId, tableLabel, orderType, totalAmount
           );
+          /* 売り切れ・取扱終了は**再送しても直らない**ので、その場で抜ける */
           if (saved !== "failed") break;
           // 1回目の失敗は瞬断のことが多い。少し待って作り直す
           if (attempt < 3) await new Promise((r) => setTimeout(r, 600 * attempt));
@@ -420,6 +435,12 @@ export const useCartStore = create<CartStore>()(
         // カートは残し、お客様が該当の行を消してやり直せる状態で止める。
         if (saved === "sold_out") {
           return { ok: false, reason: "sold_out" };
+        }
+
+        /* メニューから消えた商品が入っていた。**再送しても永久に直らない**ので、
+           通信エラーと分けて返す。画面は該当の行を示して消してもらう */
+        if (saved === "unavailable") {
+          return { ok: false, reason: "unavailable" };
         }
 
         if (saved !== "saved") {
