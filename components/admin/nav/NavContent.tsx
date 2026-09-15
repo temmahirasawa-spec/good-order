@@ -6,6 +6,8 @@
  * 外枠（幅・高さ・背景・境界線 or 影）だけをそれぞれのラッパーが持つ。
  */
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { fetchFeatureToggles, FEATURES_DEFAULT, type FeatureToggles } from "@/lib/features";
 import NavItem from "@/components/admin/nav/NavItem";
 import MenuAccordionNavItem from "@/components/admin/nav/MenuAccordionNavItem";
 import { ADMIN_NAV_ITEMS, STAFF_ROLE_LABEL, type StaffRole } from "@/lib/staffRoles";
@@ -43,7 +45,22 @@ export default function NavContent({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
-  const items = ADMIN_NAV_ITEMS.filter((item) => item.roles.includes(role));
+
+  /* 使わない機能はサイドバーから消す（管理画面「表示設定 ＞ 使う機能」）。
+     **厨房を OFF にしても伝票の印刷は止めない**（天真の決定 2026-09-15）。
+     ここは見せ方だけの話で、印刷・レジ・受渡は今までどおり動く。 */
+  const [features, setFeatures] = useState<FeatureToggles>(FEATURES_DEFAULT);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchFeatureToggles()
+      .then((f) => { if (!cancelled) setFeatures(f); })
+      .catch((err) => console.warn("[NavContent] fetchFeatureToggles failed:", err));
+    return () => { cancelled = true; };
+  }, []);
+
+  const items = ADMIN_NAV_ITEMS
+    .filter((item) => item.roles.includes(role))
+    .filter((item) => features.kitchen || item.href !== "/admin/kitchen");
 
   /* 区切り線とスペーサーの位置をグループで決める。
      ロールによっては片方のグループが空になる（例: kitchenロールは manage/review が無い）ので、

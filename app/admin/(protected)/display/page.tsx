@@ -25,6 +25,7 @@ import BestSellerPanel, {
   type BestSellerCandidate,
 } from "@/components/admin/display/BestSellerPanel";
 import BrandColorPanel from "@/components/admin/display/BrandColorPanel";
+import FeaturePanel from "@/components/admin/display/FeaturePanel";
 import { fetchBrandAccent, saveBrandAccent } from "@/lib/brandColor";
 import { fetchCategories, type ApiCategory } from "@/lib/api";
 import {
@@ -321,6 +322,19 @@ export default function DisplaySettingsPage() {
                         }
                       />
                     )}
+                  </SettingsSection>
+                </>
+              ) : tab === "features" ? (
+                <>
+                  <p className="type-jp-caption text-text-secondary">
+                    使わない機能をオフにできます。オフにしても設定や過去のデータは消えないので、いつでも戻せます。
+                  </p>
+
+                  <SettingsSection
+                    title="使う機能"
+                    description="お店の運用に合わせて、使わない機能を隠します。"
+                  >
+                    <FeaturePanel />
                   </SettingsSection>
                 </>
               ) : tab === "brand" ? (

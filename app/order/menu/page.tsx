@@ -28,6 +28,7 @@ import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
 import StaffCallSheet from "@/components/StaffCallSheet";
 import StoreInfoModal from "@/components/StoreInfoModal";
 import { useMenuDataStore } from "@/lib/menuDataStore";
+import { fetchFeatureToggles, FEATURES_DEFAULT, type FeatureToggles } from "@/lib/features";
 import { useCartStore } from "@/lib/store";
 import {
   orderHomeCategories,
@@ -53,6 +54,15 @@ export default function OrderMenuPage() {
 
   const [staffCallOpen, setStaffCallOpen] = useState(false);
   const [storeInfoOpen, setStoreInfoOpen] = useState(false);
+  /* 使わない機能の導線は出さない（管理画面「表示設定 ＞ 使う機能」） */
+  const [features, setFeatures] = useState<FeatureToggles>(FEATURES_DEFAULT);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchFeatureToggles()
+      .then((f) => { if (!cancelled) setFeatures(f); })
+      .catch((err) => console.warn("[order/menu] fetchFeatureToggles failed:", err));
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     fetchAll();
@@ -114,7 +124,12 @@ export default function OrderMenuPage() {
         {/* ── クイックリンク ── */}
         <div className="grid grid-cols-2 gap-[16px]">
           <LinkButton icon="return"  label="トップへ戻る"   href="/order" />
-          <LinkButton icon="bell"    label="スタッフを呼ぶ" onClick={() => setStaffCallOpen(true)} />
+          {/* **注文履歴への導線**（2026-09-15 追加）。画面は前からあったのに
+              旧デザインのドロワーからしか行けず、お客様には届いていなかった */}
+          <LinkButton icon="receipt" label="注文履歴"       href="/history" />
+          {features.staffCall && (
+            <LinkButton icon="bell"  label="スタッフを呼ぶ" onClick={() => setStaffCallOpen(true)} />
+          )}
           {/* テイクアウトの商品が無いときは押せなくする。
               「押したら『ありません』と言われる」を無くすため（洋輔さんの指摘、2026-09-15） */}
           <LinkButton

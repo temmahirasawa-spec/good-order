@@ -9,6 +9,7 @@
  */
 import type { Metadata } from "next";
 import ItemDetailOverlay from "@/components/order/ItemDetailOverlay";
+import VisitClosedGate from "@/components/ui/VisitClosedGate";
 
 /**
  * 注文フローは検索結果に出さない。カート状態や卓の二次元コードを前提にした画面で、
@@ -23,9 +24,11 @@ export const metadata: Metadata = {
 
 export default function OrderLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    /* 会計が済んだ端末では注文画面を出さない（lib/visitSession.ts）。
+       ふだんは中身をそのまま通すので、この包みは見えない */
+    <VisitClosedGate>
       {children}
       <ItemDetailOverlay />
-    </>
+    </VisitClosedGate>
   );
 }
