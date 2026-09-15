@@ -1,23 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchStaffCallOptions, STAFF_CALL_DEFAULT, type StaffCallOption } from "@/lib/storeInfo";
 import { supabase } from "@/lib/supabase";
 import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
 import OptionCard from "@/components/ui/OptionCard";
-import type { IconName } from "@/components/Icon";
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
 const COOLDOWN_MS = 3 * 60 * 1000;
 
-type CallType = "water" | "bill" | "other";
+/* 呼び出しの項目は**管理画面「スタッフ呼び出し」で決める**（lib/storeInfo.ts）。
+   2026-09-15 まで、ここに「お水 / お会計 / 呼ぶ」の3つが直書きされていて
+   店舗側から変えられなかった（洋輔さんの指摘）。
+   読めないときは今までと同じ3つにフォールバックする。
+   連打防止はラベルごとに持つ（項目は自由に足せるので、固定の型では数えられない）。 */
 
-const OPTIONS: { type: CallType; icon: IconName; label: string }[] = [
-  { type: "water", icon: "water-drop", label: "お水をください" },
-  { type: "bill",  icon: "card",       label: "お会計をお願いします" },
-  { type: "other", icon: "bell",       label: "スタッフを呼ぶ" },
-];
 
 interface Props {
   open: boolean;
@@ -30,13 +29,11 @@ export default function StaffCallSheet({ open, onClose }: Props) {
 
   const [mounted,  setMounted]  = useState(false);
   const [visible,  setVisible]  = useState(false);
-  const [sending,  setSending]  = useState<CallType | null>(null);
+  const [sending,  setSending]  = useState<string | null>(null);
+  const [options,  setOptions]  = useState<StaffCallOption[]>(STAFF_CALL_DEFAULT);
   const [toast,    setToast]    = useState(false);
-  const [lastSent, setLastSent] = useState<Record<CallType, number>>({
-    water: 0,
-    bill: 0,
-    other: 0,
-  });
+  /* 連打防止はラベルごと（項目は自由に足せる） */
+  const [lastSent, setLastSent] = useState<Record<string, number>>({});
   const [now, setNow] = useState(() => Date.now());
 
   /* ── cooldown 表示更新のために 10 秒おきに now を更新 ── */
@@ -61,24 +58,34 @@ export default function StaffCallSheet({ open, onClose }: Props) {
     }
   }, [open, setOverlay]);
 
+  /* 開いたときに項目を読む。閉じている間は通信しない */
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void fetchStaffCallOptions()
+      .then((o) => { if (!cancelled) setOptions(o); })
+      .catch((err) => console.warn("[StaffCallSheet] fetchStaffCallOptions failed:", err));
+    return () => { cancelled = true; };
+  }, [open]);
+
   const closeSheet = () => onClose();
 
-  const handleSelect = async (opt: typeof OPTIONS[number]) => {
+  const handleSelect = async (opt: StaffCallOption) => {
     const t = Date.now();
-    if (t - lastSent[opt.type] < COOLDOWN_MS) return;
+    if (t - (lastSent[opt.label] ?? 0) < COOLDOWN_MS) return;
     if (sending) return;
-    setSending(opt.type);
+    setSending(opt.label);
     try {
       const { error } = await supabase.from("staff_calls").insert({
         store_id: STORE_ID,
         table_number: tableNumber ?? 0,
         // 厨房のCall Chipに "A1" と出すためのラベル（Step3-O）
         table_label: tableLabel ?? null,
-        call_type: opt.type,
+        call_type: opt.callType,
         call_label: opt.label,
       });
       if (error) throw error;
-      setLastSent((prev) => ({ ...prev, [opt.type]: t }));
+      setLastSent((prev) => ({ ...prev, [opt.label]: t }));
       closeSheet();
       setToast(true);
       setTimeout(() => setToast(false), 2000);
@@ -89,8 +96,8 @@ export default function StaffCallSheet({ open, onClose }: Props) {
     }
   };
 
-  const isCoolingDown = (type: CallType) =>
-    now - lastSent[type] < COOLDOWN_MS;
+  const isCoolingDown = (label: string) =>
+    now - (lastSent[label] ?? 0) < COOLDOWN_MS;
 
   return (
     <>
@@ -129,12 +136,12 @@ export default function StaffCallSheet({ open, onClose }: Props) {
               </p>
 
               <div className="flex flex-col gap-[12px] mt-[16px]">
-                {OPTIONS.map((opt) => {
-                  const cooling = isCoolingDown(opt.type);
-                  const busy = sending === opt.type;
+                {options.map((opt) => {
+                  const cooling = isCoolingDown(opt.label);
+                  const busy = sending === opt.label;
                   return (
                     <OptionCard
-                      key={opt.type}
+                      key={opt.label}
                       icon={opt.icon}
                       label={opt.label}
                       onClick={() => handleSelect(opt)}

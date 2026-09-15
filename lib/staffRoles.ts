@@ -74,6 +74,10 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   // 税の設定（内税/外税・税率）。2026-09-15 に追加。表示設定と同じく manage 群の末尾で、
   // 先頭には入れない（上のコメントの着地先の話と同じ理由）
   { href: "/admin/tax",       label: "税の設定",       roles: ["manager"],                        group: "manage" },
+  // 店舗情報（写真・住所・営業時間）と、スタッフ呼び出しの項目。2026-09-15 に追加。
+  // どちらも表示設定と同じく manage 群の末尾で、先頭には入れない
+  { href: "/admin/store",     label: "店舗情報",       roles: ["manager"],                        group: "manage" },
+  { href: "/admin/staff-calls", label: "スタッフ呼び出し", roles: ["manager"],                    group: "manage" },
   { href: "/admin/dashboard", label: "ダッシュボード", roles: ["manager"],                        group: "review" },
 ];
 // /admin/takeout（テイクアウト商品のCRUD）は /admin/menu に統合して廃止した。
