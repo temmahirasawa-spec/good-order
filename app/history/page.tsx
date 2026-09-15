@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
+import OrderHeader from "@/components/ui/OrderHeader";
+import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
+import { AddToCartButton } from "@/components/ui/Buttons";
 import { fetchFeatureToggles, FEATURES_DEFAULT, type FeatureToggles } from "@/lib/features";
 import FloatingStaffCall from "@/components/FloatingStaffCall";
-import CartButton from "@/components/CartButton";
 import { supabase } from "@/lib/supabase";
 import { loadHistory, updateHistoryStatus, updateHistoryPickupNo, type HistoryEntry } from "@/lib/history";
 import { MENU_ITEM_COLUMNS, fetchCategories, fetchMenuItemOptions, fetchOrderStatuses, rowToMenuItem, type ApiMenuItem } from "@/lib/api";
@@ -13,7 +14,6 @@ import { defaultServingTimingFor } from "@/lib/servingTiming";
 import { formatSelectedOptions, type SelectedOption } from "@/lib/menuOptions";
 import { PICKUP_NO_LABEL, formatPickupNo } from "@/lib/pickupNo";
 import { useCartStore, type CartItem } from "@/lib/store";
-import RippleButton from "@/components/RippleButton";
 import type { MenuItem } from "@/lib/menu";
 
 /* ── お客様側の表示は「調理中」か「提供済み」の 2 状態のみ ── */
@@ -196,24 +196,32 @@ export default function HistoryPage() {
   const totalCount = entries?.length ?? 0;
 
   return (
-    <div className="mx-auto max-w-md min-h-screen bg-gray-50 flex flex-col">
-      <Header mode="sub" title="注文履歴" />
+    <div className="mx-auto max-w-md min-h-screen bg-bg-primary flex flex-col gap-[var(--space-20)]">
+      <div className="sticky top-0 z-30 flex flex-col">
+        <OrderHeader variant="close" />
+      </div>
 
-      <main className="flex-1 px-4 py-5 pb-24">
+      {/* 見出し（カテゴリー一覧・テイクアウトと同じ形） */}
+      <div className="flex flex-col gap-[var(--space-4)] pt-[4px] px-[var(--space-24)]">
+        <p className="type-en-display-l text-text-primary">ORDER HISTORY</p>
+        <p className="type-jp-body-small text-text-primary">注文履歴</p>
+      </div>
+
+      <main className="flex-1 px-[var(--space-16)] pb-[110px]">
         {entries === null ? (
-          <div className="flex justify-center py-20">
-            <div className="w-8 h-8 rounded-full border-2 border-warm-300 border-t-warm-700 animate-spin" />
+          <div className="flex justify-center py-[var(--space-48)]">
+            <div className="w-8 h-8 rounded-full border-2 border-border border-t-text-primary animate-spin" />
           </div>
         ) : totalCount === 0 ? (
           <EmptyState onBack={() => router.push("/order")} />
         ) : (
           <>
-            <p className="text-xs text-gray-500 mb-4">{totalCount} 件</p>
+            <p className="type-jp-caption text-text-secondary mb-[var(--space-16)]">{totalCount} 件</p>
 
             {todayOrders.length > 0 && (
-              <section className="mb-6">
-                <h2 className="text-[11px] font-bold tracking-widest mb-3" style={{ color: "var(--ink)" }}>今日の注文</h2>
-                <div className="space-y-3">
+              <section className="mb-[var(--space-24)]">
+                <h2 className="type-jp-caption-bold text-text-primary mb-[var(--space-12)]">今日の注文</h2>
+                <div className="flex flex-col gap-[var(--space-12)]">
                   {todayOrders.map((o) => (
                     <OrderCard key={o.orderId} entry={o} onReorder={() => handleReorderClick(o)} />
                   ))}
@@ -223,8 +231,8 @@ export default function HistoryPage() {
 
             {pastOrders.length > 0 && (
               <section>
-                <h2 className="text-[11px] font-semibold tracking-widest mb-3" style={{ color: "var(--ink-sub)" }}>過去の注文</h2>
-                <div className="space-y-3">
+                <h2 className="type-jp-caption-bold text-text-secondary mb-[var(--space-12)]">過去の注文</h2>
+                <div className="flex flex-col gap-[var(--space-12)]">
                   {pastOrders.map((o) => (
                     <OrderCard key={o.orderId} entry={o} onReorder={() => handleReorderClick(o)} />
                   ))}
@@ -232,7 +240,7 @@ export default function HistoryPage() {
               </section>
             )}
 
-            <p className="text-[10px] text-gray-400 text-center mt-6">
+            <p className="type-jp-caption text-text-tertiary text-center mt-[var(--space-24)]">
               ※ 履歴はこの端末にのみ保存されます
             </p>
           </>
@@ -244,39 +252,39 @@ export default function HistoryPage() {
           className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/40"
           onClick={() => setReorderPrompt(null)}
         >
-          <div className="relative bg-white rounded-3xl px-6 py-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-gray-900 mb-2">同じ内容で注文しますか？</h3>
-            <p className="text-sm text-gray-500 mb-1">
+          <div className="relative bg-surface-white rounded-[var(--radius-xl)] px-[var(--space-24)] py-[var(--space-24)] w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="type-jp-heading-s text-text-primary mb-[var(--space-8)]">同じ内容で注文しますか？</h3>
+            <p className="type-jp-body text-text-secondary mb-[var(--space-4)]">
               この注文の {reorderPrompt.items.length} 品をカートに追加します。
             </p>
             {items.length > 0 && (
-              <p className="text-xs text-amber-700 mt-2">
+              <p className="type-jp-caption text-accent-deep mt-[var(--space-8)]">
                 ※ 現在のカートに既に {items.length} 件の商品があります
               </p>
             )}
             {reorderPrompt.orderType !== orderType && (
-              <p className="text-xs text-amber-700 mt-2">
+              <p className="type-jp-caption text-accent-deep mt-[var(--space-8)]">
                 ※ モードが「{reorderPrompt.orderType === "takeout" ? "テイクアウト" : "店内"}」の注文です
               </p>
             )}
-            <div className="flex gap-3 mt-5">
+            <div className="flex gap-[var(--space-12)] mt-[var(--space-20)]">
               <button
                 onClick={() => setReorderPrompt(null)}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
+                className="flex-1 h-[48px] rounded-full border border-border type-jp-caption-bold text-text-secondary"
               >
                 キャンセル
               </button>
               {items.length > 0 && (
                 <button
                   onClick={() => { clearCart(); doReorder(reorderPrompt); }}
-                  className="flex-1 py-3 rounded-xl bg-gray-700 text-white text-sm font-medium hover:bg-gray-800"
+                  className="flex-1 h-[48px] rounded-full bg-surface-white border border-text-secondary type-jp-caption-bold text-text-secondary"
                 >
                   置き換え
                 </button>
               )}
               <button
                 onClick={() => doReorder(reorderPrompt)}
-                className="flex-1 py-3 rounded-xl bg-warm-700 text-white text-sm font-medium hover:bg-warm-800"
+                className="flex-1 h-[48px] rounded-full bg-surface-ink type-jp-caption-bold text-text-inverse"
               >
                 追加する
               </button>
@@ -287,7 +295,7 @@ export default function HistoryPage() {
 
       {/* 使わない設定のときは出さない（lib/features.ts） */}
       {features.staffCall && <FloatingStaffCall />}
-      <CartButton />
+      <BottomViewCartBar />
     </div>
   );
 }
@@ -302,31 +310,31 @@ function OrderCard({
   const sample = entry.items.slice(0, 2);
   const extra  = entry.items.length - sample.length;
   return (
-    <div className="bg-white rounded-2xl shadow-soft p-4">
-      <div className="flex items-start justify-between mb-2">
-        <div>
+    <div className="bg-surface-white rounded-[var(--radius-md)] border border-border px-[var(--space-16)] py-[var(--space-16)]">
+      <div className="flex items-start justify-between gap-[var(--space-12)] mb-[var(--space-8)]">
+        <div className="min-w-0">
           {/* 受渡番号はテイクアウト注文のみ（店内は配膳なので出さない。/complete と同じ方針） */}
           {entry.orderType === "takeout" && entry.pickupNo != null && (
             <>
-              <p className="text-[10px] text-gray-400 leading-none">{PICKUP_NO_LABEL}</p>
-              <p className="font-price text-2xl leading-tight" style={{ color: "var(--ink)" }}>
+              <p className="type-jp-caption text-text-tertiary leading-none">{PICKUP_NO_LABEL}</p>
+              <p className="type-en-display-s text-text-primary leading-tight">
                 {formatPickupNo(entry.pickupNo)}
               </p>
             </>
           )}
-          <p className="text-sm font-semibold text-gray-800">{formatDate(entry.orderedAt)}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">
+          <p className="type-jp-body-bold text-text-primary">{formatDate(entry.orderedAt)}</p>
+          <p className="type-jp-caption text-text-tertiary mt-[2px]">
             {entry.orderType === "takeout"
-              ? "🛍 テイクアウト"
+              ? "テイクアウト"
               /* 移行前の履歴には tableLabel が無いので元の数値にフォールバックする */
-              : `🪑 ${entry.tableLabel ?? entry.tableNumber}`}
+              : entry.tableLabel ?? String(entry.tableNumber)}
           </p>
         </div>
         {(() => {
           const d = toDisplayStatus(entry.status);
           return (
             <span
-              className="text-[11px] font-bold px-2.5 py-[3px] rounded-full"
+              className="type-jp-caption-bold px-[var(--space-12)] py-[3px] rounded-full shrink-0 whitespace-nowrap"
               style={displayBadgeStyle(d)}
             >
               {DISPLAY_LABEL[d]}
@@ -335,7 +343,7 @@ function OrderCard({
         })()}
       </div>
 
-      <div className="text-xs text-gray-600 leading-relaxed mb-3">
+      <div className="type-jp-caption text-text-secondary leading-relaxed mb-[var(--space-12)]">
         {sample.map((it, i) => (
           <span key={i}>
             {it.name}
@@ -346,19 +354,23 @@ function OrderCard({
             {i < sample.length - 1 ? "、" : ""}
           </span>
         ))}
-        {extra > 0 && <span className="text-gray-400"> 他{extra}品</span>}
+        {extra > 0 && <span className="text-text-tertiary"> 他{extra}品</span>}
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-        <div>
-          <p className="text-[10px] text-gray-400">合計（税込）</p>
-          <p className="font-price text-base" style={{ color: "var(--ink)" }}>
+      <div className="flex items-center justify-between gap-[var(--space-12)] pt-[var(--space-12)] border-t border-border-divider">
+        <div className="min-w-0">
+          <p className="type-jp-caption text-text-tertiary">合計（税込）</p>
+          <p className="type-en-price-m text-text-primary">
             ¥{entry.totalAmount.toLocaleString()}
           </p>
         </div>
-        <RippleButton onClick={onReorder} className="btn-primary text-xs px-3.5">
+        <button
+          type="button"
+          onClick={onReorder}
+          className="shrink-0 bg-surface-white border border-text-secondary rounded-full h-[40px] px-[var(--space-16)] type-jp-caption-bold text-text-secondary whitespace-nowrap"
+        >
           同じ内容で注文
-        </RippleButton>
+        </button>
       </div>
     </div>
   );
@@ -366,19 +378,17 @@ function OrderCard({
 
 function EmptyState({ onBack }: { onBack: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-5 py-20">
-      <div className="text-5xl">📜</div>
-      <div className="text-center">
-        <p className="text-sm font-semibold text-gray-700">まだ注文履歴がありません</p>
-        <p className="text-xs text-gray-400 mt-1">注文が確定するとここに表示されます</p>
+    <div className="flex flex-col items-center gap-[var(--space-16)] px-[var(--space-24)] py-[var(--space-48)]">
+      <p className="type-jp-heading-s text-text-primary text-center">
+        まだご注文はありません
+      </p>
+      <p className="type-jp-body text-text-secondary text-center">
+        ご注文が確定すると、ここに品名と金額が残ります。
+      </p>
+      <div className="w-full max-w-[280px] mt-[var(--space-8)]">
+        <AddToCartButton label="メニューを見る" onClick={onBack} />
       </div>
-      <button
-        onClick={onBack}
-        className="px-6 py-3 bg-warm-700 text-white rounded-2xl text-sm font-medium hover:bg-warm-800"
-      >
-        メニューを見る
-      </button>
-      <p className="text-[10px] text-gray-400">
+      <p className="type-jp-caption text-text-tertiary text-center">
         ※ 履歴はこの端末にのみ保存されます
       </p>
     </div>
