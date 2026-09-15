@@ -21,7 +21,7 @@ export const DISPLAY_TABS: { id: DisplayTabId; label: string }[] = [
   { id: "video", label: "動画設定" },
   { id: "bestseller", label: "ベストセラー" },
   { id: "brand", label: "ブランドカラー" },
-  { id: "features", label: "使う機能" },
+  { id: "features", label: "機能設定" },
 ];
 
 export default function DisplayTabs({

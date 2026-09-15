@@ -77,7 +77,9 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   // 店舗情報（写真・住所・営業時間）と、スタッフ呼び出しの項目。2026-09-15 に追加。
   // どちらも表示設定と同じく manage 群の末尾で、先頭には入れない
   { href: "/admin/store",     label: "店舗情報",       roles: ["manager"],                        group: "manage" },
-  { href: "/admin/staff-calls", label: "スタッフ呼び出し", roles: ["manager"],                    group: "manage" },
+  // スタッフ呼び出しの設定は**「表示設定 ＞ 機能設定」に統合した**（天真の指示 2026-09-15）。
+  // ON/OFF と中身の設定が別の場所にあると、どちらを触ればいいか分からなくなるため。
+  // 旧URL /admin/staff-calls は next.config.mjs のリダイレクトで /admin/display へ送る
   { href: "/admin/dashboard", label: "ダッシュボード", roles: ["manager"],                        group: "review" },
 ];
 // /admin/takeout（テイクアウト商品のCRUD）は /admin/menu に統合して廃止した。

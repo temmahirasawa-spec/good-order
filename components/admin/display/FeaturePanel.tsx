@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 使う機能のON/OFF（表示設定 ＞ 使う機能）
+ * 機能設定（表示設定 ＞ 機能設定）
  *
  * 2026-09-15、洋輔さんの依頼で追加。
  *   「厨房にiPadを置かないことになったので、厨房の画面を一旦使わないようにできますか？」
@@ -11,6 +11,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import ToggleSwitch from "@/components/ui/ToggleSwitch";
+import StaffCallSettingsModal from "@/components/admin/display/StaffCallSettingsModal";
 import {
   FEATURES_DEFAULT,
   fetchFeatureToggles,
@@ -38,6 +39,9 @@ export default function FeaturePanel() {
   const [saving, setSaving] = useState(false);
   const [done, setDone]     = useState(false);
   const [error, setError]   = useState<string | null>(null);
+  /* 呼び出しの中身（文言・アイコン・並び）はポップアップで設定する。
+     ON/OFF はここ、詳細はモーダル、と役割を分ける（天真の指示 2026-09-15） */
+  const [staffCallModal, setStaffCallModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,13 +92,27 @@ export default function FeaturePanel() {
       {ROWS.map(({ key, title, desc }) => (
         <div
           key={key}
-          className="flex items-center justify-between gap-[var(--space-16)] bg-surface-white rounded-[var(--radius-md)] border border-border px-[var(--space-16)] lg:px-[var(--space-20)] py-[var(--space-16)]"
+          className="flex flex-col gap-[var(--space-12)] bg-surface-white rounded-[var(--radius-md)] border border-border px-[var(--space-16)] lg:px-[var(--space-20)] py-[var(--space-16)]"
         >
-          <div className="flex flex-col gap-[var(--space-4)] min-w-0">
-            <p className="type-jp-body-bold text-text-primary">{title}</p>
-            <p className="type-jp-caption text-text-secondary">{desc}</p>
+          <div className="flex items-center justify-between gap-[var(--space-16)]">
+            <div className="flex flex-col gap-[var(--space-4)] min-w-0">
+              <p className="type-jp-body-bold text-text-primary">{title}</p>
+              <p className="type-jp-caption text-text-secondary">{desc}</p>
+            </div>
+            <ToggleSwitch on={draft[key]} onClick={() => toggle(key)} ariaLabel={title} />
           </div>
-          <ToggleSwitch on={draft[key]} onClick={() => toggle(key)} ariaLabel={title} />
+
+          {/* 使うときだけ、中身の設定へ入れるようにする。
+              使わないのに設定だけできても迷うので、OFF のときは出さない */}
+          {key === "staffCall" && draft.staffCall && (
+            <button
+              type="button"
+              onClick={() => setStaffCallModal(true)}
+              className="self-start bg-surface-white border border-border rounded-full h-[40px] px-[var(--space-20)] type-jp-caption-bold text-text-primary hover:bg-bg-secondary"
+            >
+              設定する
+            </button>
+          )}
         </div>
       ))}
 
@@ -117,6 +135,8 @@ export default function FeaturePanel() {
       <p className="type-jp-caption text-text-tertiary">
         オフにしても設定や過去のデータは消えません。いつでも戻せます。
       </p>
+
+      {staffCallModal && <StaffCallSettingsModal onClose={() => setStaffCallModal(false)} />}
     </div>
   );
 }

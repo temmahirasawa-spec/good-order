@@ -331,8 +331,8 @@ export default function DisplaySettingsPage() {
                   </p>
 
                   <SettingsSection
-                    title="使う機能"
-                    description="お店の運用に合わせて、使わない機能を隠します。"
+                    title="機能設定"
+                    description="お店の運用に合わせて、使う機能を切り替えます。"
                   >
                     <FeaturePanel />
                   </SettingsSection>

@@ -68,6 +68,14 @@ const nextConfig = {
         destination: "/admin/display",
         permanent: false,
       },
+      {
+        // スタッフ呼び出しの設定は「表示設定 ＞ 機能設定」に統合した（2026-09-15）。
+        // ON/OFF と中身の設定が別の場所にあると迷うため。
+        // permanent:false（307）なのは上2つと同じ理由。
+        source: "/admin/staff-calls",
+        destination: "/admin/display",
+        permanent: false,
+      },
     ];
   },
   images: {
