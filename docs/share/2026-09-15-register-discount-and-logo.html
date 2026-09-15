@@ -1,0 +1,175 @@
+<title>レジの金額とイラスト</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600&family=Noto+Sans+JP:wght@500;700&display=swap">
+<style>
+/* ── 色と書体はここだけ差し替える（題材のブランド色・書体を使う）── */
+:root{--accent:#5E6B4A;--accent-deep:#444D35;--accent-subtle:#E7E9E5;--ink:#1A1A1A;--sub:#5F6258;--t3:#8E9187;--line:#DCDED6;--bg:#F3F3F0;--paper:#FFFFFF;--old:#FAC03D;--jp:'Noto Sans JP',system-ui,sans-serif;--en:Barlow,'Noto Sans JP',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--accent:#97A67F;--accent-deep:#B9C6A4;--accent-subtle:#2C3126;--ink:#F2F2EE;--sub:#B9BCB2;--t3:#82857C;--line:#3A3D35;--bg:#1C1E19;--paper:#262923}}
+:root[data-theme="dark"]{--accent:#97A67F;--accent-deep:#B9C6A4;--accent-subtle:#2C3126;--ink:#F2F2EE;--sub:#B9BCB2;--t3:#82857C;--line:#3A3D35;--bg:#1C1E19;--paper:#262923}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:500 15px/1.8 var(--jp)}
+.wrap{max-width:1040px;margin:0 auto;padding:40px 24px 96px}
+/* ヘッダー */
+.hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-bottom:28px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:500 11px/1.4 var(--jp);letter-spacing:.06em;color:var(--sub)}
+h1{font:500 44px/1.05 var(--en);margin:6px 0 4px;letter-spacing:-.01em;text-wrap:balance}
+.jp{font:700 13px var(--jp);color:var(--sub);letter-spacing:.04em}
+.meta{font:600 13px var(--en);color:var(--sub);text-align:right;line-height:1.6;font-variant-numeric:tabular-nums}.meta b{display:block;font:600 20px var(--en);color:var(--ink)}
+/* サマリー */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0 0}
+.sum{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:6px}
+.sum .n{font:600 13px var(--en);color:var(--accent);letter-spacing:.08em}.sum .t{font:700 16px/1.4 var(--jp)}.sum p{margin:0;font-size:13px;color:var(--sub);line-height:1.6}
+/* セクション */
+section{margin-top:56px}
+.sh{display:flex;flex-direction:column;gap:2px;margin-bottom:18px}.sh .eye{font:500 11px var(--jp);letter-spacing:.06em;color:var(--sub)}.sh .en{font:500 34px/1.1 var(--en);letter-spacing:-.01em}.sh .ja{font:700 13px var(--jp);color:var(--sub)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.prose{max-width:62ch}.prose p{margin:0 0 12px}.prose ul{margin:0 0 12px;padding-left:20px}.prose li{margin:4px 0}
+.callout{border-left:3px solid var(--accent);background:var(--accent-subtle);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}.callout b{color:var(--accent-deep)}
+/* 画面カード */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:16px}.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.shot{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0}
+.shot .lab{display:flex;align-items:center;gap:8px;padding:10px 14px;font:700 12px var(--jp);border-bottom:1px solid var(--line)}
+.shot .lab span{font:600 10px var(--en);letter-spacing:.1em;padding:2px 7px;border-radius:999px;background:var(--accent);color:#fff}.shot .lab span.old{background:var(--old);color:#1A1A1A}
+.shot .im{max-height:560px;overflow-y:auto;background:var(--bg)}.shot img{display:block;width:100%}
+.shot .cap{padding:10px 14px;font-size:12px;color:var(--sub);line-height:1.6;border-top:1px solid var(--line)}
+/* 色チップ・表・次の順番 */
+.pal{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 18px}.chip{display:flex;flex-direction:column;gap:4px;width:96px;font:600 11px var(--en);color:var(--sub)}.chip i{display:block;height:44px;border-radius:8px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:700;color:var(--sub);font-size:12px}tr:last-child td{border-bottom:0}
+.next{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.next span{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700}.next i{color:var(--t3);font-style:normal}
+.foot{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--t3)}
+@media (max-width:760px){.wrap{padding:24px 16px 64px}.hero,.row,.ba,.summary,.shots{grid-template-columns:1fr}.meta{text-align:left}h1{font-size:34px}.sh .en{font-size:28px}.shot .im{max-height:480px}}
+
+.bill{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.billcard{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.billcard .lab{display:flex;align-items:center;gap:8px;padding:10px 14px;font:700 12px var(--jp);border-bottom:1px solid var(--line)}
+.billcard .lab span{font:600 10px var(--en);letter-spacing:.1em;padding:2px 7px;border-radius:999px;background:var(--accent);color:#fff}
+.billcard .lab span.old{background:var(--old);color:#1A1A1A}
+.billbody{padding:14px 16px}
+.bl{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--sub)}
+.bl b{font:600 14px var(--en);color:var(--ink)}
+.bl.disc{color:var(--accent-deep)}.bl.disc b{color:var(--accent-deep)}
+.bl.sum{border-top:1px solid var(--line);margin-top:8px;padding-top:10px;font:700 14px var(--jp);color:var(--ink)}
+.bl.sum b{font-size:20px}
+.bl.wrong b{color:var(--old-ink,#9A6B00)}
+.miss{font-size:12px;color:var(--t3);padding:5px 0;font-style:italic}
+.illu{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:16px 0}
+.illu .box{width:96px;height:96px;display:grid;place-items:center;border:1px dashed var(--line);border-radius:12px;background:var(--bg);flex:none}
+.illu .box img{width:72px;height:72px}
+.illu .box.ng{color:var(--t3);font:600 28px var(--en)}
+.illu .t{font:700 14px var(--jp);margin-bottom:4px}
+.illu p{margin:0;font-size:13px;color:var(--sub);line-height:1.7}
+.big{font:600 34px var(--en);color:var(--ink);line-height:1.1}
+table.tight th,table.tight td{white-space:nowrap;padding:8px 10px}
+.big small{display:block;font:700 12px var(--jp);color:var(--sub);margin-top:4px}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0}
+.kpi div{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+@media (max-width:760px){.bill,.kpi{grid-template-columns:1fr}}
+</style>
+<div class="wrap">
+
+<header class="hero">
+  <div>
+    <div class="eyebrow">GOOD ORDER — YORKYS BRUNCH 夙川店</div>
+    <h1>Register &amp; Logo</h1>
+    <div class="jp">レジに割引が反映されていなかった件と、イラストが出ていなかった件</div>
+  </div>
+  <div class="meta">2026.09.15<b>Fixed</b>平澤 天真（Claude Code 補助）</div>
+</header>
+
+<div class="summary">
+  <div class="sum"><div class="n">01 / AMOUNT</div><div class="t">レジの金額がずれていました</div><p>お客様にお見せした金額より高い額がレジに出ていました。ご指摘のとおりです。<b>すでに直っています。</b></p></div>
+  <div class="sum"><div class="n">02 / TODAY</div><div class="t">本日8件が該当します</div><p>うち7件はお会計済みです。実際にいくらお預かりしたかのご確認をお願いします。</p></div>
+  <div class="sum"><div class="n">03 / LOGO</div><div class="t">イラストも直しました</div><p>「ご注文を承りました」のイラストが出ていなかった件も、原因を特定して直しました。</p></div>
+</div>
+
+<section>
+  <div class="sh"><span class="eye">ご指摘 1</span><span class="en">THE AMOUNT</span><span class="ja">レジに割引が反映されていなかった</span></div>
+  <div class="prose">
+    <p>お送りいただいた写真の、テーブル席 A-3（受渡番号 #10）のご注文です。</p>
+  </div>
+  <div class="bill">
+    <div class="billcard">
+      <div class="lab"><span>OK</span>お客様の画面（正しい）</div>
+      <div class="billbody">
+        <div class="bl">小計（税抜）<b>¥3,430</b></div>
+        <div class="bl disc">セットドリンク割引<b>−¥200</b></div>
+        <div class="bl">消費税（10%）<b>¥323</b></div>
+        <div class="bl sum">合計（税込）<b>¥3,553</b></div>
+      </div>
+    </div>
+    <div class="billcard">
+      <div class="lab"><span class="old">BEFORE</span>レジの画面（ずれていた）</div>
+      <div class="billbody">
+        <div class="bl">小計（税抜）<b>¥3,430</b></div>
+        <div class="miss">（割引の行が出ていない）</div>
+        <div class="bl">消費税（10%）<b>¥343</b></div>
+        <div class="bl sum">合計（税込）<b>¥3,773</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="prose">
+    <div class="callout"><b>レジが、明細の金額から計算し直すだけで、割引を見ていませんでした。</b> 割引の行が出ないだけでなく、<b>合計そのものが 220円 高く</b>出ていました。</div>
+    <p><b>直した内容:</b> レジの合計は、ご注文が入った時点でシステムが確定させた金額（＝お客様にお見せした金額そのもの）をそのまま表示するようにしました。画面側で計算し直すのをやめたので、<b>お客様の画面とレジが食い違うことは無くなります。</b>割引のあるお会計には「セットドリンク割引 −¥200」の行も出ます。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">ご確認のお願い</span><span class="en">TODAY</span><span class="ja">本日、割引がついたご注文</span></div>
+  <div class="kpi">
+    <div><div class="big">8<small>割引がついたご注文</small></div></div>
+    <div><div class="big">7<small>うちお会計済み</small></div></div>
+    <div><div class="big">¥2,420<small>レジに多く出ていた額の合計</small></div></div>
+  </div>
+  <div class="prose">
+    <div class="callout"><b>お願い:</b> レジに出ていた額のままお預かりしていた場合、お客様に多くいただいてしまっている可能性があります。Squareの記録と突き合わせて、実際にいくらお預かりしたかをご確認ください。<b>金額のデータそのものは正しく記録されています</b>ので、さかのぼって確認できます。</div>
+    <table class="tight">
+      <tr><th>時刻</th><th>席</th><th>小計</th><th>割引</th><th>正しい合計</th><th>レジに出ていた額</th><th>差</th><th>状態</th></tr>
+      <tr><td>09:57</td><td>テーブル席 A-1</td><td>¥3,960</td><td>−¥200</td><td><b>¥4,136</b></td><td>¥4,356</td><td><b>+¥220</b></td><td>会計済み</td></tr>
+<tr><td>10:21</td><td>テーブル席 A-1</td><td>¥4,730</td><td>−¥400</td><td><b>¥4,763</b></td><td>¥5,203</td><td><b>+¥440</b></td><td>会計済み</td></tr>
+<tr><td>11:39</td><td>テーブル席 A-1</td><td>¥4,200</td><td>−¥400</td><td><b>¥4,180</b></td><td>¥4,620</td><td><b>+¥440</b></td><td>会計済み</td></tr>
+<tr><td>11:52</td><td>ボックス席 B-2</td><td>¥4,400</td><td>−¥200</td><td><b>¥4,620</b></td><td>¥4,840</td><td><b>+¥220</b></td><td>未会計</td></tr>
+<tr><td>11:56</td><td>テーブル席 A-6</td><td>¥2,530</td><td>−¥200</td><td><b>¥2,563</b></td><td>¥2,783</td><td><b>+¥220</b></td><td>会計済み</td></tr>
+<tr><td>12:28</td><td>テーブル席 A-2</td><td>¥1,890</td><td>−¥200</td><td><b>¥1,859</b></td><td>¥2,079</td><td><b>+¥220</b></td><td>会計済み</td></tr>
+<tr><td>12:30</td><td>テーブル席 A-3</td><td>¥3,430</td><td>−¥200</td><td><b>¥3,553</b></td><td>¥3,773</td><td><b>+¥220</b></td><td>会計済み</td></tr>
+<tr><td>12:39</td><td>テーブル席 A-4</td><td>¥4,310</td><td>−¥400</td><td><b>¥4,301</b></td><td>¥4,741</td><td><b>+¥440</b></td><td>会計済み</td></tr>
+    </table>
+    <p style="font-size:13px;color:var(--sub);margin-top:12px">「正しい合計」が、お客様の画面に出ていた金額です。修正後のレジはこの列と一致します。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">ご指摘 2</span><span class="en">THE LOGO</span><span class="ja">「ご注文を承りました」のイラスト</span></div>
+  <div class="illu">
+    <div class="box ng">?</div>
+    <div>
+      <div class="t">これまで（出ていなかった）</div>
+      <p>画像の置き場所の指定が1か所だけ間違っていて、存在しない場所を見に行っていました。</p>
+    </div>
+  </div>
+  <div class="illu">
+    <div class="box"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgaWQ9Ik1lbnUgQWNjb3JkaW9uL0lsbHVzdHJhdGlvbi9DaGVmIFNtaWxlIj4KPGcgaWQ9Ikdyb3VwIj4KPHBhdGggaWQ9IlZlY3RvciIgZD0iTTU0LjAwMDEgNTIuMTE1QzU0LjAwNTIgNTAuNzUyNSA1My42NjAxIDQ5LjQxMTUgNTIuOTk3OCA0OC4yMjA3QzUyLjMzNTYgNDcuMDI5OSA1MS4zNzgzIDQ2LjAyOTMgNTAuMjE4MSA0NS4zMTVDNDQuNzQxMSA0MS45MjExIDM4LjQ0MjggNDAuMDgzNiAzMi4wMDAxIDQwQzI1LjU1NzIgNDAuMDgzOSAxOS4yNTkgNDEuOTIxNyAxMy43ODIxIDQ1LjMxNkMxMi42MjE5IDQ2LjAzMDMgMTEuNjY0OCA0Ny4wMzA3IDExLjAwMjUgNDguMjIxMkMxMC4zNDAzIDQ5LjQxMTggOS45OTUwNiA1MC43NTI2IDEwLjAwMDEgNTIuMTE1VjYySDU0LjAwMDFWNTIuMTE1WiIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS1saW5lY2FwPSJzcXVhcmUiLz4KPHBhdGggaWQ9IlZlY3Rvcl8yIiBkPSJNMzIgNDBMMjguNjM2IDQxLjQ0MkMyNy41NTY5IDQxLjkwNDYgMjYuNjM3MyA0Mi42NzM1IDI1Ljk5MSA0My42NTM3QzI1LjM0NDcgNDQuNjMzOCAyNS4wMDAxIDQ1Ljc4MiAyNSA0Ni45NTZWNjIiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIi8+CjxwYXRoIGlkPSJWZWN0b3JfMyIgZD0iTTMyIDQ4QzMyLjU1MjMgNDggMzMgNDcuNTUyMyAzMyA0N0MzMyA0Ni40NDc3IDMyLjU1MjMgNDYgMzIgNDZDMzEuNDQ3NyA0NiAzMSA0Ni40NDc3IDMxIDQ3QzMxIDQ3LjU1MjMgMzEuNDQ3NyA0OCAzMiA0OFoiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIi8+CjxwYXRoIGlkPSJWZWN0b3JfNCIgZD0iTTMyIDQ4QzMyLjU1MjMgNDggMzMgNDcuNTUyMyAzMyA0N0MzMyA0Ni40NDc3IDMyLjU1MjMgNDYgMzIgNDZDMzEuNDQ3NyA0NiAzMSA0Ni40NDc3IDMxIDQ3QzMxIDQ3LjU1MjMgMzEuNDQ3NyA0OCAzMiA0OFoiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGlkPSJWZWN0b3JfNSIgZD0iTTMyIDU2QzMyLjU1MjMgNTYgMzMgNTUuNTUyMyAzMyA1NUMzMyA1NC40NDc3IDMyLjU1MjMgNTQgMzIgNTRDMzEuNDQ3NyA1NCAzMSA1NC40NDc3IDMxIDU1QzMxIDU1LjU1MjMgMzEuNDQ3NyA1NiAzMiA1NloiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIi8+CjxwYXRoIGlkPSJWZWN0b3JfNiIgZD0iTTMyIDU2QzMyLjU1MjMgNTYgMzMgNTUuNTUyMyAzMyA1NUMzMyA1NC40NDc3IDMyLjU1MjMgNTQgMzIgNTRDMzEuNDQ3NyA1NCAzMSA1NC40NDc3IDMxIDU1QzMxIDU1LjU1MjMgMzEuNDQ3NyA1NiAzMiA1NloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGlkPSJWZWN0b3JfNyIgZD0iTTQyIDI0VjMwQzQyIDMyLjY1MjIgNDAuOTQ2NCAzNS4xOTU3IDM5LjA3MTEgMzcuMDcxMUMzNy4xOTU3IDM4Ljk0NjQgMzQuNjUyMiA0MCAzMiA0MEMyOS4zNDc4IDQwIDI2LjgwNDMgMzguOTQ2NCAyNC45Mjg5IDM3LjA3MTFDMjMuMDUzNiAzNS4xOTU3IDIyIDMyLjY1MjIgMjIgMzBWMjQiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBzdHJva2UtbGluZWNhcD0ic3F1YXJlIi8+CjxwYXRoIGlkPSJWZWN0b3JfOCIgZD0iTTQyLjAwMDIgNEM0MC42OTQ2IDQuMDAzNzEgMzkuNDI2NiA0LjQzNzM5IDM4LjM5MjIgNS4yMzRDMzcuNjU1IDQuMjMxNDQgMzYuNjkyNCAzLjQxNjM1IDM1LjU4MiAyLjg1NDU3QzM0LjQ3MTYgMi4yOTI3OSAzMy4yNDQ2IDIuMDAwMDcgMzIuMDAwMiAyLjAwMDA3QzMwLjc1NTggMi4wMDAwNyAyOS41Mjg5IDIuMjkyNzkgMjguNDE4NSAyLjg1NDU3QzI3LjMwODEgMy40MTYzNSAyNi4zNDU0IDQuMjMxNDQgMjUuNjA4MiA1LjIzNEMyNC44NTAzIDQuNjU5NjcgMjMuOTY2NSA0LjI3NDAzIDIzLjAzIDQuMTA4OTZDMjIuMDkzNCAzLjk0Mzg4IDIxLjEzMTEgNC4wMDQxMyAyMC4yMjI0IDQuMjg0N0MxOS4zMTM4IDQuNTY1MjcgMTguNDg1IDUuMDU4MTIgMTcuODA0NiA1LjcyMjQ4QzE3LjEyNDIgNi4zODY4NCAxNi42MTE3IDcuMjAzNjMgMTYuMzA5NSA4LjEwNTMxQzE2LjAwNzQgOS4wMDY5OSAxNS45MjQyIDkuOTY3NjUgMTYuMDY2OCAxMC45MDc4QzE2LjIwOTUgMTEuODQ4IDE2LjU3NCAxMi43NDA4IDE3LjEzIDEzLjUxMjJDMTcuNjg2MSAxNC4yODM3IDE4LjQxNzggMTQuOTExNiAxOS4yNjQ3IDE1LjM0NDJDMjAuMTExNiAxNS43NzY4IDIxLjA0OTMgMTYuMDAxNiAyMi4wMDAyIDE2VjI0SDQyLjAwMDJWMTZDNDMuNTkxNSAxNiA0NS4xMTc2IDE1LjM2NzkgNDYuMjQyOSAxNC4yNDI2QzQ3LjM2ODEgMTMuMTE3NCA0OC4wMDAyIDExLjU5MTMgNDguMDAwMiAxMEM0OC4wMDAyIDguNDA4NyA0Ny4zNjgxIDYuODgyNTggNDYuMjQyOSA1Ljc1NzM2QzQ1LjExNzYgNC42MzIxNCA0My41OTE1IDQgNDIuMDAwMiA0WiIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS1saW5lY2FwPSJzcXVhcmUiLz4KPHBhdGggaWQ9IlZlY3Rvcl85IiBkPSJNMjggMjRWMTkiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLW1pdGVybGltaXQ9IjEwIiBzdHJva2UtbGluZWNhcD0ic3F1YXJlIi8+CjxwYXRoIGlkPSJWZWN0b3JfMTAiIGQ9Ik0zNiAyNFYxOSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbWl0ZXJsaW1pdD0iMTAiIHN0cm9rZS1saW5lY2FwPSJzcXVhcmUiLz4KPC9nPgo8L2c+Cjwvc3ZnPgo=" alt="シェフのイラスト"></div>
+    <div>
+      <div class="t">これから（本番で表示を確認済み）</div>
+      <p>指定を直しました。上の絵は、実際に公開中のサイトから取ってきたものです。</p>
+    </div>
+  </div>
+  <div class="prose">
+    <p>同じ間違いが他にないか、サイト全体を調べました。<b>この1か所だけ</b>でした。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">これから</span><span class="en">NEXT</span><span class="ja">状態とお願い</span></div>
+  <div class="next"><span>2件とも修正済み</span><i>→</i><span>iPadを開き直す</span><i>→</i><span>本日の8件を突き合わせ</span></div>
+  <table style="margin-top:18px">
+    <tr><th>項目</th><th>状態</th></tr>
+    <tr><td>レジに割引が反映されない</td><td><b>修正済み・本番に反映済み</b></td></tr>
+    <tr><td>完了画面のイラスト</td><td><b>修正済み・本番で表示を確認済み</b></td></tr>
+    <tr><td>本日の8件のお会計</td><td><b>ご確認をお願いします</b>（上の表）</td></tr>
+    <tr><td>お客様の画面・厨房・伝票</td><td>変更していません</td></tr>
+  </table>
+  <div class="prose" style="margin-top:16px">
+    <p>レジのiPadは、一度画面を開き直してください。次に割引のついたお会計が出たときに、「セットドリンク割引」の行が出て、合計がお客様の画面と同じになっているかを見ていただけると確実です。</p>
+  </div>
+</section>
+
+<div class="foot">作成: 平澤 天真（Claude Code 補助） ／ 表の数字は本番のデータから取り出した実際の値です ／ 仕様: docs/specs/set-drink-discount.md</div>
+</div>
