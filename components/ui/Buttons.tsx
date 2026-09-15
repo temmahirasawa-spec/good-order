@@ -116,11 +116,15 @@ export function ViewCartButton({
       aria-label={count > 0 ? `カートを見る（${count}点）` : "カートを見る"}
       className={`btn-pill flex gap-[var(--space-8)] h-[var(--size-control-lg)] items-center justify-center rounded-full bg-accent-primary active:bg-accent-pressed w-full shadow-[var(--shadow-card)] ${className}`}
     >
-      <span className="relative block w-[26px] h-[22px] shrink-0">
-        <Icon name="cart" className="absolute left-0 top-[6px] w-4 h-4 text-accent-contrast" />
+      {/* ⚠ バッジは**寸法を決めて中央寄せ**にする（min-w/h ＋ flex ＋ leading-none）。
+          padding と leading-normal で成り行きにすると、10px の文字の行高のぶん
+          縦だけ伸びて楕円になり、アイコンに大きくかぶる（2026-09-16、洋輔さんが発見）。
+          カートアイコンのバッジ（CartIconButton）と同じ作り。 */}
+      <span className="relative block w-[28px] h-[24px] shrink-0">
+        <Icon name="cart" className="absolute left-0 bottom-0 w-[18px] h-[18px] text-accent-contrast" />
         {count > 0 && (
-          <span className="absolute left-[10px] top-0 bg-surface-white rounded-full px-[5px] py-px">
-            <span className="font-en font-semibold text-[10px] leading-normal text-text-primary whitespace-nowrap tabular-nums">
+          <span className="absolute right-0 top-0 flex items-center justify-center bg-surface-white rounded-full min-w-[16px] h-[16px] px-[4px]">
+            <span className="font-en font-semibold text-[10px] leading-none text-text-primary whitespace-nowrap tabular-nums">
               {count}
             </span>
           </span>
