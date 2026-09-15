@@ -1,0 +1,177 @@
+<title>消費税の設定</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600&family=Noto+Sans+JP:wght@500;700&display=swap">
+<style>
+/* ── 色と書体はここだけ差し替える（題材のブランド色・書体を使う）── */
+:root{--accent:#5E6B4A;--accent-deep:#444D35;--accent-subtle:#E7E9E5;--ink:#1A1A1A;--sub:#5F6258;--t3:#8E9187;--line:#DCDED6;--bg:#F3F3F0;--paper:#FFFFFF;--old:#FAC03D;--jp:'Noto Sans JP',system-ui,sans-serif;--en:Barlow,'Noto Sans JP',sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--accent:#97A67F;--accent-deep:#B9C6A4;--accent-subtle:#2C3126;--ink:#F2F2EE;--sub:#B9BCB2;--t3:#82857C;--line:#3A3D35;--bg:#1C1E19;--paper:#262923}}
+:root[data-theme="dark"]{--accent:#97A67F;--accent-deep:#B9C6A4;--accent-subtle:#2C3126;--ink:#F2F2EE;--sub:#B9BCB2;--t3:#82857C;--line:#3A3D35;--bg:#1C1E19;--paper:#262923}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:500 15px/1.8 var(--jp)}
+.wrap{max-width:1040px;margin:0 auto;padding:40px 24px 96px}
+/* ヘッダー */
+.hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-bottom:28px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:500 11px/1.4 var(--jp);letter-spacing:.06em;color:var(--sub)}
+h1{font:500 44px/1.05 var(--en);margin:6px 0 4px;letter-spacing:-.01em;text-wrap:balance}
+.jp{font:700 13px var(--jp);color:var(--sub);letter-spacing:.04em}
+.meta{font:600 13px var(--en);color:var(--sub);text-align:right;line-height:1.6;font-variant-numeric:tabular-nums}.meta b{display:block;font:600 20px var(--en);color:var(--ink)}
+/* サマリー */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0 0}
+.sum{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:6px}
+.sum .n{font:600 13px var(--en);color:var(--accent);letter-spacing:.08em}.sum .t{font:700 16px/1.4 var(--jp)}.sum p{margin:0;font-size:13px;color:var(--sub);line-height:1.6}
+/* セクション */
+section{margin-top:56px}
+.sh{display:flex;flex-direction:column;gap:2px;margin-bottom:18px}.sh .eye{font:500 11px var(--jp);letter-spacing:.06em;color:var(--sub)}.sh .en{font:500 34px/1.1 var(--en);letter-spacing:-.01em}.sh .ja{font:700 13px var(--jp);color:var(--sub)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.prose{max-width:62ch}.prose p{margin:0 0 12px}.prose ul{margin:0 0 12px;padding-left:20px}.prose li{margin:4px 0}
+.callout{border-left:3px solid var(--accent);background:var(--accent-subtle);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}.callout b{color:var(--accent-deep)}
+/* 画面カード */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:16px}.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.shot{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0}
+.shot .lab{display:flex;align-items:center;gap:8px;padding:10px 14px;font:700 12px var(--jp);border-bottom:1px solid var(--line)}
+.shot .lab span{font:600 10px var(--en);letter-spacing:.1em;padding:2px 7px;border-radius:999px;background:var(--accent);color:#fff}.shot .lab span.old{background:var(--old);color:#1A1A1A}
+.shot .im{max-height:560px;overflow-y:auto;background:var(--bg)}.shot img{display:block;width:100%}
+.shot .cap{padding:10px 14px;font-size:12px;color:var(--sub);line-height:1.6;border-top:1px solid var(--line)}
+/* 色チップ・表・次の順番 */
+.pal{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 18px}.chip{display:flex;flex-direction:column;gap:4px;width:96px;font:600 11px var(--en);color:var(--sub)}.chip i{display:block;height:44px;border-radius:8px;border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:700;color:var(--sub);font-size:12px}tr:last-child td{border-bottom:0}
+.next{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.next span{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700}.next i{color:var(--t3);font-style:normal}
+.foot{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--t3)}
+@media (max-width:760px){.wrap{padding:24px 16px 64px}.hero,.row,.ba,.summary,.shots{grid-template-columns:1fr}.meta{text-align:left}h1{font-size:34px}.sh .en{font-size:28px}.shot .im{max-height:480px}}
+
+.bill{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.billcard{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.billcard .lab{display:flex;align-items:center;gap:8px;padding:10px 14px;font:700 12px var(--jp);border-bottom:1px solid var(--line)}
+.billcard .lab span{font:600 10px var(--en);letter-spacing:.1em;padding:2px 7px;border-radius:999px;background:var(--accent);color:#fff}
+.billcard .lab span.old{background:var(--old);color:#1A1A1A}
+.billbody{padding:14px 16px}
+.bl{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13px;color:var(--sub)}
+.bl b{font:600 14px var(--en);color:var(--ink)}
+.bl.disc{color:var(--accent-deep)}.bl.disc b{color:var(--accent-deep)}
+.bl.sum{border-top:1px solid var(--line);margin-top:8px;padding-top:10px;font:700 14px var(--jp);color:var(--ink)}
+.bl.sum b{font-size:20px}
+.bl.note{justify-content:flex-end;font-size:12px;color:var(--t3);padding-top:2px}
+.opt{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.optcard{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px}
+.optcard.pick{border-color:var(--accent);border-width:2px}
+.optcard h3{margin:0 0 4px;font:700 16px var(--jp)}
+.optcard .tag{display:inline-block;font:700 11px var(--jp);padding:3px 10px;border-radius:999px;background:var(--accent);color:#fff;margin-bottom:8px}
+.optcard p{margin:0 0 10px;font-size:13px;color:var(--sub);line-height:1.7}
+.optcard table{font-size:12px}
+table.tight th,table.tight td{white-space:nowrap;padding:8px 10px}
+@media (max-width:760px){.bill,.opt{grid-template-columns:1fr}}
+</style>
+<div class="wrap">
+
+<header class="hero">
+  <div>
+    <div class="eyebrow">GOOD ORDER — YORKYS BRUNCH 夙川店</div>
+    <h1>Tax Settings</h1>
+    <div class="jp">内税・外税を選べるようにし、二重に税がかかっていたのを直しました</div>
+  </div>
+  <div class="meta">2026.09.15<b>Fixed</b>平澤 天真（Claude Code 補助）</div>
+</header>
+
+<div class="summary">
+  <div class="sum"><div class="n">01 / ISSUE</div><div class="t">税が二重にかかっていました</div><p>税込で登録された価格に、さらに10%を足していました。ご指摘のとおりです。</p></div>
+  <div class="sum"><div class="n">02 / FIX</div><div class="t">内税に設定しました</div><p>登録した価格が、そのままお支払い額になります。<b>すでに直っています。</b></p></div>
+  <div class="sum"><div class="n">03 / SETTING</div><div class="t">切り替えられます</div><p>管理画面に「税の設定」を新しく作りました。内税・外税と、店内10%・持ち帰り8%を設定できます。</p></div>
+</div>
+
+<section>
+  <div class="sh"><span class="eye">ご指摘</span><span class="en">THE ISSUE</span><span class="ja">税が二重にかかっていました</span></div>
+  <div class="prose">
+    <p>お送りいただいた画面の、パンケーキ2品とアメリカーノのご注文です。</p>
+  </div>
+  <div class="bill">
+    <div class="billcard">
+      <div class="lab"><span class="old">BEFORE</span>これまで（税が二重）</div>
+      <div class="billbody">
+        <div class="bl">小計<b>¥3,430</b></div>
+        <div class="bl disc">セットドリンク割引<b>−¥200</b></div>
+        <div class="bl">消費税（10%）<b>¥323</b></div>
+        <div class="bl sum">合計<b>¥3,553</b></div>
+      </div>
+    </div>
+    <div class="billcard">
+      <div class="lab"><span>AFTER</span>これから（内税）</div>
+      <div class="billbody">
+        <div class="bl">小計（税込）<b>¥3,430</b></div>
+        <div class="bl disc">セットドリンク割引<b>−¥200</b></div>
+        <div class="bl sum">合計<b>¥3,230</b></div>
+        <div class="bl note">うち消費税（10%） ¥293</div>
+      </div>
+    </div>
+  </div>
+  <div class="prose">
+    <div class="callout"><b>価格を税込で登録されているのに、システムが「税抜」として扱って10%を足していました。</b> ¥3,230 でよいところを ¥3,553 と出していた、ということです。</div>
+    <p><b>プレオープン前でしたので、お客様への影響はありません。</b>これまでの19件はすべて動作確認用のご注文でした。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">新しい設定</span><span class="en">INCLUDED OR NOT</span><span class="ja">内税と外税、どちらにもできます</span></div>
+  <div class="opt">
+    <div class="optcard pick">
+      <span class="tag">いまこちらに設定しています</span>
+      <h3>内税</h3>
+      <p>メニューに登録した価格が、消費税を含んだ金額です。<b>登録した価格が、そのままお支払い額になります。</b>消費税は内訳として表示します。</p>
+      <table><tr><th>登録価格</th><th>店内</th><th>持ち帰り</th></tr>
+      <tr><td>¥1,870</td><td>¥1,870<br><span style="color:var(--t3)">うち税 ¥170</span></td><td>¥1,870<br><span style="color:var(--t3)">うち税 ¥138</span></td></tr></table>
+    </div>
+    <div class="optcard">
+      <h3>外税</h3>
+      <p>メニューに登録した価格は税抜です。お会計のときに消費税を加算します。<b>お支払い額は価格より高くなります。</b></p>
+      <table><tr><th>登録価格</th><th>店内</th><th>持ち帰り</th></tr>
+      <tr><td>¥1,870</td><td>¥2,057<br><span style="color:var(--t3)">税 ¥187</span></td><td>¥2,019<br><span style="color:var(--t3)">税 ¥149</span></td></tr></table>
+    </div>
+  </div>
+  <div class="prose">
+    <div class="callout"><b>軽減税率にも対応しました。</b> テイクアウトは8%、店内飲食は10%です。<br><br>内税の場合、<b>店内でもテイクアウトでもお客様のお支払い額は変わりません。</b>変わるのはレシートに出る消費税の内訳だけです。外税の場合は、お支払い額そのものが変わります。</div>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">操作</span><span class="en">WHERE</span><span class="ja">設定を変えるところ</span></div>
+  <div class="prose">
+    <p>管理画面のサイドバー、<b>「表示設定」の下に「税の設定」</b>を新しく作りました。店長のアカウントでのみ開けます。</p>
+    <ul>
+      <li><b>内税 / 外税</b> をどちらか選ぶ</li>
+      <li><b>店内飲食の税率</b>（いま 10%）と <b>テイクアウトの税率</b>（いま 8%）</li>
+      <li><b>「この設定だと、こうなります」</b> — ¥1,870 の商品を店内・持ち帰りでご注文いただいた場合のお支払い額を、設定を変えるたびにその場で表示します。保存する前に確かめられます</li>
+    </ul>
+    <div class="callout">変更は、<b>これから入るご注文に適用されます。</b>すでに入っているご注文の金額は変わりません。営業中に切り替えても、途中で混ざることはありません。</div>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">確認しました</span><span class="en">VERIFIED</span><span class="ja">4パターンすべて検算しました</span></div>
+  <div class="prose">
+    <p>お送りいただいたご注文（小計 ¥3,430・割引 −¥200）で、設定ごとの金額を本番で確かめました。</p>
+    <table class="tight">
+      <tr><th>設定</th><th>お支払い額</th><th>消費税</th></tr>
+      <tr><td><b>内税・店内 10%</b></td><td><b>¥3,230</b></td><td>うち ¥293</td></tr>
+      <tr><td>内税・持ち帰り 8%</td><td>¥3,230</td><td>うち ¥239</td></tr>
+      <tr><td>外税・店内 10%</td><td>¥3,553</td><td>¥323</td></tr>
+      <tr><td>外税・持ち帰り 8%</td><td>¥3,488</td><td>¥258</td></tr>
+    </table>
+    <p style="font-size:13px;color:var(--sub);margin-top:12px">実際にご注文を通す処理も動かして、正しい金額で保存されることを確認しました（確認用のデータは残していません）。</p>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">これから</span><span class="en">NEXT</span><span class="ja">明日のプレオープンに向けて</span></div>
+  <div class="next"><span>修正を反映済み</span><i>→</i><span>iPadを開き直す</span><i>→</i><span>1件テスト注文</span><i>→</i><span>プレオープン</span></div>
+  <table style="margin-top:18px">
+    <tr><th>項目</th><th>状態</th></tr>
+    <tr><td>税の二重がけ</td><td><b>修正済み・本番に反映済み</b></td></tr>
+    <tr><td>いまの設定</td><td><b>内税 / 店内10% / テイクアウト8%</b></td></tr>
+    <tr><td>内税・外税の切り替え</td><td>管理画面「税の設定」からいつでも</td></tr>
+    <tr><td>レシートの税率ごとの内訳</td><td>データは記録を始めました。レシート印刷を作るときに反映します</td></tr>
+  </table>
+  <div class="prose" style="margin-top:16px">
+    <p><b>お願い:</b> 明日の前に一度、実際にご注文を1件通していただけると確実です。ご注文画面の合計と、レジ画面の合計が、メニューに登録された価格どおりになっているかをご確認ください。</p>
+    <p>もし「外税で運用したい」ということでしたら、管理画面から切り替えるだけです。その場合はメニューの価格を税抜に入れ直していただく必要があります。</p>
+  </div>
+</section>
+
+<div class="foot">作成: 平澤 天真（Claude Code 補助） ／ 金額はすべて本番のシステムで実際に計算した値です ／ 仕様: docs/specs/tax-mode.md</div>
+</div>
