@@ -62,8 +62,23 @@ type Selection =
   | { kind: "table"; key: string }
   | { kind: "takeout"; orderId: string };
 
-function tableKey(o: { table_id: string | null; table_number: number }): string {
-  return o.table_id ?? `n${o.table_number}`;
+/**
+ * ⚠ **table_id が無いときに table_number だけで束ねてはいけない。**
+ * 席設定を作り直すと古い卓の行が消える（save_table_layout が DELETE する）。
+ * そのとき place_order は注文を落とさず table_id を NULL にして通すが
+ * （supabase/order_stale_table_id.sql）、いまの注文は table_number が
+ * どれも 0 なので、`n0` で束ねると**別のお客様の伝票が合流してしまう**。
+ * ラベル（"テーブル席 A-1"）を先に見て、席ごとに分かれるようにしている。
+ */
+function tableKey(o: {
+  table_id: string | null;
+  table_number: number;
+  table_label: string | null;
+}): string {
+  if (o.table_id) return o.table_id;
+  const label = o.table_label?.trim();
+  if (label) return `l${label}`;
+  return `n${o.table_number}`;
 }
 
 export default function RegisterPage() {

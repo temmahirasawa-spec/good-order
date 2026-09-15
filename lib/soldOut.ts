@@ -118,20 +118,31 @@ export function unavailableIdsIn(
 }
 
 /**
- * place_order が「注文の中身が今のメニューと合わない」で弾いたか。
- * 外部キー違反（商品が消えている）と、明細・オプションの検証エラーをまとめて見る。
- * **これは通信エラーではないので、再送しても直らない。**
+ * place_order が「**カートの商品が今のメニューに無い**」で弾いたか。
+ * これは通信エラーではないので、再送しても直らない。
+ * お客様には「その行を消してください」と伝えるので、
+ * **消せば直るものだけ**をここで true にする。
+ *
+ * ⚠ **外部キー違反（23503）を丸ごと true にしてはいけない。**
+ * 2026-09-16 にそれで誤診した。実際に起きていたのは
+ * `orders_table_id_fkey`（席設定の作り直しで卓の行が消えた）で、商品は無関係だった。
+ * それなのに「お取り扱いが終わった商品が含まれています」と出したため、
+ * お客様は**削除しても直らない対処**を指示され続けた。
+ * 見るのは order_items の menu_item_id の違反だけにする。
+ * （卓の方は supabase/order_stale_table_id.sql でサーバー側が救済するので、
+ *   そもそもここには来ない）
  */
 export function isUnavailableError(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false;
-  const e = err as { code?: string; message?: string };
-  if (e.code === "23503") return true;   // foreign_key_violation = 商品が存在しない
-  const m = e.message ?? "";
-  return (
-    m.includes("選べないオプション") ||
-    m.includes("明細の数量・単価・商品IDが不正") ||
-    m.includes("violates foreign key constraint")
-  );
+  const e = err as { code?: string; message?: string; details?: string };
+  const text = `${e.message ?? ""} ${e.details ?? ""}`;
+  // オプションが消えた（その行を消せば直る）
+  if (text.includes("選べないオプション")) return true;
+  // 商品そのものが消えた。**卓（table_id）の違反と取り違えない**
+  if (e.code === "23503" || text.includes("violates foreign key constraint")) {
+    return text.includes("menu_item_id") || text.includes("order_items");
+  }
+  return false;
 }
 
 /** Supabase のエラーが place_order の「売り切れ」拒否か */
