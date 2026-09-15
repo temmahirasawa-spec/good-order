@@ -7,8 +7,13 @@
  * 以前は `/order/item/[id]` へのページ遷移だったが、遷移のたびに一覧が
  * アンマウントされるため「戻るとスクロール位置が失われる」「閉じるアニメ中に
  * 一覧が居らず背景色しか出ない」という2つの問題が構造的に避けられなかった。
- * 一覧を出したまま重ねることで、右から出て右へ引っ込む動きの下に
+ * 一覧を出したまま重ねることで、下から出て下へ引っ込む動きの下に
  * ずっと元の画面が見えている状態になる。
+ *
+ * **ハーフモーダル**（2026-09-16、天真の決定）。以前は右から出る全画面で、
+ * ハンバーガーメニュー（AppDrawer）と器がまったく同じだったため、
+ * どちらが主でどちらが従か分からなくなっていた。詳細は従なので下から出す。
+ * 閉じ方は3つ: 右上の ×／下へスワイプ／グレーの部分をタップ。
  *
  * `app/order/layout.tsx` に置いてあるので、TOP・カテゴリ一覧・テイクアウトの
  * どのページから開いても同じ1つのオーバーレイが使われる。
@@ -17,7 +22,7 @@
  * スライドアニメ中は祖先に transform が乗るので、fixed だとビューポート基準で
  * なくなって一瞬ズレるため。
  */
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import HeaderIconButton from "@/components/ui/HeaderIconButton";
 import CartIconButton from "@/components/ui/CartIconButton";
@@ -55,8 +60,13 @@ import {
 } from "@/lib/menuOptions";
 import type { MenuItem } from "@/lib/menu";
 
-/* .page-slide-out-right（app/globals.css）のアニメ時間と合わせる */
-const CLOSE_ANIM_MS = 260;
+/* 下から出る 380ms / 下へ引っ込む 220ms。StaffCallSheet と同じ数値にそろえている
+   （アプリ内でシートの出方が1種類になるように） */
+const OPEN_MS  = 380;
+const CLOSE_MS = 220;
+/* この距離より下へ引いたら閉じる。速く弾いた場合は距離が足りなくても閉じる */
+const CLOSE_DRAG_PX = 120;
+const CLOSE_FLICK_V = 0.6;
 /* セレクタが毎回新しい配列を返すと再描画が止まらないので、空は共有の定数にする */
 const EMPTY_OPTIONS: MenuOption[] = [];
 
@@ -80,7 +90,15 @@ function OverlayContent() {
   const totalItems   = useCartStore((s) => s.totalItems());
   const setOverlay   = useUiStore((s) => s.setOverlay);
 
-  const [closing, setClosing] = useState(false);
+  /* シートの出入り。visible=false で画面の下（translateY(100%)）に居る */
+  const [visible, setVisible]   = useState(false);
+  /* 下スワイプ中の移動量(px)。指に追従させるためだけの値 */
+  const [dragY, setDragY]       = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragYRef   = useRef(0);
+  const closingRef = useRef(false);
+  const sheetRef   = useRef<HTMLDivElement>(null);
+  const scrollRef  = useRef<HTMLDivElement>(null);
   /* ステッパーは「何個入れるか」の下書き。0個追加は意味がないので下限は1 */
   const [draftQty, setDraftQty] = useState(1);
   /* 提供タイミングの下書き。null は「区分の初期値のまま」 */
@@ -113,14 +131,24 @@ function OverlayContent() {
     .map(toSelected);
   const unitPriceWithOptions = (item?.price ?? 0) + optionsTotal(selectedOptions);
 
-  /* 開くたびに数量を1へ戻し、この開き方が history.back() で閉じられるかを覚える */
+  /* 開くたびに数量を1へ戻し、この開き方が history.back() で閉じられるかを覚える。
+     商品が変わったときも通るので、おすすめから移った直後はここで先頭までスクロールを戻す。
+     visible は**次のフレームで**立てる。同じフレームで true にすると
+     translateY(100%) → 0 の差分が生まれず、アニメーションが再生されない */
   useEffect(() => {
-    if (!itemId) return;
+    if (!itemId) {
+      setVisible(false);
+      return;
+    }
     setDraftQty(1);
     setDraftTiming(null);
     setDraftOptionIds(null);
-    setClosing(false);
+    setDragY(0);
+    dragYRef.current = 0;
     openedByPushRef.current = takePushedByApp() || openedByPushRef.current;
+    scrollRef.current?.scrollTo({ top: 0 });
+    const raf = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(raf);
   }, [itemId]);
 
   /* 開いている間はカートのFABを隠し、背面の一覧をスクロールさせない */
@@ -135,11 +163,15 @@ function OverlayContent() {
     };
   }, [itemId, setOverlay]);
 
-  if (!itemId) return null;
-
-  const close = () => {
-    if (closing) return;
-    setClosing(true);
+  /* シートを下へ引っ込めてから、実際に閉じる。
+     ここは touch のリスナーからも呼ぶので useCallback で安定させている */
+  const close = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setDragging(false);
+    setDragY(0);
+    dragYRef.current = 0;
+    setVisible(false);
     setTimeout(() => {
       /* アプリが積んだ履歴なら戻す（ブラウザの戻るボタンと挙動を揃える）。
          直リンクで開かれた場合は戻り先がアプリ外なので、パラメータだけ落とす。 */
@@ -148,10 +180,93 @@ function OverlayContent() {
         window.history.back();
       } else {
         stripItemParam();
-        setClosing(false);
       }
-    }, CLOSE_ANIM_MS);
-  };
+      closingRef.current = false;
+    }, CLOSE_MS);
+  }, []);
+
+  /* おすすめから別の商品へ。天真の決定（2026-09-16）で、
+     **いったん下へ引っ込めてから新しい商品で出し直す**。
+     履歴は置き換えなので（lib/itemOverlay.ts）、何回たどっても × 一発で一覧に戻る */
+  const goToItem = useCallback((id: string) => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setDragging(false);
+    setDragY(0);
+    dragYRef.current = 0;
+    setVisible(false);
+    setTimeout(() => {
+      openItemDetail(id, { replace: true });
+      closingRef.current = false;
+    }, CLOSE_MS);
+  }, []);
+
+  /* 下スワイプで閉じる。
+     ⚠ **中身が先頭にあるときだけ**ドラッグを始める。そうしないと、
+     記事を読み下げている途中の指の動きでシートが閉じてしまう。
+     touchmove は preventDefault したいので、React の onTouchMove ではなく
+     addEventListener({ passive: false }) で付ける */
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (!el || !itemId) return;
+
+    let active = false;
+    let startY = 0;
+    let lastY = 0;
+    let lastT = 0;
+    let velocity = 0;
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1 || closingRef.current) return;
+      if ((scrollRef.current?.scrollTop ?? 0) > 0) return;
+      active = true;
+      startY = lastY = e.touches[0].clientY;
+      lastT = e.timeStamp;
+      velocity = 0;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!active) return;
+      const y = e.touches[0].clientY;
+      const dy = y - startY;
+      if (dy <= 0) {
+        /* 上向きは通常のスクロールに任せる */
+        if (dragYRef.current !== 0) { dragYRef.current = 0; setDragY(0); }
+        return;
+      }
+      e.preventDefault();
+      const dt = e.timeStamp - lastT;
+      if (dt > 0) velocity = (y - lastY) / dt;
+      lastY = y;
+      lastT = e.timeStamp;
+      dragYRef.current = dy;
+      setDragging(true);
+      setDragY(dy);
+    };
+    const onEnd = () => {
+      if (!active) return;
+      active = false;
+      setDragging(false);
+      if (dragYRef.current > CLOSE_DRAG_PX || velocity > CLOSE_FLICK_V) {
+        close();
+      } else {
+        dragYRef.current = 0;
+        setDragY(0);
+      }
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [itemId, close]);
+
+  if (!itemId) return null;
 
   const label = item ? resolveCategoryLabel(categories, item.subcategory) : "";
   const color = item ? resolveTagColor(categories, item.subcategory) : "yellow";
@@ -162,18 +277,48 @@ function OverlayContent() {
   const soldOut = item?.isSoldOut === true;
 
   return (
-    /* 高さは inset-0（＝レイアウトビューポート）ではなく h-viewport（dvh）で取る。
-       モバイルのアドレスバーが引っ込むと表示領域だけが広がるので、inset-0 のままだと
-       下部バーの下に隙間が空いて背面の一覧が透けて見えてしまう。 */
+    /* ── ハーフモーダル（2026-09-16、天真の決定）──
+       それまでは右から出る**全画面**で、ハンバーガーメニューと見分けが付かなかった。
+       詳細はあくまでサブなので、下から出るシートにして主従を分けている。
+       器（グレーのオーバーレイ / rounded-t / translateY / 時間）は
+       StaffCallSheet・StoreInfoModal と同じ作りにそろえた。
+
+       高さは dvh で取る。モバイルのアドレスバーが引っ込むと表示領域だけが広がるので、
+       vh のままだと下部バーの下に隙間が空いて背面の一覧が透けて見えてしまう。
+       60px はスタッフ呼び出し等の .bottom-sheet と同じ「上に覗かせる量」。 */
     <div
-      className={`fixed left-0 right-0 top-0 h-viewport z-50 flex justify-center ${
-        closing ? "page-slide-out-right pointer-events-none" : "page-slide-in-right"
-      }`}
+      className="fixed left-0 right-0 top-0 h-viewport z-50 flex items-end justify-center"
+      style={{
+        /* 指で引いている間はオーバーレイも一緒に薄くする（閉じる手応えを出すため） */
+        background: `rgba(0, 0, 0, ${visible ? Math.max(0, 0.5 * (1 - dragY / 400)) : 0})`,
+        transition: dragging ? "none" : `background ${CLOSE_MS}ms linear`,
+      }}
+      onClick={close}
       role="dialog"
       aria-modal="true"
       aria-label={item?.name ?? "商品詳細"}
     >
-      <div className="bg-bg-primary flex flex-col w-full max-w-md h-full">
+      <div
+        ref={sheetRef}
+        className="relative bg-bg-primary flex flex-col w-full max-w-md rounded-t-[var(--radius-xl)] overflow-hidden"
+        style={{
+          height: "calc(100% - 60px)",
+          transform: visible ? `translateY(${dragY}px)` : "translateY(100%)",
+          transition: dragging
+            ? "none"
+            : visible
+              ? `transform ${OPEN_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`
+              : `transform ${CLOSE_MS}ms ease-out`,
+          boxShadow: "0 -8px 24px rgba(0, 0, 0, 0.12)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* つまみ。「下へ引けば閉じる」ことを伝えるための印。
+            KV 写真の上ではなく**写真の上の帯**に置いている。写真の上に重ねると
+            明るい写真で見えなくなるため（写真の無い商品もあるので条件分岐も増える） */}
+        <div className="shrink-0 flex justify-center pt-[10px] pb-[6px]">
+          <span className="block w-[36px] h-[4px] rounded-full bg-border" />
+        </div>
         {!item ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-[var(--space-16)] px-[var(--space-16)]">
             <p className="type-jp-body text-text-secondary">商品が見つかりませんでした</p>
@@ -188,7 +333,7 @@ function OverlayContent() {
         ) : (
           <>
             {/* overscroll-contain: 端まで来たときに背面の一覧へスクロールが伝わらないようにする */}
-            <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
               {/* ── KV: メイン画像 + 右上の×（全画面共通のルール） ──
                   写真が無い商品（文字メニュー）はグレーの空箱を出さず、×だけの薄い帯にする
                   （docs/specs/menu-text-rows.md 4章）。 */}
@@ -295,8 +440,9 @@ function OverlayContent() {
                           <RecommendCard
                             key={r.id}
                             item={r}
-                            /* 別商品へは履歴を積んで切り替える（閉じると元の商品に戻る） */
-                            onClick={() => openItemDetail(r.id)}
+                            /* いったん下へ引っ込めて、新しい商品で出し直す。
+                               履歴は積まずに置き換えるので × 一発で一覧に戻る */
+                            onClick={() => goToItem(r.id)}
                           />
                         ))}
                       </RecommendCarousel>
