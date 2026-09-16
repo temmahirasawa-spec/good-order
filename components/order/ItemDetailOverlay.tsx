@@ -40,7 +40,7 @@ import { useCartStore } from "@/lib/store";
 import { useUiStore } from "@/lib/uiStore";
 import { resolveTagColor, resolveCategoryLabel } from "@/lib/categoryLabels";
 import { computeRelatedItems } from "@/lib/orderHome";
-import { ITEM_PARAM, openItemDetail, stripItemParam, takePushedByApp } from "@/lib/itemOverlay";
+import { ITEM_PARAM, openItemDetail, stripItemParam, takeInitialQty, takePushedByApp } from "@/lib/itemOverlay";
 import {
   SERVING_TIMING_TITLE,
   canChooseServingTiming,
@@ -151,7 +151,7 @@ function OverlayContent() {
       setTrail((t) => (t.length ? [] : t));
       return;
     }
-    setDraftQty(1);
+    setDraftQty(takeInitialQty());
     setDraftTiming(null);
     setDraftOptionIds(null);
     setAdded(false);
