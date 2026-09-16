@@ -78,7 +78,9 @@ export default function TakeoutMenuPage() {
   const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
   const addToCart = (item: MenuItem) => {
     if (needsDetail(item)) {
-      openItemDetail(item.id);
+      /* 一覧で決めた数量を詳細シートに引き継ぐ */
+      openItemDetail(item.id, { qty: draftOf(item.id) });
+      resetDraft(item.id);
       return;
     }
     addItem(item, draftOf(item.id));

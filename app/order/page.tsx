@@ -132,7 +132,9 @@ function OrderContent() {
   const addToCart = (item: MenuItem) => {
     /* オプションや提供タイミングを選ぶ必要がある商品は、一覧からは入れずに詳細を開く */
     if (needsDetail(item)) {
-      openItemDetail(item.id);
+      /* 一覧で決めた数量を詳細シートに引き継ぐ */
+      openItemDetail(item.id, { qty: draftOf(item.id) });
+      resetDraft(item.id);
       return;
     }
     addItem(item, draftOf(item.id));

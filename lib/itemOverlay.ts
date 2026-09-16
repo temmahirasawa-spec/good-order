@@ -20,7 +20,19 @@ export const ITEM_PARAM = "item";
  *  アプリ外なので、閉じるときに history.back() してはいけない。 */
 let pushedByApp = false;
 
-export function openItemDetail(id: string, opts?: { replace?: boolean }) {
+/** 一覧のステッパーで決めた下書きの数量。開いたシートが1回だけ受け取る。
+ *  以前は渡していなかったため、一覧で「3」にして「カートに入れる」を押しても
+ *  詳細シートは 1 に戻り、お客様は3個頼んだつもりで1個しか入らなかった（2026-09-16、天真の指摘）。 */
+let initialQty = 1;
+
+export function takeInitialQty(): number {
+  const q = initialQty;
+  initialQty = 1;
+  return q;
+}
+
+export function openItemDetail(id: string, opts?: { replace?: boolean; qty?: number }) {
+  initialQty = Math.max(1, Math.floor(opts?.qty ?? 1));
   const params = new URLSearchParams(window.location.search);
   params.set(ITEM_PARAM, id);
   const url = `${window.location.pathname}?${params.toString()}`;
