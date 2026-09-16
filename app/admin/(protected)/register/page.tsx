@@ -14,6 +14,9 @@ import { supabase } from "@/lib/supabase";
 import { businessDateToday } from "@/lib/dateFormat";
 import { updateOrderStatusIfUnchanged } from "@/lib/api";
 import { formatJstHm } from "@/lib/dateFormat";
+import { dineInTableKey } from "@/lib/kitchenGrouping";
+import { describeDbError } from "@/lib/dbError";
+import OrderFlowWatch from "@/components/admin/OrderFlowWatch";
 import AdminPageShell from "@/components/admin/AdminPageShell";
 import { displayTableLabel, splitTableLabel } from "@/lib/tables";
 import TopBar from "@/components/admin/TopBar";
@@ -69,17 +72,10 @@ type Selection =
  * （supabase/order_stale_table_id.sql）、いまの注文は table_number が
  * どれも 0 なので、`n0` で束ねると**別のお客様の伝票が合流してしまう**。
  * ラベル（"テーブル席 A-1"）を先に見て、席ごとに分かれるようにしている。
+ * 規則は厨房画面と1か所（lib/kitchenGrouping.ts の dineInTableKey）にまとめた。
+ * 片方だけ直すと、厨房とレジで「同じ卓」の判定が食い違う（2026-09-16）。
  */
-function tableKey(o: {
-  table_id: string | null;
-  table_number: number;
-  table_label: string | null;
-}): string {
-  if (o.table_id) return o.table_id;
-  const label = o.table_label?.trim();
-  if (label) return `l${label}`;
-  return `n${o.table_number}`;
-}
+const tableKey = dineInTableKey;
 
 export default function RegisterPage() {
   const [orders, setOrders] = useState<RegisterOrder[]>([]);
@@ -87,6 +83,10 @@ export default function RegisterPage() {
   const [selected, setSelected] = useState<Selection | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  /* 最後に一覧を取れた時刻。取れない状態が続いたら OrderFlowWatch が
+     「接続できていない」と出す。以前は取得に失敗しても古い一覧を出し続けるだけで、
+     Wi-Fi 断・セッション切れに誰も気づけなかった（2026-09-16 の裏取り） */
+  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -103,6 +103,7 @@ export default function RegisterPage() {
       if (orderErr) throw orderErr;
       if (!orderRows || orderRows.length === 0) {
         setOrders([]);
+        setLastLoadedAt(Date.now());
         setLoading(false);
         return;
       }
@@ -148,6 +149,7 @@ export default function RegisterPage() {
           items: itemsByOrder[o.id] ?? [],
         }))
       );
+      setLastLoadedAt(Date.now());
     } catch (err) {
       console.error("[RegisterPage] loadOrders failed:", err);
     } finally {
@@ -292,7 +294,8 @@ export default function RegisterPage() {
           updateOrderStatusIfUnchanged(o.id, "paid", o.updatedAt)
         )
       );
-      if (results.some((r) => r.conflict)) {
+      const conflicts = results.filter((r) => r.conflict).length;
+      if (conflicts > 0) {
         console.warn(
           "[RegisterPage] close-out: 一部の注文で他端末による更新済み（競合）を検出。最新状態を再取得します。"
         );
@@ -300,8 +303,21 @@ export default function RegisterPage() {
       setSelected(null);
       setConfirmOpen(false);
       await loadOrders();
+      /* 0件更新（別の端末が先に触った／権限で弾かれた）は例外にならず、
+         以前はダイアログが黙って閉じるだけだった。会計できていないのに
+         できたように見えるので、取り直した後に必ず伝える（2026-09-16 の裏取り） */
+      if (conflicts > 0) {
+        alert(
+          "会計済みにできなかった注文があります。\n" +
+          "別の端末で先に操作されたか、権限が無い可能性があります。\n" +
+          "画面を最新にしました。まだ会計待ちに残っていれば、もう一度お試しください。"
+        );
+      }
     } catch (err) {
+      /* 通信断・セッション切れ・RLS 違反はここに来る。以前は console に落とすだけで、
+         ダイアログが開いたままボタンだけ戻り、何が起きたか誰にも分からなかった */
       console.error("[RegisterPage] close-out failed:", err);
+      alert("会計済みにできませんでした。\n" + describeDbError(err));
     } finally {
       setClosing(false);
     }
@@ -343,6 +359,11 @@ export default function RegisterPage() {
               ) : undefined
             }
           />
+
+          {/* 注文が店に届いていないこと（伝票が出ていない／プリンタ停止／接続断）を
+              レジ画面の上に出す。厨房画面 OFF・プリンタ1本の運用では、ここが唯一の
+              「気づく場所」になる（2026-09-16 の裏取り、監査の最優先項目） */}
+          <OrderFlowWatch lastLoadedAt={lastLoadedAt} />
 
           <main className="flex-1 overflow-y-auto px-[var(--space-16)] lg:px-[var(--space-24)] pt-[var(--space-16)] pb-[var(--space-40)] lg:pb-[var(--space-24)]">
             {loading ? (

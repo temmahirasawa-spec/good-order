@@ -25,6 +25,8 @@ export interface KitchenOrderRound {
   createdAt: string;
   /** 楽観ロック用（orders.updated_at）。DBから取得した値をそのまま保持すること */
   updatedAt: string;
+  /** orders.status。会計済み（paid）の注文は「すべて提供済みにする」で status を上書きしない */
+  status: string;
   items: KitchenItem[];
 }
 
@@ -46,10 +48,33 @@ export interface OrderWithItems {
   table_id?: string | null;
   table_label?: string | null;
   order_type: "dine_in" | "takeout";
+  status?: string;
   created_at: string;
   updated_at: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   order_items: any[];
+}
+
+/**
+ * 店内注文を「同じ卓」として束ねるキー。**レジの tableKey と同じ規則**にする。
+ *
+ * ⚠ table_id が無いときに table_number だけで束ねてはいけない。
+ * 席設定を作り直すと卓の行が消え、place_order は table_id を NULL にして注文を通す
+ * （supabase/order_stale_table_id.sql）。いまの注文は table_number がどれも 0 なので、
+ * `table-0` で束ねると **別のお客様の注文が1枚のカードに合流し、「すべて提供済みにする」が
+ * 別卓の注文まで巻き込む**（2026-09-16 の裏取りで実行して確認）。
+ * レジ側は PR #105 でラベル優先に直っていたが、厨房側が取り残されていた。
+ * 伝票の「追加(N)」の採番（supabase/print_jobs_recovery.sql の print_job_seq_for_order）も同じ順序。
+ */
+export function dineInTableKey(o: {
+  table_id?: string | null;
+  table_number: number | null;
+  table_label?: string | null;
+}): string {
+  if (o.table_id) return o.table_id;
+  const label = o.table_label?.trim();
+  if (label) return `l:${label}`;
+  return `n:${o.table_number ?? 0}`;
 }
 
 export function groupOrdersByTable(
@@ -59,11 +84,9 @@ export function groupOrdersByTable(
   const groups = new Map<string, KitchenTableGroup>();
 
   for (const order of orders) {
-    /* 卓のまとめ方は table_id 優先。カテゴリーのコードを変えても同じ卓は同じ束に残る。
-       移行前の注文（table_id が無い）は従来どおり table_number でまとめる */
     const key =
       order.order_type === "dine_in"
-        ? `table-${order.table_id ?? order.table_number}`
+        ? `table-${dineInTableKey(order)}`
         : `takeout-${order.id}`;
 
     if (!groups.has(key)) {
@@ -84,6 +107,7 @@ export function groupOrdersByTable(
       orderId: order.id,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
+      status: order.status ?? "pending",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       items: (order.order_items ?? []).map((it: any) => ({
         orderItemId: it.id,
