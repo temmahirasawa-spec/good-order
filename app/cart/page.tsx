@@ -27,7 +27,9 @@ import {
   SET_DRINK_DEFAULT,
   calcSetDrinkDiscount,
   fetchSetDrinkSetting,
+  fetchSetDrinkTableContext,
   type SetDrinkSetting,
+  type SetDrinkTableContext,
 } from "@/lib/setDrink";
 import {
   canChooseServingTiming,
@@ -44,6 +46,8 @@ export default function CartPage() {
   const removeLine = useCartStore((s) => s.removeLine);
   const setServingTiming = useCartStore((s) => s.setServingTiming);
   const orderType = useCartStore((s) => s.orderType);
+  const tableId = useCartStore((s) => s.tableId);
+  const tableLabel = useCartStore((s) => s.tableLabel);
   const totalPrice = useCartStore((s) => s.totalPrice());
   const placeOrder = useCartStore((s) => s.placeOrder);
 
@@ -121,11 +125,28 @@ export default function CartPage() {
     return () => { cancelled = true; };
   }, []);
 
+  /* 同じ卓のこれまでの注文（フードを先に頼んだ場合など）を足して数える。
+     サーバーが同じ規則で計算するので、ここで出す額と会計の額が揃う（2026-09-16） */
+  const [tableContext, setTableContext] = useState<SetDrinkTableContext | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const c = await fetchSetDrinkTableContext(tableId, tableLabel);
+        if (!cancelled) setTableContext(c);
+      } catch (err) {
+        console.warn("[cart] fetchSetDrinkTableContext failed:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tableId, tableLabel]);
+
   const discount = calcSetDrinkDiscount(
     items.map((ci) => ({ item: ci.item, quantity: ci.quantity, unitPrice: lineUnitPrice(ci) })),
     categories,
     orderType,
-    setDrink
+    setDrink,
+    tableContext
   );
 
   /* 消費税（lib/tax.ts）。内税なら合計はそのまま、外税なら加算する */

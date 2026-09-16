@@ -57,17 +57,53 @@ export interface DiscountLine {
  *   2. 単価の**安い順**にその杯数ぶん、1杯あたり min(設定額, その杯の単価) を引く
  *      （100円のドリンクに200円引いてマイナスにしないため）
  */
+/**
+ * 同じ卓の「これまで」（会計前の注文）。**割引は卓単位で数える**（2026-09-16、天真の決定・案2）。
+ * フードを先に頼んでドリンクをあとから別の注文（別のスマホでも）で頼んでも割引が付くよう、
+ * サーバー（place_order）は卓の会計前の注文をまとめて計算し、既に付けた分を引いた残りを
+ * 今回の注文に付ける。画面側も同じ数字を出すために、卓の要約だけを RPC で読む
+ * （supabase/set_drink_table_scope.sql）。読めなければ「この注文だけ」で計算する（従来どおり）。
+ */
+export interface SetDrinkTableContext {
+  foodQty: number;
+  drinkPrices: number[];
+  /** これまでの注文に既に付いている割引の合計 */
+  applied: number;
+}
+
+export async function fetchSetDrinkTableContext(
+  tableId: string | null,
+  tableLabel: string | null
+): Promise<SetDrinkTableContext | null> {
+  if (!tableId && !tableLabel) return null;
+  const { data, error } = await supabase.rpc("get_set_drink_table_context", {
+    p_store_id: STORE_ID,
+    p_table_id: tableId,
+    p_table_label: tableLabel,
+  });
+  if (error) throw error;
+  const row = (data ?? {}) as { food_qty?: unknown; drink_prices?: unknown; applied?: unknown };
+  return {
+    foodQty: Number(row.food_qty) || 0,
+    drinkPrices: Array.isArray(row.drink_prices) ? row.drink_prices.map((p) => Number(p) || 0) : [],
+    applied: Number(row.applied) || 0,
+  };
+}
+
 export function calcSetDrinkDiscount(
   lines: DiscountLine[],
   categories: Pick<ApiCategory, "slug" | "category_type" | "serving_timing_choice">[],
   orderType: "dine_in" | "takeout",
-  setting: SetDrinkSetting
+  setting: SetDrinkSetting,
+  /** 同じ卓のこれまで。渡すと「卓全体 − 既に付いた分」を返す（サーバーと同じ規則） */
+  context?: SetDrinkTableContext | null
 ): number {
   if (!setting.enabled || setting.discount <= 0) return 0;
   if (orderType === "takeout" && !setting.takeout) return 0;
 
-  let foodQty = 0;
-  const drinkUnitPrices: number[] = [];
+  const prior = orderType === "dine_in" ? context ?? null : null;
+  let foodQty = prior?.foodQty ?? 0;
+  const drinkUnitPrices: number[] = [...(prior?.drinkPrices ?? [])];
   for (const line of lines) {
     if (line.quantity <= 0) continue;
     const isDrink = servingCategoryType(categories, line.item) === "drink";
@@ -82,9 +118,10 @@ export function calcSetDrinkDiscount(
   if (count <= 0) return 0;
 
   drinkUnitPrices.sort((a, b) => a - b);
-  return drinkUnitPrices
+  const total = drinkUnitPrices
     .slice(0, count)
     .reduce((sum, price) => sum + Math.min(setting.discount, Math.max(0, price)), 0);
+  return Math.max(0, total - (prior?.applied ?? 0));
 }
 
 /* ── 読み書き ─────────────────────────────────────────────── */

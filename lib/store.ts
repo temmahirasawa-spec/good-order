@@ -9,7 +9,7 @@ import { useMenuDataStore } from "./menuDataStore";
 import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
 import { optionsKey, optionsTotal, type SelectedOption } from "./menuOptions";
 import { isSoldOut, isSoldOutError, isUnavailableError, soldOutIdsIn } from "./soldOut";
-import { calcSetDrinkDiscount, fetchSetDrinkSetting, SET_DRINK_DEFAULT, type SetDrinkSetting } from "./setDrink";
+import { calcSetDrinkDiscount, fetchSetDrinkSetting, fetchSetDrinkTableContext, SET_DRINK_DEFAULT, type SetDrinkSetting, type SetDrinkTableContext } from "./setDrink";
 import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "./tax";
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
@@ -371,11 +371,21 @@ export const useCartStore = create<CartStore>()(
         } catch (err) {
           console.warn("[placeOrder] fetchSetDrinkSetting failed, no discount:", err);
         }
+        /* 同じ卓のこれまでの注文も数える（サーバーと同じ規則）。読めなければこの注文だけ */
+        let tableContext: SetDrinkTableContext | null = null;
+        if (orderType === "dine_in") {
+          try {
+            tableContext = await fetchSetDrinkTableContext(tableId, tableLabel);
+          } catch (err) {
+            console.warn("[placeOrder] fetchSetDrinkTableContext failed:", err);
+          }
+        }
         const discountAmount = calcSetDrinkDiscount(
           current.map((ci) => ({ item: ci.item, quantity: ci.quantity, unitPrice: lineUnitPrice(ci) })),
           useMenuDataStore.getState().categories,
           orderType,
-          setDrink
+          setDrink,
+          tableContext
         );
         /* 消費税（lib/tax.ts）。内税なら合計はそのまま、外税なら加算する。
            税率は注文の種別で決まる（テイクアウトは軽減税率）。
