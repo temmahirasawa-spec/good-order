@@ -30,7 +30,7 @@ import type { MenuItem } from "@/lib/menu";
 /* ── ローディング（カテゴリー一覧と同じ2カラム4セル） ── */
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-2 justify-items-center gap-y-[16px] px-[var(--space-16)]">
+    <div className="grid grid-cols-2 justify-items-center gap-x-[8px] gap-y-[16px] px-[var(--space-16)]">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="w-full max-w-[175px]">
           <div className="aspect-square rounded-[var(--radius-sm)] bg-bg-tertiary animate-pulse" />
@@ -139,7 +139,7 @@ export default function TakeoutMenuPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 justify-items-center gap-y-[16px] px-[var(--space-16)]">
+          <div className="grid grid-cols-2 justify-items-center gap-x-[8px] gap-y-[16px] px-[var(--space-16)]">
             {items.map((item) => (
               <MenuCard
                 key={item.id}

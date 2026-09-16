@@ -56,6 +56,12 @@ function TopContent() {
         // 移行前のカードで、まだ tables に無い番号。数値のまま従来どおり動かす
         setTableRef(null, String(legacyNumber));
         setTable(legacyNumber);
+      } else {
+        /* 解決できなかった（DB に無いコード／通信失敗）。**前の卓の記憶を必ず消す。**
+           消さないと、この端末が以前に覚えた別の卓のまま注文が通り、
+           別のお客様の伝票に合流する（2026-09-16 の裏取り A1 / S3）。 */
+        setTableRef(null, null);
+        setTable(0);
       }
       // 解決できなかった（＝二次元コードが古い/DBに無い）場合もボタンは開ける。
       // 押せないまま詰まるより、卓名なしで注文が通る方がお客様の被害が小さい

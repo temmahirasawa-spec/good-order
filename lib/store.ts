@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import * as Sentry from "@sentry/nextjs";
 import type { MenuItem } from "./menu";
 import { supabase } from "./supabase";
-import { appendHistory, type HistoryEntry } from "./history";
+import { appendHistory, loadHistory, type HistoryEntry } from "./history";
 import { isAcceptingOrders } from "./api";
 import { useMenuDataStore } from "./menuDataStore";
 import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
@@ -61,6 +61,8 @@ async function saveOrderToDb(
   totalAmount: number
 ): Promise<"saved" | "sold_out" | "unavailable" | "failed"> {
   try {
+    /* 1回の送信は 15 秒で打ち切る。以前はタイムアウトが無く、応答が返らないと
+       「送信中…」のままボタンが戻らなかった（2026-09-16 の裏取り O4） */
     const { error } = await supabase.rpc("place_order", {
       p_order_id:     orderId,
       p_store_id:     STORE_ID,
@@ -81,7 +83,7 @@ async function saveOrderToDb(
         // 選んだオプション（supabase/menu_item_options.sql）。ID だけ送り、名前と価格はサーバー側で確定する
         options:        (ci.options ?? []).map((o) => ({ option_id: o.optionId })),
       })),
-    });
+    }).abortSignal(AbortSignal.timeout(15_000));
 
     if (error) throw error;
     return "saved";
@@ -196,6 +198,8 @@ interface CartStore {
   hasOrdered: boolean;
   /** 直近に確定した注文のID（/complete が受渡番号を引くのに使う） */
   lastOrderId: string | null;
+  /** 送信中〜失敗した注文の ID。同じ中身のカートで押し直したときに使い回す（二重注文の防止） */
+  pendingOrder: { orderId: string; cartKey: string } | null;
 
   setTable: (n: number) => void;
   setTableRef: (id: string | null, label: string | null) => void;
@@ -239,6 +243,7 @@ export const useCartStore = create<CartStore>()(
       orderHistory: [],
       hasOrdered: false,
       lastOrderId: null,
+      pendingOrder: null,
 
       setTable: (n) => set({ tableNumber: n }),
       setTableRef: (id, label) => set({ tableId: id, tableLabel: label }),
@@ -383,7 +388,19 @@ export const useCartStore = create<CartStore>()(
         }
         const totals = calcOrderTotals({ subtotal, discount: discountAmount, orderType, setting: taxSetting });
         const totalAmount = totals.total;
-        const orderId = generateUuid();
+        /* 注文IDは**同じ中身のカートなら押し直しても同じ**にする。
+           以前は placeOrder のたびに新しい ID を振っていたため、3回とも「失敗」に見えたが
+           実は1回目がサーバーに届いていた場合、押し直しで**同じ注文が2件入った**
+           （伝票2枚・料理2人前・レジ2件。2026-09-16 の裏取り O4）。
+           place_order は同じ ID なら何もしない（ON CONFLICT DO NOTHING）ので、
+           ID を固定しておけば何度押しても1件で済む。カートの中身が変われば振り直す。 */
+        const cartKey = JSON.stringify({
+          items: current.map((ci) => [ci.item.id, ci.quantity, ci.servingTiming ?? null, optionsKey(ci.options)]),
+          orderType, tableId, tableLabel, totalAmount,
+        });
+        const pending = get().pendingOrder;
+        const orderId = pending && pending.cartKey === cartKey ? pending.orderId : generateUuid();
+        set({ pendingOrder: { orderId, cartKey } });
 
         // DB 書き込みの前に LocalStorage にスナップショットを先行保存
         // （RLS で select 出来ないので DB に頼らない）
@@ -409,7 +426,8 @@ export const useCartStore = create<CartStore>()(
             options: ci.options ?? [],
           })),
         };
-        appendHistory(entry);
+        /* 押し直し（同じ ID）のときは履歴を二重に積まない */
+        if (!loadHistory().some((e) => e.orderId === orderId)) appendHistory(entry);
 
         // DB への保存は**必ず待つ**。
         // ここを fire-and-forget にしていると、Wi-Fi の瞬断や一時的な
@@ -456,6 +474,7 @@ export const useCartStore = create<CartStore>()(
           hasOrdered: true,
           isTakeoutMode: false,
           lastOrderId: orderId,
+          pendingOrder: null,
         });
         return { ok: true, orderId };
       },
@@ -483,6 +502,7 @@ export const useCartStore = create<CartStore>()(
         orderHistory: state.orderHistory,
         hasOrdered: state.hasOrdered,
         lastOrderId: state.lastOrderId,
+        pendingOrder: state.pendingOrder,
       }),
     }
   )

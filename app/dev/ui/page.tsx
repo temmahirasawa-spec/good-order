@@ -757,6 +757,16 @@ export default function UiGalleryPage() {
         </div>
       </Section>
 
+      <Section title="MenuCard 2列グリッド（320px 幅でも重ならない。2026-09-16）">
+        <div className="w-[320px] border border-border">
+          <div className="grid grid-cols-2 justify-items-center gap-x-[8px] gap-y-[16px] px-[var(--space-16)] py-[16px]">
+            {[0, 1].map((i) => (
+              <MenuCard key={i} item={i === 0 ? sampleItem : sampleDrink} quantity={1} onIncrement={() => {}} onDecrement={() => {}} onAddToCart={() => {}} />
+            ))}
+          </div>
+        </div>
+      </Section>
+
       <Section title="MenuCard (171)">
         <MenuCard
           item={sampleItem}
