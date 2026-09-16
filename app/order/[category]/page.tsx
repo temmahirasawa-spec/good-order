@@ -40,10 +40,10 @@ const SCROLL_OFFSET = 118;
 /* ── ローディングスケルトン（2カラム4セル） ── */
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-2 justify-items-center gap-y-[16px] px-[var(--space-16)]">
+    <div className="grid grid-cols-2 justify-items-center gap-x-[8px] gap-y-[16px] px-[var(--space-16)]">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="w-[171px]">
-          <div className="skeleton w-[171px] h-[171px]" style={{ borderRadius: 8 }} />
+        <div key={i} className="w-full max-w-[171px]">
+          <div className="skeleton w-full aspect-square" style={{ borderRadius: 8 }} />
           <div className="skeleton h-4 w-3/4 mt-2" />
           <div className="skeleton h-4 w-1/3 mt-2" />
         </div>
@@ -174,7 +174,7 @@ export default function CategoryListingPage() {
         ))}
       </div>
     ) : (
-      <div className="grid grid-cols-2 justify-items-center gap-y-[16px] px-[var(--space-16)]">
+      <div className="grid grid-cols-2 justify-items-center gap-x-[8px] gap-y-[16px] px-[var(--space-16)]">
         {groupItems.map((item) => (
           <MenuCard
             key={item.id}

@@ -163,15 +163,27 @@ export async function resolveTable(
   legacyNumber: number | null
 ): Promise<ResolvedTable | null> {
   if (!shortCode && legacyNumber === null) return null;
-  const { data, error } = await supabase.rpc("resolve_table", {
-    p_short_code: shortCode,
-    p_legacy_number: legacyNumber,
-  });
-  if (error) {
-    console.error("[resolveTable] failed:", error);
-    return null;
+  /* 通信の瞬断で null を返すと、お客様は卓なし（または前の卓）で注文まで進めてしまう。
+     DB に無いコード（0件）は再試行しないが、RPC のエラーだけは少し待って3回まで試す
+     （lib/store.ts の注文送信と同じ考え方。2026-09-16 A1） */
+  let data: unknown = null;
+  let error: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const res = await supabase.rpc("resolve_table", {
+      p_short_code: shortCode,
+      p_legacy_number: legacyNumber,
+    });
+    data = res.data;
+    error = res.error;
+    if (!error) break;
+    console.error(`[resolveTable] failed (attempt ${attempt}):`, error);
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 600 * attempt));
   }
-  const row = Array.isArray(data) ? data[0] : data;
+  if (error) return null;
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | { id: string; label: string; short_label?: string | null; legacy_number?: number | null }
+    | null
+    | undefined;
   if (!row) return null;
   return {
     id: row.id,

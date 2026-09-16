@@ -470,7 +470,9 @@ function OverlayContent() {
                     mode={optionsMode}
                     options={itemOptions}
                     selectedIds={selectedOptionIds}
-                    onChange={setDraftOptionIds}
+                    /* 選び直したら「カートに入れる」に戻す。戻さないと「カートを見る」のままで
+                       入れ直せず、画面では ICED なのに HOT が届く（2026-09-16 の裏取り C3） */
+                    onChange={(ids) => { setDraftOptionIds(ids); setAdded(false); }}
                   />
                 )}
 
@@ -481,7 +483,7 @@ function OverlayContent() {
                     <ServingTimingCards
                       options={servingTimingOptions(timingType)}
                       value={selectedTiming}
-                      onChange={setDraftTiming}
+                      onChange={(t) => { setDraftTiming(t); setAdded(false); }}
                     />
                   </section>
                 )}

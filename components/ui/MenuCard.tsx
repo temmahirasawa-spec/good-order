@@ -151,11 +151,14 @@ function CardBody({
 export function MenuCard(props: MenuCardProps) {
   const { item, onClick, imageLoading, className = "" } = props;
   return (
-    <div className={`flex flex-col gap-[var(--space-8)] items-start w-[171px] ${className}`}>
+    /* 幅は「171 を上限に、列幅いっぱい」。390px では従来どおり 171 だが、374px 未満の端末
+       （Android の 360px、iPhone の表示拡大 320px）では列幅 (vw−32−8)/2 が 171 を下回り、
+       固定幅のままだと隣のカードと重なって**隣の商品がカートに入る**（2026-09-16 の裏取り C1） */
+    <div className={`flex flex-col gap-[var(--space-8)] items-start w-full max-w-[171px] ${className}`}>
       <CardImage
         item={item}
         onClick={onClick}
-        imageClassName="w-[171px] h-[171px]"
+        imageClassName="w-full aspect-square"
         imageLoading={imageLoading}
       />
       <CardBody

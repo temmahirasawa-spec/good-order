@@ -16,7 +16,7 @@ import CartItemRow from "@/components/ui/CartItemRow";
 import { useCartStore, lineUnitPrice } from "@/lib/store";
 import { formatSelectedOptions, optionsKey } from "@/lib/menuOptions";
 import { useMenuDataStore } from "@/lib/menuDataStore";
-import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import { resolveCategoryLabel, resolveTagColor } from "@/lib/categoryLabels";
 import {
   SOLD_OUT_CART_NOTICE, SOLD_OUT_ORDER_REJECTED, UNAVAILABLE_CART_NOTICE,
   soldOutIdsIn, unavailableIdsIn,
@@ -49,6 +49,7 @@ export default function CartPage() {
 
   const categories = useMenuDataStore((s) => s.categories);
   const menuItems = useMenuDataStore((s) => s.menuItems);
+  const menuOptions = useMenuDataStore((s) => s.menuOptions);
   /* メニューを一度でも読み終えたか。読み込み中に「取扱終了」と誤判定しないため */
   const menuLoadedAt = useMenuDataStore((s) => s.loadedAt);
   const fetchAll = useMenuDataStore((s) => s.fetchAll);
@@ -86,7 +87,21 @@ export default function CartPage() {
      メニューが読めるまでは判定しない（読み込み中に誤って出さないため）。 */
   const menuLoaded = Boolean(menuLoadedAt) && menuItems.length > 0;
   const unavailableIds = unavailableIdsIn(items, menuItems, menuLoaded);
-  const hasUnavailable = unavailableIds.size > 0;
+  /* **選んだオプション（HOT/ICED 等）が今は非表示** の行。place_order は
+     「選べないオプションが含まれています」で必ず弾くのに、以前はここで赤くならず、
+     案内文（赤い行を削除して）どおりにしても直らなかった（2026-09-16 の裏取り O1）。
+     オプションの取得に失敗して空のときは判定しない（全行が赤くなるのを防ぐ） */
+  const optionsLoaded = menuLoaded && Object.keys(menuOptions).length > 0;
+  const unavailableLineKeys = new Set<string>();
+  if (optionsLoaded) {
+    for (const ci of items) {
+      const offered = new Set((menuOptions[ci.item.id] ?? []).map((o) => o.id));
+      if ((ci.options ?? []).some((o) => !offered.has(o.optionId))) {
+        unavailableLineKeys.add(ci.lineId ?? cartLineKey(ci.item.id, ci.servingTiming ?? null, optionsKey(ci.options)));
+      }
+    }
+  }
+  const hasUnavailable = unavailableIds.size > 0 || unavailableLineKeys.size > 0;
   /* どちらも「その行を消さないと進めない」なので、同じ扱いで止める */
   const blocked = hasSoldOut || hasUnavailable;
 
@@ -287,14 +302,18 @@ export default function CartPage() {
                   // セグメントの帯がすべるアニメーションが出ない（lib/store.ts の lineId 参照）
                   key={ci.lineId ?? cartLineKey(ci.item.id, timing, optionsKey(ci.options))}
                   image={ci.item.image}
-                  categoryLabel={SUBCATEGORY_LABEL[ci.item.subcategory] ?? ci.item.subcategory}
+                  categoryLabel={resolveCategoryLabel(categories, ci.item.subcategory)}
                   categoryColor={resolveTagColor(categories, ci.item.subcategory)}
                   name={ci.item.name}
                   /* 単価はオプション込み（docs/specs/menu-options.md 4-3） */
                   price={lineUnitPrice(ci)}
                   quantity={ci.quantity}
                   optionsLabel={ci.options && ci.options.length > 0 ? formatSelectedOptions(ci.options) : undefined}
-                  soldOut={soldOutIds.has(ci.item.id) || unavailableIds.has(ci.item.id)}
+                  soldOut={
+                    soldOutIds.has(ci.item.id) ||
+                    unavailableIds.has(ci.item.id) ||
+                    unavailableLineKeys.has(ci.lineId ?? cartLineKey(ci.item.id, timing, optionsKey(ci.options)))
+                  }
                   onIncrement={() => updateLineQuantity(ci, ci.quantity + 1)}
                   onDecrement={() => updateLineQuantity(ci, ci.quantity - 1)}
                   onRemove={() => removeLine(ci)}

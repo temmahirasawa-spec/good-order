@@ -19,7 +19,7 @@
  */
 import type { MenuItem } from "@/lib/menu";
 import CategoryTag, { TAG_BG } from "@/components/ui/CategoryTag";
-import { SUBCATEGORY_LABEL, resolveTagColor } from "@/lib/categoryLabels";
+import { resolveCategoryLabel, resolveTagColor } from "@/lib/categoryLabels";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { SoldOutBand } from "@/components/ui/SoldOut";
 
@@ -35,7 +35,8 @@ export default function RecommendCard({
   const categories = useMenuDataStore((s) => s.categories);
   const cover = item.media?.[0];
   const src = (cover?.type === "image" ? cover.url : undefined) ?? item.image;
-  const label = SUBCATEGORY_LABEL[item.subcategory] ?? item.subcategory;
+  /* DB のカテゴリー名を先に見る。固定辞書だけだと slug（drink / hamburger …）がそのまま出る（2026-09-16 C4） */
+  const label = resolveCategoryLabel(categories, item.subcategory);
   const color = resolveTagColor(categories, item.subcategory);
   const soldOut = item.isSoldOut === true;
   return (
