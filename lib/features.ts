@@ -16,6 +16,7 @@
  */
 import { supabase } from "./supabase";
 import { STORE_ID } from "./api";
+import { ADMIN_NAV_ITEMS, type StaffRole } from "./staffRoles";
 
 export interface FeatureToggles {
   /** 厨房画面（/admin/kitchen）を使うか */
@@ -46,6 +47,22 @@ export async function fetchFeatureToggles(): Promise<FeatureToggles> {
     kitchen:   row.kitchen_enabled !== false,
     staffCall: row.staff_call_enabled !== false,
   };
+}
+
+/**
+ * ログイン直後・URL 直打ち時の着地先。
+ *
+ * 以前は ADMIN_NAV_ITEMS の先頭（/admin/kitchen）に固定で飛ばしていたため、
+ * 厨房画面を OFF にした本番では **サイドバーに無い画面に着地し、そこには
+ * 会計済みで下がらない注文が並ぶ**（2026-09-16 の裏取り）。
+ * サイドバーと同じ条件（機能 OFF の画面を除く）で「そのロールが最初に見る画面」を選ぶ。
+ * 該当が無ければ null（呼び出し側が従来どおり先頭へ）。
+ */
+export function adminLandingPath(role: StaffRole, features: FeatureToggles): string | null {
+  const allowed = ADMIN_NAV_ITEMS
+    .filter((item) => item.roles.includes(role))
+    .filter((item) => features.kitchen || item.href !== "/admin/kitchen");
+  return allowed[0]?.href ?? null;
 }
 
 /** 保存（manager のみ）。RPC 側でロールを検証する */

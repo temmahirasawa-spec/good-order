@@ -21,6 +21,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { parseStaffRole } from "@/lib/staffRoles";
+import { adminLandingPath, FEATURES_DEFAULT, fetchFeatureToggles } from "@/lib/features";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -54,7 +56,17 @@ export default function AdminLoginPage() {
         setError("セッションの取得に失敗しました。もう一度お試しください。");
         return;
       }
-      router.replace("/admin/kitchen");
+      /* 着地先は「そのロールが最初に見る画面」。厨房画面を OFF にしている店では
+         /admin/kitchen に飛ばさない（サイドバーに無い画面に着地していた。2026-09-16）。
+         設定が読めないときは従来どおり厨房へ（fail-open） */
+      const role = parseStaffRole(data.session.user.app_metadata?.role);
+      let features = FEATURES_DEFAULT;
+      try {
+        features = await fetchFeatureToggles();
+      } catch (err) {
+        console.warn("[login] fetchFeatureToggles failed:", err);
+      }
+      router.replace((role && adminLandingPath(role, features)) ?? "/admin/kitchen");
     } catch (err) {
       console.error("Login exception:", err);
       setError("ネットワークエラーが発生しました。接続を確認してもう一度お試しください。");

@@ -166,6 +166,7 @@ export default function KitchenPage() {
         table_id:     o.table_id ?? null,
         table_label:  o.table_label ?? null,
         order_type: (o.order_type ?? "dine_in") as "dine_in" | "takeout",
+        status: o.status,
         created_at: o.created_at,
         updated_at: o.updated_at,
         order_items: itemsByOrder.get(o.id) ?? [],
@@ -347,10 +348,15 @@ export default function KitchenPage() {
           updateOrderItemCookingStatusIfUnchanged(i.orderItemId, "done", i.updatedAt)
         )
       );
+      /* ⚠ **会計済み（paid）の注文の status は触らない。**
+         状態の欄は1つしかないので、paid を served に上書きすると「会計した」記憶が消え、
+         **レジに未会計として復活する**（2026-09-16 の裏取りで本番の取引内で確認。
+         二重請求の事故になる）。会計済みの注文は明細を done にするだけで、
+         上の isFinished（会計済み＋全品 done）で次の取得時に厨房から下がる。 */
       const orderResults = await Promise.all(
-        group.rounds.map((r) =>
-          updateOrderStatusIfUnchanged(r.orderId, "served", r.updatedAt)
-        )
+        group.rounds
+          .filter((r) => r.status !== "paid")
+          .map((r) => updateOrderStatusIfUnchanged(r.orderId, "served", r.updatedAt))
       );
       if (itemResults.some((r) => r.conflict) || orderResults.some((r) => r.conflict)) {
         console.warn(
