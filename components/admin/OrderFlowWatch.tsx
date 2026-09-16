@@ -34,7 +34,7 @@ const NO_JOB_AFTER_MS = 20_000;
 /** レジ一覧・この見張り自体が取れていない時間。3〜5秒間隔のポーリングが3回続けて失敗した長さ */
 const CONNECTION_STALE_MS = 15_000;
 
-interface WatchAlert {
+export interface WatchAlert {
   tone: "urgent" | "warning";
   text: string;
 }
@@ -47,16 +47,20 @@ interface WatchSummary {
 export default function OrderFlowWatch({
   /** レジ一覧を最後に取れた時刻（register/page.tsx）。null は初回読み込み前 */
   lastLoadedAt,
+  /** /dev/ui 用。渡すと DB を読まずにこの内容を出す */
+  preview,
 }: {
   lastLoadedAt: number | null;
+  preview?: { alerts: WatchAlert[]; summary?: WatchSummary };
 }) {
-  const [alerts, setAlerts] = useState<WatchAlert[]>([]);
-  const [summary, setSummary] = useState<WatchSummary | null>(null);
+  const [alerts, setAlerts] = useState<WatchAlert[]>(preview?.alerts ?? []);
+  const [summary, setSummary] = useState<WatchSummary | null>(preview?.summary ?? null);
   /** この見張りの読み込みが最後に成功した時刻 */
   const [watchOkAt, setWatchOkAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    if (preview) return;
     let cancelled = false;
 
     const run = async () => {
@@ -151,6 +155,8 @@ export default function OrderFlowWatch({
       clearInterval(dataInterval);
       clearInterval(tick);
     };
+    // preview は /dev/ui 専用の固定値なので依存に入れない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── 接続が切れている（レジ一覧か、この見張り自体が取れていない） ── */

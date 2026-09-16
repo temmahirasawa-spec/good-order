@@ -275,6 +275,20 @@ if (RENDER_FILE) {
   process.exit(0);
 }
 
+/* ⚠ .env.local が本番（good-order）を向いていると、ローカルの /api/print は本番と同じ鍵で
+   printer_poll を呼び、**店の伝票を奪って「印刷済み」にしてしまう**（紙は店で1枚も出ない）。
+   2026-09-16 の裏取りで確定。本番向きの設定では、明示的な許可が無い限り起動しない。 */
+const PRODUCTION_REF = "oiropkuvaenebmlicrac";
+const targetsLocal = /^https?:\/\/(localhost|127\.0\.0\.1)/.test(URL_);
+if (targetsLocal && readEnvLocal("NEXT_PUBLIC_SUPABASE_URL").includes(PRODUCTION_REF) && !flag("allow-production")) {
+  console.error(
+    "この .env.local は本番 DB（good-order）を指しています。\n" +
+    "ローカルから叩くと店の伝票を奪って「印刷済み」にしてしまうため中止します。\n" +
+    "見た目の確認だけなら --render <xml>、どうしても必要なら --allow-production を付けてください。"
+  );
+  process.exit(1);
+}
+
 console.log(`ニセ・プリンタ起動  宛先: ${URL_.replace(TOKEN, TOKEN.slice(0, 6) + "…")}`);
 if (ONCE) {
   const got = await pollOnce();

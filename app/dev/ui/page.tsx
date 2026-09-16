@@ -50,6 +50,7 @@ import NavSidebar from "@/components/admin/nav/NavSidebar";
 import StatusBadge, { type StatusBadgeState } from "@/components/admin/StatusBadge";
 import PrinterHealthCard from "@/components/admin/print/PrinterHealthCard";
 import PrintJobRowCard from "@/components/admin/print/PrintJobRowCard";
+import OrderFlowWatch from "@/components/admin/OrderFlowWatch";
 import { describePrinterHealth, type PrinterHealthView, type PrintJobRow } from "@/lib/printStatus";
 import StaffCallChip from "@/components/admin/StaffCallChip";
 import OrderCard, { type OrderCardItem } from "@/components/admin/kitchen/OrderCard";
@@ -1168,6 +1169,17 @@ export default function UiGalleryPage() {
       </Section>
 
       {/* ── 厨房プリンタ: 印刷状況（/admin/print） ── */}
+      <Section title="OrderFlowWatch（レジ画面の上に出る見張り。正常 / 異常あり）">
+        <div className="flex flex-col gap-[16px] max-w-[840px]">
+          <div className="border border-border"><OrderFlowWatch lastLoadedAt={null} preview={{ alerts: [], summary: { printedToday: 12, printerSeenAt: new Date().toISOString() } }} /></div>
+          <div className="border border-border"><OrderFlowWatch lastLoadedAt={null} preview={{ alerts: [
+            { tone: "urgent", text: "プリンタが応答していません（最後の応答は3分前）。伝票が出ないので、電源とWi-Fiを確認してください。" },
+            { tone: "urgent", text: "印刷に失敗した伝票が 1 件あります。紙とカバーを確認してください。数分以内に自動でもう一度出しますが、急ぐときは「印刷状況」の「刷り直す」を押してください。" },
+            { tone: "warning", text: "プリンタ: 用紙切れ。解消するまで伝票は出ません。" },
+          ] }} /></div>
+        </div>
+      </Section>
+
       <Section title="PrinterHealthCard">
         <div className="max-w-[560px] flex flex-col gap-[var(--space-12)]">
           {(["ok", "warning", "offline", "unknown"] as const).map((h) => (

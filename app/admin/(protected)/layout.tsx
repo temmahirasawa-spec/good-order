@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { ADMIN_NAV_ITEMS, parseStaffRole, type StaffRole } from "@/lib/staffRoles";
+import { adminLandingPath, FEATURES_DEFAULT, fetchFeatureToggles } from "@/lib/features";
 
 /**
  * スタッフ権限分離（方式(a): Supabase Auth の app_metadata.role）
@@ -54,7 +55,16 @@ export default function AdminProtectedLayout({
     const allowed = ADMIN_NAV_ITEMS.filter((item) => item.roles.includes(role));
     const isAllowed = allowed.some((item) => pathname.startsWith(item.href));
     if (!isAllowed && allowed.length > 0) {
-      router.replace(allowed[0].href);
+      /* 飛ばす先は「使う機能」の設定を見て決める（厨房 OFF の店で /admin/kitchen に
+         着地しない）。設定が読めなければ従来どおり先頭へ。lib/features.ts */
+      let cancelled = false;
+      void fetchFeatureToggles()
+        .catch(() => FEATURES_DEFAULT)
+        .then((features) => {
+          if (cancelled) return;
+          router.replace(adminLandingPath(role, features) ?? allowed[0].href);
+        });
+      return () => { cancelled = true; };
     }
   }, [ready, role, pathname, router]);
 
