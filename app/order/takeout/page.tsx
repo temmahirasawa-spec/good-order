@@ -18,7 +18,7 @@ import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
-import { hasSelectableOptions } from "@/lib/menuOptions";
+import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import OrderHeader from "@/components/ui/OrderHeader";
@@ -74,16 +74,13 @@ export default function TakeoutMenuPage() {
   /* カテゴリー一覧と同じ操作にそろえる。
      ステッパーは**下書きの数量**で、カートに入るのは「カートに入れる」を押したときだけ */
   const { draftOf, bump: bumpDraft, reset: resetDraft } = useDraftQuantities();
-  /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる */
-  const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
   const addToCart = (item: MenuItem) => {
-    if (needsDetail(item)) {
-      /* 一覧で決めた数量を詳細シートに引き継ぐ */
-      openItemDetail(item.id, { qty: draftOf(item.id) });
-      resetDraft(item.id);
-      return;
-    }
-    addItem(item, draftOf(item.id));
+    /* **一覧の「カートに入れる」はその場で入れる**（2026-09-17、天真の決定）。
+       以前はオプション（HOT/ICED 等）のある商品だけ詳細シートを開いてもう一度押させていたが、
+       「押したのに入らない」とお客様が戸惑う。オプションは既定値（1つ選ぶ型は1番目＝HOT、
+       複数選ぶ型は無し）、提供タイミングは区分の既定値で入れる。変えたい人は商品をタップして詳細から */
+    const options = defaultSelection(normalizeSelectMode(item.optionsSelectMode), menuOptions[item.id] ?? []);
+    addItem(item, draftOf(item.id), undefined, options);
     resetDraft(item.id);
   };
   const cardHandlers = (item: MenuItem) => ({

@@ -34,7 +34,7 @@ import FilterPlaceholderSheet from "@/components/ui/FilterPlaceholderSheet";
 import { ENABLE_MENU_FILTER } from "@/lib/siteConfig";
 import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
-import { hasSelectableOptions } from "@/lib/menuOptions";
+import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import { applyTopLimit, hasImage } from "@/lib/orderHome";
@@ -88,8 +88,6 @@ function OrderContent() {
   const isTakeoutMode = useCartStore((s) => s.isTakeoutMode);
   const addItem        = useCartStore((s) => s.addItem);
   const menuOptions    = useMenuDataStore((s) => s.menuOptions);
-  /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる（docs/specs/menu-options.md 3-2） */
-  const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
 
   const { loading, bestSellerItems, bestSellerEnabled, categorySections } = useOrderPageData();
 
@@ -130,14 +128,12 @@ function OrderContent() {
      カード・行のすべてへ広げた（天真の指示）。hooks/useDraftQuantities.ts */
   const { draftOf, bump: bumpDraft, reset: resetDraft } = useDraftQuantities();
   const addToCart = (item: MenuItem) => {
-    /* オプションや提供タイミングを選ぶ必要がある商品は、一覧からは入れずに詳細を開く */
-    if (needsDetail(item)) {
-      /* 一覧で決めた数量を詳細シートに引き継ぐ */
-      openItemDetail(item.id, { qty: draftOf(item.id) });
-      resetDraft(item.id);
-      return;
-    }
-    addItem(item, draftOf(item.id));
+    /* **一覧の「カートに入れる」はその場で入れる**（2026-09-17、天真の決定）。
+       以前はオプション（HOT/ICED 等）のある商品だけ詳細シートを開いてもう一度押させていたが、
+       「押したのに入らない」とお客様が戸惑う。オプションは既定値（1つ選ぶ型は1番目＝HOT、
+       複数選ぶ型は無し）、提供タイミングは区分の既定値で入れる。変えたい人は商品をタップして詳細から */
+    const options = defaultSelection(normalizeSelectMode(item.optionsSelectMode), menuOptions[item.id] ?? []);
+    addItem(item, draftOf(item.id), undefined, options);
     resetDraft(item.id);
   };
   const cardHandlers = (item: MenuItem) => ({
