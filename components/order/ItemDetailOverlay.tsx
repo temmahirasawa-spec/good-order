@@ -34,6 +34,8 @@ import { Video9x16 } from "@/components/ui/VideoBlock";
 import { AddToCartButton, ViewCartButton } from "@/components/ui/Buttons";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
 import MenuOptionPicker from "@/components/ui/OptionRow";
+import PerCupRows from "@/components/ui/PerCupRows";
+import { type CupDraft, groupCups, perCupHeading, resizeCups, usesPerCup } from "@/lib/perCup";
 import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { useCartStore } from "@/lib/store";
@@ -114,6 +116,9 @@ function OverlayContent() {
   const [draftTiming, setDraftTiming] = useState<ServingTiming | null>(null);
   /* オプション（トッピング）の下書き。null は「初期選択のまま」（1つだけの商品は最初の項目、複数選択は空） */
   const [draftOptionIds, setDraftOptionIds] = useState<string[] | null>(null);
+  /* 1杯ごとの選択（lib/perCup.ts）。数量2以上で HOT/ICED か提供タイミングを選べる商品のとき、
+     杯ごとの下書きをここに持つ。長さは数量に合わせて resizeCups で揃える（2026-09-16、案B） */
+  const [cups, setCups] = useState<CupDraft[]>([]);
   const openedByPushRef = useRef(false);
 
   const item = itemId ? allMenuItems.find((m) => m.id === itemId) ?? null : null;
@@ -140,6 +145,23 @@ function OverlayContent() {
     .map(toSelected);
   const unitPriceWithOptions = (item?.price ?? 0) + optionsTotal(selectedOptions);
 
+  /* 1杯ごとの選択。1つ選ぶ型のオプション（HOT/ICED）と提供タイミングだけを杯ごとに分ける。
+     複数選べるトッピングは全杯共通のまま */
+  const singleSelectable = optionsSelectable && optionsMode === "single";
+  const perCup = usesPerCup(draftQty, singleSelectable, timingSelectable);
+  const cupDefaults: CupDraft = {
+    optionId: singleSelectable ? itemOptions[0]?.id ?? null : null,
+    timing: timingSelectable ? defaultServingTiming(timingType) : null,
+  };
+  const effectiveCups = perCup ? resizeCups(cups, draftQty, cupDefaults) : [];
+  const cupUnit = timingType === "drink" ? "杯" : "個";
+  const optionOf = (id: string | null) => itemOptions.find((o) => o.id === id);
+  /* 杯ごとに選んだ組み合わせの合計。オプションに価格差があっても正しく足す */
+  const perCupTotal = effectiveCups.reduce(
+    (sum, cup) => sum + (item?.price ?? 0) + (optionOf(cup.optionId)?.price ?? 0), 0
+  );
+  const cartTotal = perCup ? perCupTotal : unitPriceWithOptions * draftQty;
+
   /* 開くたびに数量を1へ戻し、この開き方が history.back() で閉じられるかを覚える。
      商品が変わったときも通るので、おすすめから移った直後はここで先頭までスクロールを戻す。
      visible は**次のフレームで**立てる。同じフレームで true にすると
@@ -154,6 +176,7 @@ function OverlayContent() {
     setDraftQty(takeInitialQty());
     setDraftTiming(null);
     setDraftOptionIds(null);
+    setCups([]);
     setAdded(false);
     setDragY(0);
     dragYRef.current = 0;
@@ -463,7 +486,7 @@ function OverlayContent() {
                 </div>
 
                 {/* ── オプション（対象商品のみ。案A: 説明文の下にチェック一覧） ── */}
-                {optionsSelectable && (
+                {optionsSelectable && !(perCup && singleSelectable) && (
                   <MenuOptionPicker
                     className="px-[var(--space-16)] mt-[var(--space-24)]"
                     heading={item.optionsHeading || OPTIONS_HEADING_DEFAULT}
@@ -477,7 +500,23 @@ function OverlayContent() {
                 )}
 
                 {/* ── 提供タイミング（対象商品のみ。案B: 説明つきカード） ── */}
-                {timingSelectable && (
+                {/* ── 1杯ごとの選択（数量2以上・案B）。オプション一覧と提供タイミングの代わりに出す ── */}
+                {perCup && (
+                  <PerCupRows
+                    className="px-[var(--space-16)] mt-[var(--space-24)]"
+                    heading={perCupHeading(draftQty, cupUnit)}
+                    itemName={item.name}
+                    cups={effectiveCups}
+                    singleOptions={singleSelectable ? itemOptions : []}
+                    timingOptions={timingSelectable ? servingTimingOptions(timingType) : []}
+                    onChange={(i, next) => {
+                      setCups(effectiveCups.map((c, j) => (j === i ? next : c)));
+                      setAdded(false);
+                    }}
+                  />
+                )}
+
+                {timingSelectable && !perCup && (
                   <section className="flex flex-col gap-[var(--space-8)] px-[var(--space-16)] mt-[var(--space-24)]">
                     <p className="type-jp-caption-bold text-text-secondary">{SERVING_TIMING_TITLE}</p>
                     <ServingTimingCards
@@ -583,14 +622,25 @@ function OverlayContent() {
                     数量をかけた「いま入れる分の合計」なので、押す前に必ず金額が見える */}
                 <div className="flex-1 min-w-0 max-w-[190px]">
                   <AddToCartButton
-                    label={`カートに入れる ¥${(unitPriceWithOptions * draftQty).toLocaleString()}`}
+                    label={`カートに入れる ¥${cartTotal.toLocaleString()}`}
                     onClick={() => {
-                      addItem(
-                        item,
-                        draftQty,
-                        timingSelectable ? selectedTiming : null,
-                        optionsSelectable ? selectedOptions : []
-                      );
+                      if (perCup) {
+                        /* 同じ組み合わせごとにまとめてカートの行にする（天真の決定 2026-09-16） */
+                        for (const g of groupCups(effectiveCups)) {
+                          const single = optionOf(g.optionId);
+                          const options = singleSelectable
+                            ? (single ? [toSelected(single)] : [])
+                            : optionsSelectable ? selectedOptions : [];
+                          addItem(item, g.quantity, timingSelectable ? g.timing : null, options);
+                        }
+                      } else {
+                        addItem(
+                          item,
+                          draftQty,
+                          timingSelectable ? selectedTiming : null,
+                          optionsSelectable ? selectedOptions : []
+                        );
+                      }
                       setAdded(true);
                     }}
                   />
