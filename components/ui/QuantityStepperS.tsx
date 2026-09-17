@@ -36,7 +36,7 @@ export default function QuantityStepperS({
         }`}
       >
         <span
-          className={`absolute left-[11px] top-[15px] w-[10px] h-[2px] rounded-[1px] ${
+          className={`absolute left-[10px] top-[14px] w-[10px] h-[2px] rounded-[1px] ${
             empty ? "bg-text-disabled" : "bg-text-primary"
           }`}
         />
@@ -55,8 +55,11 @@ export default function QuantityStepperS({
         onClick={onIncrement}
         className="relative bg-surface-white border border-text-primary rounded-full shrink-0 w-[32px] h-[32px]"
       >
-        <span className="absolute left-[11px] top-[15px] w-[10px] h-[2px] rounded-[1px] bg-text-primary" />
-        <span className="absolute left-[15px] top-[11px] w-[2px] h-[10px] rounded-[1px] bg-text-primary" />
+        {/* ⚠ absolute の基準は枠線の**内側**（padding box）。ボタン 32px・枠 1px なので中身は 30px、
+            中心は 15。以前は 11/15 始まりで中心が 16 になり、＋−が 1px 右下にずれていた
+            （2026-09-17、天真の指摘。36px の QuantityStepper は 11/16 始まりで中心 17 = 正しい） */}
+        <span className="absolute left-[10px] top-[14px] w-[10px] h-[2px] rounded-[1px] bg-text-primary" />
+        <span className="absolute left-[14px] top-[10px] w-[2px] h-[10px] rounded-[1px] bg-text-primary" />
       </button>
     </div>
   );
