@@ -27,7 +27,7 @@ import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import { useMenuDataStore } from "@/lib/menuDataStore";
-import { hasSelectableOptions } from "@/lib/menuOptions";
+import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
 import { childCategories, itemsOfCategory, resolveListStyle, hasImage } from "@/lib/orderHome";
 import { SUBCATEGORY_LABEL, SUBCATEGORY_EN_LABEL } from "@/lib/categoryLabels";
 import type { ApiCategory } from "@/lib/api";
@@ -72,8 +72,6 @@ export default function CategoryListingPage() {
 
   const addItem        = useCartStore((s) => s.addItem);
   const menuOptions    = useMenuDataStore((s) => s.menuOptions);
-  /* オプション（トッピング）を選べる商品は、黙って入れずに商品詳細で選ばせる */
-  const needsDetail = (item: MenuItem) => hasSelectableOptions(item, menuOptions[item.id] ?? []);
 
   useEffect(() => {
     fetchAll();
@@ -141,14 +139,12 @@ export default function CategoryListingPage() {
   /* ステッパーは**下書きの数量**。カートに入るのは「カートに入れる」を押したときだけ
      （2026-09-16、天真の指示。それまで ＋ が即カート投入だった） */
   const addToCart = (item: MenuItem) => {
-    /* オプションや提供タイミングを選ぶ必要がある商品は、一覧からは入れずに詳細を開く */
-    if (needsDetail(item)) {
-      /* 一覧で決めた数量を詳細シートに引き継ぐ */
-      openItemDetail(item.id, { qty: draftOf(item.id) });
-      resetDraft(item.id);
-      return;
-    }
-    addItem(item, draftOf(item.id));
+    /* **一覧の「カートに入れる」はその場で入れる**（2026-09-17、天真の決定）。
+       以前はオプション（HOT/ICED 等）のある商品だけ詳細シートを開いてもう一度押させていたが、
+       「押したのに入らない」とお客様が戸惑う。オプションは既定値（1つ選ぶ型は1番目＝HOT、
+       複数選ぶ型は無し）、提供タイミングは区分の既定値で入れる。変えたい人は商品をタップして詳細から */
+    const options = defaultSelection(normalizeSelectMode(item.optionsSelectMode), menuOptions[item.id] ?? []);
+    addItem(item, draftOf(item.id), undefined, options);
     resetDraft(item.id);
   };
   const cardHandlers = (item: MenuItem) => ({

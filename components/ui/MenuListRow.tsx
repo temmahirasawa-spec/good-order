@@ -52,7 +52,9 @@ export default function MenuListRow({
     <div
       className={`flex gap-[var(--space-12)] items-center py-[var(--space-12)] border-b border-border-divider w-full ${className}`}
     >
-      {showThumb && (
+      {/* 写真が無い商品は枠ごと出さない（グレーの空箱が「準備中」に見える。2026-09-17、天真の指摘）。
+          その分、品名と価格が左に詰まる */}
+      {showThumb && src && (
         <div
           className={`relative bg-bg-tertiary rounded-[var(--radius-sm)] overflow-hidden shrink-0 w-[56px] h-[56px] ${onClick ? "cursor-pointer" : ""}`}
           onClick={onClick}
