@@ -32,6 +32,15 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 
 ## 直近までの進捗
 
+### 2026-09-17: 下部「カートを見る」に数字ピル（案B）
+
+- 一覧ページ（TOP・カテゴリ・メニュー）の下部バーに、カートの点数を白い丸ピルで常に出す。**空でも 0 で出す**
+  （天真の要望。それまでは空だとバーごと出なかった）。入れた瞬間に数字がロール＋丸が 1.3 倍にはねる
+- 3案（アイコンにバッジ／右端に数字ピル／左に丸ボタンを独立）から案B。Figma: `View Cart Button (Count)`、
+  `Bottom View Cart Bar (Count)`。丸の下側だけ 2px の余白は Barlow の数字を持ち上げる調整（Figma と同じ）
+- 商品詳細シートの「カートを見る」（アイコンにバッジ）はそのまま
+- 部品: `components/ui/ViewCartCountButton.tsx`、`components/ui/BottomViewCartBar.tsx`
+
 ### 2026-09-16: 詳細シートの数量引き継ぎ・1杯ごとの選択
 
 - 一覧のステッパーで決めた数量が詳細シートで 1 に戻る不具合を修正（#120、天真の指摘）。`openItemDetail` に `qty` を渡す

@@ -27,6 +27,7 @@ import CartItemRow from "@/components/ui/CartItemRow";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
 import PerCupRows from "@/components/ui/PerCupRows";
+import ViewCartCountButton from "@/components/ui/ViewCartCountButton";
 import { type CupDraft, perCupHeading } from "@/lib/perCup";
 import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
 import { SERVING_TIMING_TITLE, servingTimingOptions, type ServingTiming } from "@/lib/servingTiming";
@@ -546,6 +547,20 @@ function CheckoutConfirmAlertDemo() {
   );
 }
 
+/* ── 下部バーの「カートを見る」＋数字ピル（案B）。押すと増えてロール＋はねる ── */
+function ViewCartCountDemo() {
+  const [n, setN] = useState(0);
+  return (
+    <div className="flex flex-col gap-[12px]">
+      <p className="type-jp-caption text-text-secondary">ボタンを押すと 1 増える（ロール＋はねる）。「減らす」は静かに変わる</p>
+      <ViewCartCountButton count={n} onClick={() => setN(n + 1)} />
+      <button type="button" className="type-jp-caption text-text-secondary underline self-start" onClick={() => setN(Math.max(0, n - 1))}>
+        減らす
+      </button>
+    </div>
+  );
+}
+
 /* ── 1杯ごとの選択（lib/perCup.ts・案B）のデモ。数量4、3杯目だけ ICED・食後 ── */
 function PerCupDemo() {
   const options = [
@@ -971,6 +986,9 @@ export default function UiGalleryPage() {
 
       <Section title="提供タイミング（ServingTimingCards / SegmentedControl / ServingTimingBadge）">
         <ServingTimingDemo />
+      </Section>
+      <Section title="ViewCartCountButton（下部バーの数字つき、components/ui/ViewCartCountButton.tsx）">
+        <ViewCartCountDemo />
       </Section>
       <Section title="PerCupRows（1杯ごとの選択・案B、components/ui/PerCupRows.tsx）">
         <PerCupDemo />
