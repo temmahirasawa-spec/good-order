@@ -84,6 +84,13 @@ const ITEM_NAME_X = 96;
  */
 const ITEM_NAME_HALF_WIDTHS = Math.floor((PRINT_WIDTH - ITEM_NAME_X) / 12);
 
+/**
+ * 補足（オプション・提供タイミング）に使う小さい書体 font_b の半角1文字 = 9ドット。
+ * 品名（font_a・縦2倍）より一回り小さく、厨房が「何を作るか」を品名だけで拾えるようにする
+ * （2026-09-17、洋輔さんの要望を天真が決定）。「食後」の黒帯は見落とし防止のため今までどおり。
+ */
+const SUB_INFO_HALF_WIDTHS = Math.floor((PRINT_WIDTH - ITEM_NAME_X) / 9);
+
 /** XML の特殊文字を実体参照に置き換える。品名に & や < が入っていても壊さないため */
 function esc(s: string): string {
   return s
@@ -271,17 +278,22 @@ function ticketXml(job: ReceiptJob, copy: ReceiptCopy): string[] {
       x.push(`<text x="${ITEM_NAME_X}"/>`);
       x.push(`<text>${esc(line)}&#10;</text>`);
     });
-    // オプション（トッピング）: 品名と同じ大きさで「＋名前」を1行ずつ（天真の決定）
+    x.push(`<text width="1" height="1" em="false"/>`);
+
+    // オプション（トッピング）: 「＋名前」を1行ずつ。品名より小さい書体（font_b・縦2倍）で、
+    // 補足だと分かるようにする（2026-09-17 の決定。それまでは品名と同じ大きさだった）
     for (const opt of item.options ?? []) {
-      wrapByWidth(`＋${opt.name}`, ITEM_NAME_HALF_WIDTHS).forEach((line) => {
+      x.push(`<text font="font_b" width="1" height="2"/>`);
+      wrapByWidth(`＋${opt.name}`, SUB_INFO_HALF_WIDTHS).forEach((line) => {
         x.push(`<text x="${ITEM_NAME_X}"/>`);
         x.push(`<text>${esc(line)}&#10;</text>`);
       });
+      x.push(`<text font="font_a" width="1" height="1"/>`);
     }
-    x.push(`<text width="1" height="1" em="false"/>`);
 
-    // 提供タイミング（選んだ明細だけ）。品名と同じ左端・同じ倍高で、厨房から読める大きさにする。
-    // 「食後」は黒帯（見落とすと事故になるのはこちら）、「でき次第」「先出し」は通常の文字。
+    // 提供タイミング（選んだ明細だけ）。品名と同じ左端。
+    // 「食後」は黒帯（見落とすと事故になるのはこちら）で今までどおりの大きさ、
+    // 「でき次第」「先出し」はオプションと同じ小さい書体。
     if (item.servingTiming) {
       const label = SERVING_TIMING_LABEL[item.servingTiming];
       x.push(`<text x="${ITEM_NAME_X}"/>`);
@@ -291,9 +303,9 @@ function ticketXml(job: ReceiptJob, copy: ReceiptCopy): string[] {
         x.push(`<text reverse="false" em="false" width="1" height="1"/>`);
         x.push(`<text>&#10;</text>`);
       } else {
-        x.push(`<text width="1" height="2"/>`);
+        x.push(`<text font="font_b" width="1" height="2"/>`);
         x.push(`<text>${esc(label)}&#10;</text>`);
-        x.push(`<text width="1" height="1"/>`);
+        x.push(`<text font="font_a" width="1" height="1"/>`);
       }
     }
   });
