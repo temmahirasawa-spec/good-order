@@ -32,6 +32,16 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 
 ## 直近までの進捗
 
+### 2026-09-16: 詳細シートの数量引き継ぎ・1杯ごとの選択
+
+- 一覧のステッパーで決めた数量が詳細シートで 1 に戻る不具合を修正（#120、天真の指摘）。`openItemDetail` に `qty` を渡す
+- **1杯ごとの選択（案B）** を追加。数量2以上で HOT/ICED・先出し/食後 を杯ごとに選べる。
+  カートは同じ組み合わせごとにまとめる（天真の決定）。詳細は `docs/specs/menu-options.md` の 11
+- 洋輔さんから「厨房伝票は料理名を大きく、＋HOT や 先出し は小さく」の要望。`lib/receipt.ts` の
+  明細は品名 `width=1 height=2`・オプション同サイズ・提供タイミング `height=2`。対応は可能（未着手、天真の判断待ち）
+
+
+
 - Step3-I: スタッフ管理画面共通基盤を新規構築済み
   - `components/admin/nav/{NavItem,MenuAccordionNavItem,NavContent,NavSidebar,NavDrawer}.tsx`
   - `components/admin/AdminPageShell.tsx`（render-propsで`openDrawer`を渡す。PC=NavSidebar常設／

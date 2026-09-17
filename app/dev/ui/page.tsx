@@ -26,6 +26,8 @@ import RecommendCard from "@/components/ui/RecommendCard";
 import CartItemRow from "@/components/ui/CartItemRow";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
+import PerCupRows from "@/components/ui/PerCupRows";
+import { type CupDraft, perCupHeading } from "@/lib/perCup";
 import ServingTimingBadge from "@/components/ui/ServingTimingBadge";
 import { SERVING_TIMING_TITLE, servingTimingOptions, type ServingTiming } from "@/lib/servingTiming";
 import MenuOptionPicker from "@/components/ui/OptionRow";
@@ -544,6 +546,30 @@ function CheckoutConfirmAlertDemo() {
   );
 }
 
+/* ── 1杯ごとの選択（lib/perCup.ts・案B）のデモ。数量4、3杯目だけ ICED・食後 ── */
+function PerCupDemo() {
+  const options = [
+    { id: "hot", name: "HOT", price: 0 },
+    { id: "iced", name: "ICED", price: 0 },
+  ];
+  const [cups, setCups] = useState<CupDraft[]>([
+    { optionId: "hot", timing: "first" },
+    { optionId: "hot", timing: "first" },
+    { optionId: "iced", timing: "after_meal" },
+    { optionId: "hot", timing: "first" },
+  ]);
+  return (
+    <PerCupRows
+      heading={perCupHeading(cups.length, "杯")}
+      itemName="アメリカーノ"
+      cups={cups}
+      singleOptions={options}
+      timingOptions={servingTimingOptions("drink")}
+      onChange={(i, next) => setCups(cups.map((c, j) => (j === i ? next : c)))}
+    />
+  );
+}
+
 /* ── 提供タイミング（docs/specs/serving-timing.md）のデモ。選択状態を持つ ── */
 function ServingTimingDemo() {
   const [food, setFood]   = useState<ServingTiming>("asap");
@@ -945,6 +971,9 @@ export default function UiGalleryPage() {
 
       <Section title="提供タイミング（ServingTimingCards / SegmentedControl / ServingTimingBadge）">
         <ServingTimingDemo />
+      </Section>
+      <Section title="PerCupRows（1杯ごとの選択・案B、components/ui/PerCupRows.tsx）">
+        <PerCupDemo />
       </Section>
 
       <Section title="オプション（MenuOptionPicker / OptionRow）">
