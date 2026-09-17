@@ -32,6 +32,16 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 
 ## 直近までの進捗
 
+### 2026-09-18: 使い方マニュアル `/help` を開始（第1部 お客様）
+
+- 天真の決定: 3部構成（お客様 / 当日の運用 / 設定）、**認証なしの公開ページ** `/help`、第1部から順に書く。
+  製品化の土台にするため、ページと段落に「共通 / 店ごとの設定 / YORKYS だけ」の印を付ける（`scope`、`[YORKYS]`、`[店ごと]`）
+- 文章は `content/help/<part>/<slug>.md`（frontmatter: title / order / summary / scope）。読み込みは `lib/help/content.ts`、
+  表示は `components/help/HelpMarkdown.tsx`（外部ライブラリなしの小さな Markdown）。**lib/ に置くと Tailwind が拾わず装飾が効かない**ので components/ に置く
+- スクショは `public/help/<part>/*.png`（390px・2倍）。撮影スクリプトは scratchpad（`helpshots.mjs`）。管理画面のスクショはローカルの見本データで撮る方針
+- 検索エンジンにはまだ載せない（`robots: index false`）。製品版で整理してから
+- 未着手: 第2部（当日の運用）、第3部（設定）。カート画面の写真なし商品はグレーの枠が残っている（一覧は #126 で消した。カートも消すか天真に確認）
+
 ### 2026-09-17: 一覧の「カートに入れる」はその場で入れる・写真なしの行は枠を出さない
 
 - TOP・カテゴリ・テイクアウトの一覧で「カートに入れる」を押したら**その場でカートに入る**（天真の決定）。
