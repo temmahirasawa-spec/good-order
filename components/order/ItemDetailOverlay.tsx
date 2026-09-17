@@ -31,7 +31,8 @@ import QuantityStepper from "@/components/ui/QuantityStepper";
 import RecommendCard from "@/components/ui/RecommendCard";
 import { RecommendCarousel } from "@/components/ui/MenuCarousel";
 import { Video9x16 } from "@/components/ui/VideoBlock";
-import { AddToCartButton, ViewCartButton } from "@/components/ui/Buttons";
+import { AddToCartButton } from "@/components/ui/Buttons";
+import ViewCartCountButton from "@/components/ui/ViewCartCountButton";
 import ServingTimingCards from "@/components/ui/ServingTimingCards";
 import MenuOptionPicker from "@/components/ui/OptionRow";
 import PerCupRows from "@/components/ui/PerCupRows";
@@ -657,7 +658,8 @@ function OverlayContent() {
                   pointerEvents: added ? "auto" : "none",
                 }}
               >
-                <ViewCartButton count={totalItems} onClick={() => router.push("/cart")} />
+                {/* 一覧の下部バーと同じ数字ピル（2026-09-17、天真の指示。それまではアイコンにバッジの ViewCartButton） */}
+                <ViewCartCountButton count={totalItems} onClick={() => router.push("/cart")} />
               </div>
              </div>
             </div>
