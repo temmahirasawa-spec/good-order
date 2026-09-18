@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>法人口座の選定</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600&family=Noto+Sans+JP:wght@500;700&display=swap">
+<style>
+:root{--accent:#5E6B4A;--accent-deep:#444D35;--accent-subtle:#E7E9E5;--ink:#1A1A1A;--sub:#5F6258;--t3:#8E9187;--line:#DCDED6;--bg:#F3F3F0;--paper:#FFFFFF;--warn:#C4302A;--jp:'Noto Sans JP',system-ui,sans-serif;--en:'Barlow',system-ui,sans-serif}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--accent:#97A67F;--accent-deep:#B9C6A4;--accent-subtle:#2C3126;--ink:#F2F2EE;--sub:#B9BCB2;--t3:#82857C;--line:#3A3D35;--bg:#1C1E19;--paper:#262923;--warn:#E0736C}}
+:root[data-theme="dark"]{--accent:#97A67F;--accent-deep:#B9C6A4;--accent-subtle:#2C3126;--ink:#F2F2EE;--sub:#B9BCB2;--t3:#82857C;--line:#3A3D35;--bg:#1C1E19;--paper:#262923;--warn:#E0736C}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:500 15px/1.8 var(--jp)}
+.wrap{max-width:1040px;margin:0 auto;padding:40px 24px 96px}
+.hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-bottom:28px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:500 11px/1.4 var(--jp);letter-spacing:.06em;color:var(--sub)}
+h1{font:500 44px/1.05 var(--en);margin:6px 0 4px;letter-spacing:-.01em;text-wrap:balance}
+.jp{font:700 13px var(--jp);color:var(--sub);letter-spacing:.04em}
+.meta{font:600 13px var(--en);color:var(--sub);text-align:right;line-height:1.6;font-variant-numeric:tabular-nums}.meta b{display:block;font:600 20px var(--en);color:var(--ink)}
+.band{background:var(--ink);color:var(--bg);border-radius:12px;padding:16px 20px;margin:28px 0 0}
+.band b{display:block;font:600 13px var(--en);letter-spacing:.08em;opacity:.7;margin-bottom:4px}
+.band p{margin:0;font-size:15px;font-weight:700}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0 0}
+.sum{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:6px}
+.sum .n{font:600 13px var(--en);color:var(--accent);letter-spacing:.08em}.sum .t{font:700 16px/1.4 var(--jp)}.sum p{margin:0;font-size:13px;color:var(--sub);line-height:1.6}
+section{margin-top:56px}
+.sh{display:flex;flex-direction:column;gap:2px;margin-bottom:18px}.sh .eye{font:500 11px var(--jp);letter-spacing:.06em;color:var(--sub)}.sh .en{font:500 34px/1.1 var(--en);letter-spacing:-.01em}.sh .ja{font:700 15px var(--jp);color:var(--sub)}
+.prose{max-width:66ch}.prose p{margin:0 0 12px}.prose ul{margin:0 0 12px;padding-left:20px}.prose li{margin:4px 0}
+.callout{border-left:3px solid var(--accent);background:var(--accent-subtle);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}.callout b{color:var(--accent-deep)}
+.caution{border-left:3px solid var(--warn);background:var(--paper);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}.caution b{color:var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:700;color:var(--sub);font-size:12px;background:var(--bg)}tr:last-child td{border-bottom:0}
+.g{font:600 18px var(--en);color:var(--accent)}.g.w{color:var(--warn)}.g.s{color:var(--t3)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.card h3{margin:0 0 4px;font:700 17px var(--jp)}.card .tag{display:inline-block;font:600 10px var(--en);letter-spacing:.1em;padding:2px 8px;border-radius:999px;background:var(--accent);color:#fff;margin-left:8px;vertical-align:middle}
+.card .tag.s{background:var(--t3)}.card .tag.w{background:var(--warn)}
+.card dl{margin:10px 0 0;display:grid;grid-template-columns:96px 1fr;gap:4px 12px;font-size:13px}.card dt{color:var(--sub);font-weight:700}.card dd{margin:0}
+.card .src{margin-top:10px;font-size:12px;color:var(--t3)}.card .src a{color:var(--sub)}
+.next{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}.next span{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700}.next i{color:var(--t3);font-style:normal}
+.ask{counter-reset:q}.ask li{margin:8px 0}
+.foot{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--t3)}
+a{color:var(--accent-deep)}
+@media (max-width:760px){.wrap{padding:24px 16px 64px}.hero,.summary,.cards{grid-template-columns:1fr}.meta{text-align:left}h1{font-size:34px}.sh .en{font-size:28px}.card dl{grid-template-columns:84px 1fr}}
+</style>
+<div class="wrap">
+
+<header class="hero">
+  <div>
+    <div class="eyebrow">UTUTU — 会社設立 2026.09.07</div>
+    <h1>Bank Account</h1>
+    <div class="jp">法人口座をどこで作るか — 洋輔さん判断用</div>
+  </div>
+  <div class="meta">2026.09.18<b>7 banks</b>平澤 天真（Claude Code 補助）</div>
+</header>
+
+<div class="band"><b>PREMISE</b><p>用途は Stripe（決済代行）からの入金受け取り・経費の支払い・将来の創業融資。法人番号は公表サイトに掲載済み。今回はスピードを重視。</p></div>
+
+<div class="summary">
+  <div class="sum"><div class="n">01 / 推奨</div><div class="t">三井住友 Trunk をメインに即日申し込み</div><p>メガバンク名・最短即日・他行宛 100 円。Stripe の入金先として実績あり。</p></div>
+  <div class="sum"><div class="n">02 / 保険</div><div class="t">GMOあおぞらも同時に申し込む</div><p>最速・最安。Trunk の審査が通らなければこちらをメインに。月額はどちらもゼロ。</p></div>
+  <div class="sum"><div class="n">03 / 見送り</div><div class="t">楽天・ゆうちょ・PayPay 銀行</div><p>Stripe の入金先候補に出ないという調査報告あり。三菱UFJ の通常口座は開設に 1〜1.5 か月。</p></div>
+</div>
+
+<section>
+  <div class="sh"><span class="eye">1</span><span class="en">RANKING</span><span class="ja">推奨度の一覧</span></div>
+  <table>
+    <tr><th style="width:44px">順位</th><th>銀行</th><th style="width:64px">推奨度</th><th>一言</th></tr>
+    <tr><td>1</td><td><b>三井住友銀行 Trunk</b></td><td class="g">◎</td><td>メガバンクの名前・スピード・手数料の三拍子。融資はこの口座では扱わないが、今の UTUTU に融資の予定は無い</td></tr>
+    <tr><td>2</td><td><b>GMOあおぞらネット銀行</b></td><td class="g">○</td><td>最速・最安（設立 1 年未満は他行宛が月 20 回無料）。API と会計連携に強い。銀行名の信用はメガバンクに劣る</td></tr>
+    <tr><td>3</td><td><b>みずほ UPSIDER BANK</b>（2026-06 開始）</td><td class="g">○</td><td>メガバンク名＋他行宛 100 円＋最短即日。始まって 3 か月で情報が少なく、様子見</td></tr>
+    <tr><td>4</td><td>ドコモSMTBネット銀行（旧 住信SBI）</td><td class="g s">△</td><td>中身は変わっていないが、ブランドが「ドコモの銀行」に寄った。あえて今選ぶ理由が薄い</td></tr>
+    <tr><td>5</td><td>PayPay銀行</td><td class="g s">△</td><td>開設が 3〜10 日と遅め。Stripe の入金先に選べない可能性</td></tr>
+    <tr><td>—</td><td>楽天銀行・ゆうちょ銀行</td><td class="g w">×</td><td>Stripe の入金先候補に出ない報告あり。今回の用途に合わない</td></tr>
+    <tr><td>—</td><td>三菱UFJ（通常口座）</td><td class="g w">×</td><td>開設まで 1〜1.5 か月。スピード重視と合わない</td></tr>
+    <tr><td>—</td><td>地方銀行・信用金庫</td><td class="g s">将来</td><td>創業融資（公庫＋保証協会）を本気で使う段階で、会社所在地の信金に 2 口座目</td></tr>
+  </table>
+  <div class="callout"><b>推奨: Trunk をメインで即日申し込み。あわせて GMOあおぞらも申し込み、Trunk の審査が通らなければ GMO をメインにする。</b> どちらも申し込みは 20〜30 分、費用ゼロ。2 口座あっても月額はかからない。</div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">2</span><span class="en">BANKS</span><span class="ja">主要な銀行の現状（2026 年 9 月）</span></div>
+  <div class="cards">
+    <div class="card"><h3>三井住友銀行 Trunk<span class="tag">推奨</span></h3>
+      <dl>
+        <dt>性格</dt><dd>2024 年開始のオンライン完結型。新設法人が主なターゲット</dd>
+        <dt>申し込み</dt><dd>スマホで最短 20 分。本人確認＋「事業内容がわかる書類」1 点（定款・登記事項証明書などのどれか）。印鑑証明の郵送は不要</dd>
+        <dt>開設</dt><dd>最短即日〜翌営業日。ネットバンキングの利用開始は 1 週間程度</dd>
+        <dt>手数料</dt><dd>月額 0 円、SMBC 宛 0 円、他行宛 100 円（2025-05〜）</dd>
+        <dt>できない</dt><dd>通帳なし、窓口なし、現金は ATM のみ、融資はこの口座では扱わない</dd>
+        <dt>連携</dt><dd>freee 等と API 連携</dd>
+        <dt>審査</dt><dd>あり。税理士の比較記事でも「新設法人にも比較的積極的」</dd>
+      </dl>
+      <div class="src">出典: <a href="https://www.smbc.co.jp/hojin/kouza/">SMBC Trunk</a> / <a href="https://www.smbc.co.jp/hojin/kouza/column/banking/trunk-corporate-account.html">Trunk が合理的な 3 つの理由</a> / <a href="https://sogyotecho.jp/smbc-trunk/">創業手帳</a></div>
+    </div>
+    <div class="card"><h3>GMOあおぞらネット銀行<span class="tag">保険・2口座目</span></h3>
+      <dl>
+        <dt>性格</dt><dd>ネット銀行で新設法人の開設実績が最多クラス。IT・Web 系のスタートアップに人気</dd>
+        <dt>申し込み</dt><dd>オンライン完結。代表者＝取引責任者で、セルフィー動画かマイナンバーカードなら最短即日</dd>
+        <dt>手数料</dt><dd>月額 0 円、他行宛 130 円。設立 1 年未満は他行宛が毎月 20 回無料</dd>
+        <dt>カード</dt><dd>法人カード還元 1%。デビット専用サブカードあり</dd>
+        <dt>連携</dt><dd>API が充実（残高・明細・振込の自動化）。freee・マネーフォワード</dd>
+        <dt>融資</dt><dd>自行ビジネスローンのみ。公庫の返済口座には指定可</dd>
+        <dt>注意</dt><dd>バーチャルオフィスは郵便物の受け取り確認が必須</dd>
+      </dl>
+      <div class="src">出典: <a href="https://gmo-aozora.com/promotion/lp/business_account/">GMOあおぞら 法人口座</a> / <a href="https://gmo-aozora.com/business/api-cooperation/">API 連携</a> / <a href="https://www.century-partners.jp/17792596868161">税理士の比較</a></div>
+    </div>
+    <div class="card"><h3>みずほ UPSIDER BANK by MIZUHO<span class="tag s">様子見</span></h3>
+      <dl>
+        <dt>性格</dt><dd>2026-06-30 開始。みずほ＋UPSIDER（法人カード）の共同。みずほに口座を持たない新設・成長期向けのオンライン専用プラン</dd>
+        <dt>中身</dt><dd>口座・ネットバンキング・法人カード・資金調達が一体。AI 与信でカード限度額を上げられる</dd>
+        <dt>手数料</dt><dd>契約料・月額 0 円、他行宛 100 円。最短即日とされる</dd>
+        <dt>注意</dt><dd>始まって 3 か月。審査の実態や落とし穴の情報が少ない。「メガバンク名で 100 円」では Trunk の直接の対抗馬</dd>
+      </dl>
+      <div class="src">出典: <a href="https://www.watch.impress.co.jp/docs/news/2121285.html">Impress Watch</a> / <a href="https://www.businessinsider.jp/article/2607-mizuho-upsider-bank-launch/">Business Insider</a> / <a href="https://www.mizuhobank.co.jp/corporate/account/index.html">みずほ公式</a></div>
+    </div>
+    <div class="card"><h3>ドコモSMTBネット銀行（旧 住信SBI）<span class="tag s">見送り</span></h3>
+      <dl>
+        <dt>経緯</dt><dd>2025-10 に NTT ドコモの連結子会社に。三井住友信託銀行と共同経営。2026-08-03 社名変更。法人向けは「NEOBANK BIZ」で継続</dd>
+        <dt>変わらない</dt><dd>金融機関コード・支店・口座番号・手数料（他行宛 145 円、優遇で 130 円）。開設月と翌月は他行宛が月 10 回無料</dd>
+        <dt>開設</dt><dd>標準的（Trunk や GMO ほど速くない）</dd>
+        <dt>懸念への答え</dt><dd>銀行の実体は 2007 年からの住信SBI で、資本と社名が変わっただけ。ただし今後は d ポイント連携など個人向けのドコモ色が強まる方向。法人としてあえて今選ぶ積極的な理由は無い</dd>
+      </dl>
+      <div class="src">出典: <a href="https://www.docomo.ne.jp/info/news_release/2025/12/19_00.html">ドコモ プレスリリース</a> / <a href="https://www.netbk.co.jp/contents/lp/ci/">社名変更の案内</a></div>
+    </div>
+    <div class="card"><h3>PayPay銀行<span class="tag s">見送り</span></h3>
+      <dl>
+        <dt>開設</dt><dd>最短 3〜10 日。設立半年以内は事業計画書・資金計画書を求められることがある</dd>
+        <dt>手数料</dt><dd>他行宛 145 円、PayPay銀行宛 0 円。保証協会付き融資に対応（ネット銀行では珍しい）</dd>
+        <dt>注意</dt><dd>Stripe の入金先候補に出ないという 2023 年の調査報告。今回の用途には向かない</dd>
+      </dl>
+      <div class="src">出典: <a href="https://faq.paypay-bank.co.jp/faq/show/97?site_domain=business">PayPay銀行 FAQ</a> / <a href="https://wise.com/jp/blog/open-business-account-with-paypay-bank">Wise</a></div>
+    </div>
+    <div class="card"><h3>三菱UFJ（通常口座）・地銀・信金<span class="tag s">将来</span></h3>
+      <dl>
+        <dt>三菱UFJ</dt><dd>Web 申し込み可だが審査に 1〜1.5 か月。銀行名の信用は最上位。必要になった時点で 2 口座目に</dd>
+        <dt>地銀・信金</dt><dd>来店必須で 2〜4 週間。他行宛 440〜770 円と高い。強みは創業融資: 公庫の「新規開業・スタートアップ支援資金」や保証協会付き制度融資は、地元の信金・地銀の担当者がついて進めるのが一般的</dd>
+      </dl>
+      <div class="src">出典: <a href="https://www.bk.mufg.jp/houjin/kouza_kaisetu.html">三菱UFJ</a> / <a href="https://biz.moneyforward.com/establish/basic/53216/">マネーフォワード 比較</a> / <a href="https://sogyotecho.jp/shinsougyouyushi-haishi/">創業手帳 公庫</a></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">3</span><span class="en">STRIPE PAYOUT</span><span class="ja">Stripe の入金先として使えるか（最重要条件）</span></div>
+  <div class="prose">
+    <p>Stripe（Connect 含む）の日本の入金先は約 260 行。2023 年 8 月の調査で、<b>三井住友・三菱UFJ・みずほ・住信SBI（現ドコモSMTB）・あおぞら銀行は候補に出る</b>一方、<b>楽天銀行・ゆうちょ銀行は出ない</b>（PayPay銀行も出ない可能性）。</p>
+    <div class="caution"><b>GMOあおぞらネット銀行は「あおぞら銀行」とは別の銀行で、上の調査では名前が挙がっていない。</b> 実際には多くのスタートアップが Stripe の入金先にしているが、確実なのは Stripe のアカウント作成後、入金設定の画面で銀行名を検索して候補に出るかを見ること。</div>
+    <p style="font-size:12px;color:var(--t3)">出典: <a href="https://www.ncaq.net/2023/08/02/00/07/50/">Stripe Connect 対応銀行の調査（ncaq）</a> / <a href="https://support.stripe.com/questions/why-isnt-my-bank-available">Stripe: 銀行が利用できません</a></p>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">4</span><span class="en">LESS KNOWN</span><span class="ja">一般にあまり知られていない選択肢・考え方</span></div>
+  <div class="prose">
+    <ul>
+      <li><b>「ネット銀行をメイン、メガバンクをサブ」が 2026 年の定石</b>だが、Trunk の登場で「メガバンク名のままネット銀行並みの手数料」が成立した。UTUTU の規模なら Trunk 1 口座で両方を兼ねられる</li>
+      <li><b>UPSIDER BANK by MIZUHO</b> は法人カードの与信が最初から付く。経費をカードで回す設計なら Trunk より合う可能性。新しすぎるので半年後の評判を見て 2 口座目に検討</li>
+      <li><b>GMOあおぞらの「設立 1 年未満・他行宛 20 回無料」</b>は、外注費や店舗への支払いが月数十件になるまで実質ゼロコスト。将来 GOOD ORDER が店ごとに売上を分配する段階では、<b>API で振込を自動化できるのは GMOあおぞらだけ</b>。その時点で 2 口座目にする価値がある</li>
+      <li><b>2 口座を最初から持つ</b>のは手間に見えるが月額はゼロ。「審査落ちの保険」と「役割分担（Trunk＝対外・入金、GMO＝自動振込）」の両方で効く</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">5</span><span class="en">TODAY</span><span class="ja">申し込みに向けて今日できること</span></div>
+  <div class="prose">
+    <ul>
+      <li><b>Trunk</b>: 代表者の本人確認書類（免許証かマイナンバーカード）＋「事業内容がわかる書類」1 点。定款か登記事項証明書の PDF があれば足りる。スマホで 20 分</li>
+      <li><b>GMOあおぞら</b>: 代表者本人がスマホで申し込み（セルフィー動画かマイナンバーカード）。事業内容確認書類（定款・登記事項証明書・会社概要のどれか）</li>
+      <li>どちらも法人の印鑑証明は不要。会社の Web サイトがあると審査が通りやすいので、Stripe 申請と同じく最低限の会社ページを先に用意する</li>
+      <li>開設後: Stripe のダッシュボードで入金先に登録できるかを確認して確定</li>
+    </ul>
+  </div>
+  <div class="next"><span>Trunk 申し込み</span><i>→</i><span>GMOあおぞら 申し込み</span><i>→</i><span>審査結果</span><i>→</i><span>Stripe で入金先を検索</span><i>→</i><span>メイン確定</span></div>
+</section>
+
+<section>
+  <div class="sh"><span class="eye">6</span><span class="en">DECISIONS</span><span class="ja">洋輔さんに決めてほしいこと</span></div>
+  <div class="prose">
+    <ol class="ask">
+      <li><b>メインを Trunk でよいか。</b> 融資を近いうちに使う予定があるなら、信金との 2 口座体制を最初から組む</li>
+      <li><b>GMOあおぞらを保険として同時に申し込むか</b></li>
+      <li><b>申し込みの名義人。</b> Trunk・GMO とも代表者本人の本人確認が要る。代表者が洋輔さんか天真かで、作業する人が決まる</li>
+    </ol>
+  </div>
+</section>
+
+<div class="foot">数字は各行の公開情報（2026 年 9 月時点）から。審査の可否と日数は実際の申し込みで確定します。手数料は税込表記のものと税抜表記のものが混在するため、契約時に再確認してください。</div>
+</div>
+</html>
