@@ -3,6 +3,7 @@
 /**
  * 新デザインのヘッダー（Figma: Header / Open 338:2267・Header / Close 176:1509）
  * 高さ68px。**ボタンは常に右上に1つだけ**（絶対配置 x326 y10）、ロゴは常に画面中央。
+ * ロゴはトップ（/order）へのリンク。
  * ☰でも×でも位置を変えないことで、画面が変わってもボタンの場所を探さなくて済む。
  *
  * - variant="open"（デフォルト）: ボタン=☰、タップで /order/menu（Menuページ）へ
@@ -16,6 +17,7 @@
  * × は開いたメニューを閉じるときだけにする。
  */
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import HeaderIconButton from "@/components/ui/HeaderIconButton";
 import { asset } from "@/lib/siteConfig";
@@ -46,7 +48,14 @@ export default function OrderHeader({
           label={isClose ? "メニューを閉じる" : "メニューを開く"}
           className="absolute right-[16px] top-[10px]"
         />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        {/* ロゴはどの画面でもトップ（/order）への入口（2026-09-19、天真の指示）。
+            メニューページの「トップへ戻る」と同じ行き先にそろえている。
+            p-4 はタップ領域を 38 → 46 にするためで、見た目は変わらない */}
+        <Link
+          href="/order"
+          aria-label="トップへ戻る"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-[var(--space-4)]"
+        >
           <Image
             src={asset("/images/logo/logoSmallBlack.webp")}
             alt="YORKYS BRUNCH"
@@ -55,7 +64,7 @@ export default function OrderHeader({
             className="object-contain"
             priority
           />
-        </div>
+        </Link>
       </div>
     </header>
   );
