@@ -823,7 +823,7 @@ export default function UiGalleryPage() {
         />
       </Section>
 
-      <Section title="MenuCarousel (MenuCard x3)。下の進捗バーは右端で100%になる（2026-09-13、ドットから置き換え）">
+      <Section title="MenuCarousel (MenuCard x3)。下の進捗バーは 2026-09-19 に廃止（天真の指示）">
         <div className="-mx-[16px]">
           <MenuCarousel>
             {menuItems.slice(0, 3).map((m) => (
@@ -833,7 +833,7 @@ export default function UiGalleryPage() {
         </div>
       </Section>
 
-      <Section title="MenuCardWide (300) in Carousel（ベストセラー。進捗バーを追加）">
+      <Section title="MenuCardWide (300) in Carousel（ベストセラー）">
         <div className="-mx-[16px]">
           <MenuCarouselWide>
             {menuItems.slice(0, 2).map((m) => (
