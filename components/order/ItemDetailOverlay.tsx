@@ -439,22 +439,6 @@ function OverlayContent() {
                   style={item.image ? { boxShadow: "0 1px 3px rgba(0, 0, 0, 0.35)" } : undefined}
                 />
 
-                {/* 左上の戻る矢印。おすすめでたどってきたときだけ出す。
-                    右上の × と同じ部品・同じ大きさ（48）で左右対称にしている */}
-                {trail.length > 0 && (
-                  <HeaderIconButton
-                    icon="arrow-left"
-                    onClick={goBack}
-                    label="前に見ていた商品に戻る"
-                    className="absolute left-[16px] top-[12px]"
-                  />
-                )}
-                <HeaderIconButton
-                  icon="close"
-                  onClick={close}
-                  label="閉じる"
-                  className="absolute right-[16px] top-[12px]"
-                />
               </div>
 
               <main className="pb-[var(--space-40)]">
@@ -577,6 +561,25 @@ function OverlayContent() {
                 )}
               </main>
             </div>
+
+            {/* ── 閉じる／戻るは**シートに固定**する（2026-09-19、天真の指示）。
+                スクロール領域の外に置くので、下まで読んでも右上の × が消えない。
+                左上の戻る矢印は × と対の部品なので同じ扱いにしている。
+                z-10 は本文より上・下部バーより下に重ねるため ── */}
+            {trail.length > 0 && (
+              <HeaderIconButton
+                icon="arrow-left"
+                onClick={goBack}
+                label="前に見ていた商品に戻る"
+                className="absolute left-[16px] top-[12px] z-10"
+              />
+            )}
+            <HeaderIconButton
+              icon="close"
+              onClick={close}
+              label="閉じる"
+              className="absolute right-[16px] top-[12px] z-10"
+            />
 
             {/* ── Bottom Detail Bar（Figma 110:542）──
                 左端にカートアイコン（バッジ付き）、右側にステッパーと「カートに入れる」。
