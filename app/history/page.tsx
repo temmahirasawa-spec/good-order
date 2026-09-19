@@ -104,7 +104,7 @@ export default function HistoryPage() {
   return (
     <div className="mx-auto max-w-md min-h-screen bg-bg-primary flex flex-col gap-[var(--space-20)]">
       <div className="sticky top-0 z-30 flex flex-col">
-        <OrderHeader variant="close" />
+        <OrderHeader />
       </div>
 
       {/* 見出し（カテゴリー一覧・テイクアウトと同じ形） */}

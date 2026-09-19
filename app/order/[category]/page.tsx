@@ -200,7 +200,7 @@ export default function CategoryListingPage() {
   return (
     <div className="mx-auto max-w-md min-h-screen bg-bg-primary flex flex-col gap-[var(--space-20)]">
       <div ref={tabNavRef} className="sticky top-0 z-30 flex flex-col">
-        <OrderHeader variant="close" />
+        <OrderHeader />
         {tabs.length > 0 && (
           <TabNav tabs={tabs} activeId={activeGroup} onSelect={handleTabSelect} />
         )}
