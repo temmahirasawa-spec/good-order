@@ -20,7 +20,7 @@ import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
-import { listActionLabel, opensDetailFromList } from "@/lib/listAction";
+import { listActionLabel, listActionVariant, opensDetailFromList } from "@/lib/listAction";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import OrderHeader from "@/components/ui/OrderHeader";
 import { MenuCard } from "@/components/ui/MenuCard";
@@ -98,6 +98,7 @@ export default function TakeoutMenuPage() {
     onDecrement: () => bumpDraft(item.id, -1),
     onAddToCart: () => addToCart(item),
     addLabel: listActionLabel(categories, item),
+    addVariant: listActionVariant(categories, item),
     onClick: () => openItemDetail(item.id),
   });
 

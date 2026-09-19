@@ -32,3 +32,15 @@ export function listActionLabel(
 ): string {
   return opensDetailFromList(categories, item) ? OPEN_DETAIL_LABEL : ADD_TO_CART_LABEL;
 }
+
+/**
+ * 一覧のボタンの見た目。
+ * カートに入る主操作は塗り、詳細を開く副操作は白地に枠
+ * （Figma: Components / 04 Tags & Steppers / Add to Cart Button S-Line）。
+ */
+export function listActionVariant(
+  categories: CategoryForTiming[],
+  item: ItemForTiming
+): "fill" | "line" {
+  return opensDetailFromList(categories, item) ? "line" : "fill";
+}

@@ -28,6 +28,7 @@ export default function MenuListRow({
   showThumb = false,
   onAdd,
   addLabel,
+  addVariant,
   onIncrement,
   onDecrement,
   onClick,
@@ -44,6 +45,8 @@ export default function MenuListRow({
   onAdd: () => void;
   /** ボタンの文言。省略すると「カートに入れる」 */
   addLabel?: string;
+  /** ボタンの見た目。詳細を開く副操作は "line"（白地に枠） */
+  addVariant?: "fill" | "line";
   onIncrement: () => void;
   onDecrement: () => void;
   onClick?: () => void;
@@ -106,6 +109,7 @@ export default function MenuListRow({
           <AddToCartButtonS
             onClick={onAdd}
             label={addLabel ?? ADD_TO_CART_LABEL}
+            variant={addVariant}
             className="w-full"
           />
         </div>
