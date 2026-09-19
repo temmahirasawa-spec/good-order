@@ -70,11 +70,13 @@ export default function StoreInfoModal({ open, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="overflow-y-auto px-[20px] pt-[24px] pb-[24px]"
+          className="overflow-y-auto px-[20px] pb-[24px]"
           style={{ maxHeight: "80vh" }}
         >
-          {/* ── ヘッダー行: タイトル + 閉じる ── */}
-          <div className="flex items-center justify-between">
+          {/* ── ヘッダー行: タイトル + 閉じる。
+              **上に貼り付けて位置を固定する**（2026-09-19、天真の指示）。
+              下まで読んでも右上の × が消えない。地を白で塗るので本文が透けない ── */}
+          <div className="sticky top-0 z-10 bg-surface-white pt-[24px] pb-[var(--space-8)] flex items-center justify-between">
             <h2 className="font-jp font-bold text-[22px] leading-[1.4] text-text-primary">
               店舗情報
             </h2>
@@ -82,7 +84,7 @@ export default function StoreInfoModal({ open, onClose }: Props) {
           </div>
 
           {/* ── ヒーロー画像 ── */}
-          <div className="relative w-full h-[171px] rounded-[var(--radius-sm)] overflow-hidden bg-bg-tertiary mt-[16px]">
+          <div className="relative w-full h-[171px] rounded-[var(--radius-sm)] overflow-hidden bg-bg-tertiary mt-[var(--space-8)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={info.imageUrl}
