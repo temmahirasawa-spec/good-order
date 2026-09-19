@@ -18,6 +18,7 @@
 import type { MenuItem } from "@/lib/menu";
 import QuantityStepperS from "@/components/ui/QuantityStepperS";
 import { AddToCartButtonS } from "@/components/ui/Buttons";
+import { ADD_TO_CART_LABEL } from "@/lib/listAction";
 import { SoldOutBand, SoldOutPill } from "@/components/ui/SoldOut";
 
 export default function MenuListRow({
@@ -26,6 +27,7 @@ export default function MenuListRow({
   description,
   showThumb = false,
   onAdd,
+  addLabel,
   onIncrement,
   onDecrement,
   onClick,
@@ -38,7 +40,10 @@ export default function MenuListRow({
   description?: string | null;
   /** 写真つき商品が混ざる一覧で、行を揃えるために左にサムネ枠を出す */
   showThumb?: boolean;
+  /** 「カートに入れる」。ドリンクでは「詳細を見る」として詳細シートを開く（lib/listAction.ts） */
   onAdd: () => void;
+  /** ボタンの文言。省略すると「カートに入れる」 */
+  addLabel?: string;
   onIncrement: () => void;
   onDecrement: () => void;
   onClick?: () => void;
@@ -100,7 +105,7 @@ export default function MenuListRow({
           />
           <AddToCartButtonS
             onClick={onAdd}
-            label={`カートに入れる`}
+            label={addLabel ?? ADD_TO_CART_LABEL}
             className="w-full"
           />
         </div>

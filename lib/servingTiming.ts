@@ -70,8 +70,8 @@ export function normalizeServingTiming(v: unknown): ServingTiming | null {
   return isServingTiming(v) ? v : null;
 }
 
-type CategoryForTiming = Pick<ApiCategory, "slug" | "category_type" | "serving_timing_choice">;
-type ItemForTiming = Pick<MenuItem, "subcategory" | "category" | "isTakeout">;
+export type CategoryForTiming = Pick<ApiCategory, "slug" | "category_type" | "serving_timing_choice">;
+export type ItemForTiming = Pick<MenuItem, "subcategory" | "category" | "isTakeout">;
 type OrderTypeForTiming = "dine_in" | "takeout";
 
 /**

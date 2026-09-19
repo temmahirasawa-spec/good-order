@@ -20,6 +20,7 @@ import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
+import { listActionLabel, opensDetailFromList } from "@/lib/listAction";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import OrderHeader from "@/components/ui/OrderHeader";
 import { MenuCard } from "@/components/ui/MenuCard";
@@ -52,6 +53,7 @@ export default function TakeoutMenuPage() {
 
   const allMenuItems  = useMenuDataStore((s) => s.menuItems);
   const menuOptions   = useMenuDataStore((s) => s.menuOptions);
+  const categories    = useMenuDataStore((s) => s.categories);
   const storeLoading  = useMenuDataStore((s) => s.loading);
   const storeLoaded   = useMenuDataStore((s) => s.loadedAt);
   const fetchAll      = useMenuDataStore((s) => s.fetchAll);
@@ -75,6 +77,13 @@ export default function TakeoutMenuPage() {
      ステッパーは**下書きの数量**で、カートに入るのは「カートに入れる」を押したときだけ */
   const { draftOf, bump: bumpDraft, reset: resetDraft } = useDraftQuantities();
   const addToCart = (item: MenuItem) => {
+    /* **ドリンクは一覧から直接入れず、詳細シートを開く**（2026-09-19、天真の決定）。
+       HOT / ICED を選べないまま既定値で入ってしまうのを防ぐ。lib/listAction.ts */
+    if (opensDetailFromList(categories, item)) {
+      openItemDetail(item.id, { qty: draftOf(item.id) });
+      resetDraft(item.id);
+      return;
+    }
     /* **一覧の「カートに入れる」はその場で入れる**（2026-09-17、天真の決定）。
        以前はオプション（HOT/ICED 等）のある商品だけ詳細シートを開いてもう一度押させていたが、
        「押したのに入らない」とお客様が戸惑う。オプションは既定値（1つ選ぶ型は1番目＝HOT、
@@ -88,6 +97,7 @@ export default function TakeoutMenuPage() {
     onIncrement: () => bumpDraft(item.id, 1),
     onDecrement: () => bumpDraft(item.id, -1),
     onAddToCart: () => addToCart(item),
+    addLabel: listActionLabel(categories, item),
     onClick: () => openItemDetail(item.id),
   });
 

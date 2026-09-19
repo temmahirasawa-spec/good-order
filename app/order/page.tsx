@@ -36,6 +36,7 @@ import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
+import { listActionLabel, opensDetailFromList } from "@/lib/listAction";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import { applyTopLimit, hasImage } from "@/lib/orderHome";
 import { useOrderPageData, type CategorySection } from "@/hooks/useOrderPageData";
@@ -88,6 +89,7 @@ function OrderContent() {
   const isTakeoutMode = useCartStore((s) => s.isTakeoutMode);
   const addItem        = useCartStore((s) => s.addItem);
   const menuOptions    = useMenuDataStore((s) => s.menuOptions);
+  const categories     = useMenuDataStore((s) => s.categories);
 
   const { loading, bestSellerItems, bestSellerEnabled, categorySections } = useOrderPageData();
 
@@ -128,6 +130,13 @@ function OrderContent() {
      カード・行のすべてへ広げた（天真の指示）。hooks/useDraftQuantities.ts */
   const { draftOf, bump: bumpDraft, reset: resetDraft } = useDraftQuantities();
   const addToCart = (item: MenuItem) => {
+    /* **ドリンクは一覧から直接入れず、詳細シートを開く**（2026-09-19、天真の決定）。
+       HOT / ICED を選べないまま既定値で入ってしまうのを防ぐ。lib/listAction.ts */
+    if (opensDetailFromList(categories, item)) {
+      openItemDetail(item.id, { qty: draftOf(item.id) });
+      resetDraft(item.id);
+      return;
+    }
     /* **一覧の「カートに入れる」はその場で入れる**（2026-09-17、天真の決定）。
        以前はオプション（HOT/ICED 等）のある商品だけ詳細シートを開いてもう一度押させていたが、
        「押したのに入らない」とお客様が戸惑う。オプションは既定値（1つ選ぶ型は1番目＝HOT、
@@ -141,6 +150,7 @@ function OrderContent() {
     onIncrement: () => bumpDraft(item.id, 1),
     onDecrement: () => bumpDraft(item.id, -1),
     onAddToCart: () => addToCart(item),
+    addLabel: listActionLabel(categories, item),
     onClick: () => openItemDetail(item.id),
   });
 
@@ -275,6 +285,7 @@ function OrderContent() {
                           description={rowDescription(sec, item)}
                           showThumb={showThumb}
                           onAdd={() => addToCart(item)}
+                          addLabel={listActionLabel(categories, item)}
                           onIncrement={() => bumpDraft(item.id, 1)}
                           onDecrement={() => bumpDraft(item.id, -1)}
                           onClick={() => openItemDetail(item.id)}

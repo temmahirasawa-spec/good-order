@@ -38,6 +38,7 @@ import SeeMoreButton from "@/components/ui/SeeMoreButton";
 import SeeAllLink from "@/components/ui/SeeAllLink";
 import MenuSectionHeader from "@/components/ui/MenuSectionHeader";
 import MenuListRow from "@/components/ui/MenuListRow";
+import { OPEN_DETAIL_LABEL } from "@/lib/listAction";
 import PlusButton from "@/components/ui/PlusButton";
 import SubcategoryChips, { ALL_CHIP_ID } from "@/components/ui/SubcategoryChips";
 import ListSubHeading from "@/components/ui/ListSubHeading";
@@ -196,9 +197,11 @@ function MenuListRowDemo() {
         onIncrement={() => setQty((q) => q + 1)}
         onDecrement={() => setQty((q) => Math.max(0, q - 1))}
       />
+      {/* ドリンクは「詳細を見る」。HOT/ICED を選ばせるため詳細シートを開く（lib/listAction.ts） */}
       <MenuListRow
         item={{ ...sampleDrink, name: "カフェラテ", description: "カフェ", price: 600 }}
         quantity={qty2}
+        addLabel={OPEN_DETAIL_LABEL}
         onAdd={() => setQty2(1)}
         onIncrement={() => setQty2((q) => q + 1)}
         onDecrement={() => setQty2((q) => Math.max(0, q - 1))}
