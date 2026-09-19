@@ -28,8 +28,11 @@ export interface MenuCardProps {
   quantity: number;
   onIncrement: () => void;
   onDecrement: () => void;
-  /** 「カートに入れる」。下書きの数ぶんを一度に入れる */
+  /** 「カートに入れる」。下書きの数ぶんを一度に入れる。
+   *  ドリンクでは「詳細を見る」として詳細シートを開く（lib/listAction.ts） */
   onAddToCart: () => void;
+  /** ボタンの文言。省略すると「カートに入れる」 */
+  addLabel?: string;
   onClick?: () => void;
   /** 画像の読み込み方法。長いページで下部に並ぶカードは "lazy"（デフォルト）を推奨 */
   imageLoading?: "eager" | "lazy";
@@ -105,6 +108,7 @@ function CardBody({
   onIncrement,
   onDecrement,
   onAddToCart,
+  addLabel,
   onClick,
   hideTag,
   nameClassName,
@@ -141,7 +145,7 @@ function CardBody({
             onDecrement={onDecrement}
             className="w-full"
           />
-          <AddToCartButtonS onClick={onAddToCart} className="w-full" />
+          <AddToCartButtonS onClick={onAddToCart} label={addLabel} className="w-full" />
         </div>
       )}
     </>
@@ -180,6 +184,7 @@ export function MenuCardM({
   onIncrement,
   onDecrement,
   onAddToCart,
+  addLabel,
   onClick,
   imageLoading,
   className = "",
@@ -218,7 +223,7 @@ export function MenuCardM({
             onIncrement={onIncrement}
             onDecrement={onDecrement}
           />
-          <AddToCartButtonS onClick={onAddToCart} className="flex-1 min-w-0" />
+          <AddToCartButtonS onClick={onAddToCart} label={addLabel} className="flex-1 min-w-0" />
         </div>
       )}
     </div>
