@@ -115,7 +115,7 @@ export default function TakeoutMenuPage() {
   return (
     <div className="mx-auto max-w-md min-h-screen bg-bg-primary flex flex-col gap-[var(--space-20)]">
       <div className="sticky top-0 z-30 flex flex-col">
-        <OrderHeader variant="close" />
+        <OrderHeader />
         {showMixBanner && (
           <div className="bg-accent-subtle border-b border-border-divider px-[var(--space-16)] py-[var(--space-8)]">
             <p className="type-jp-caption-bold text-accent-deep text-center">
