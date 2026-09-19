@@ -25,7 +25,7 @@ import ListSubHeading from "@/components/ui/ListSubHeading";
 import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
 import { useCartStore } from "@/lib/store";
 import { openItemDetail } from "@/lib/itemOverlay";
-import { listActionLabel, opensDetailFromList } from "@/lib/listAction";
+import { listActionLabel, listActionVariant, opensDetailFromList } from "@/lib/listAction";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
@@ -161,6 +161,7 @@ export default function CategoryListingPage() {
     onDecrement: () => bumpDraft(item.id, -1),
     onAddToCart: () => addToCart(item),
     addLabel: listActionLabel(categories, item),
+    addVariant: listActionVariant(categories, item),
     onClick: () => openItemDetail(item.id),
   });
 
@@ -175,6 +176,7 @@ export default function CategoryListingPage() {
             showThumb={showThumb}
             onAdd={() => addToCart(item)}
             addLabel={listActionLabel(categories, item)}
+            addVariant={listActionVariant(categories, item)}
             onIncrement={() => bumpDraft(item.id, 1)}
             onDecrement={() => bumpDraft(item.id, -1)}
             onClick={() => openItemDetail(item.id)}

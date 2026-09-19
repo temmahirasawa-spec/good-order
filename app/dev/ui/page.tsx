@@ -202,6 +202,7 @@ function MenuListRowDemo() {
         item={{ ...sampleDrink, name: "カフェラテ", description: "カフェ", price: 600 }}
         quantity={qty2}
         addLabel={OPEN_DETAIL_LABEL}
+        addVariant="line"
         onAdd={() => setQty2(1)}
         onIncrement={() => setQty2((q) => q + 1)}
         onDecrement={() => setQty2((q) => Math.max(0, q - 1))}

@@ -36,7 +36,9 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 
 - トップ・カテゴリー・テイクアウトの一覧で、**ドリンクのボタンを「カートに入れる」から「詳細を見る」に変更**（天真の決定）。
   HOT / ICED を選べないまま既定値で入ってしまうのを防ぐ。フードは今までどおりその場で入る
-- 判定は `lib/listAction.ts`（カテゴリーの区分が drink か）。カード・行に `addLabel` を足しただけで、ボタンの部品は共通のまま
+- 判定は `lib/listAction.ts`（カテゴリーの区分が drink か）。カード・行に `addLabel` / `addVariant` を足しただけで、ボタンの部品は共通のまま
+- 「詳細を見る」は**白地に緑の枠**（Figma の `Add to Cart Button S-Line` 1693:31062 を天真が用意。`AddToCartButtonS` の `variant="line"`）。
+  カートに入る主操作（塗り）と、選びに行く副操作（線）を見た目で分ける
 - 一覧の数量はシートに引き継ぐ。ステッパーはドリンクの行にも残してある
 - ⚠ テイクアウト専用の商品はカテゴリーが無いため、区分の判定が `item.category` へのフォールバックになる。
   テイクアウトのドリンクに HOT/ICED を付ける日は、ここが効くか確認が要る

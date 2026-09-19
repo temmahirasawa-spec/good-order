@@ -40,20 +40,33 @@ export function AddToCartButton({
  *  Quantity Stepper S（84）と8pxのgapで並べると 84+8+108=200 に収まる ── */
 export function AddToCartButtonS({
   label = "カートに入れる",
+  variant = "fill",
   onClick,
   className = "",
 }: {
   label?: string;
+  /** fill = 塗り（Figma: Add to Cart Button S）。line = 白地に枠（Figma: Add to Cart Button S-Line 1693:31062）。
+   *  ドリンクの「詳細を見る」は line。カートに入る主操作（塗り）と、選びに行く副操作（線）を見た目で分ける */
+  variant?: "fill" | "line";
   onClick: () => void;
   className?: string;
 }) {
+  const line = variant === "line";
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`btn-pill flex h-[32px] items-center justify-center rounded-full bg-accent-primary active:bg-accent-pressed px-[var(--space-12)] ${className}`}
+      className={`btn-pill flex h-[32px] items-center justify-center rounded-full px-[var(--space-12)] ${
+        line
+          ? "bg-surface-white border border-accent-primary"
+          : "bg-accent-primary active:bg-accent-pressed"
+      } ${className}`}
     >
-      <span className="type-jp-caption-bold text-accent-contrast whitespace-nowrap">
+      <span
+        className={`type-jp-caption-bold whitespace-nowrap ${
+          line ? "text-accent-primary" : "text-accent-contrast"
+        }`}
+      >
         {label}
       </span>
     </button>

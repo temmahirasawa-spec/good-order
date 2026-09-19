@@ -33,6 +33,8 @@ export interface MenuCardProps {
   onAddToCart: () => void;
   /** ボタンの文言。省略すると「カートに入れる」 */
   addLabel?: string;
+  /** ボタンの見た目。詳細を開く副操作は "line"（白地に枠） */
+  addVariant?: "fill" | "line";
   onClick?: () => void;
   /** 画像の読み込み方法。長いページで下部に並ぶカードは "lazy"（デフォルト）を推奨 */
   imageLoading?: "eager" | "lazy";
@@ -109,6 +111,7 @@ function CardBody({
   onDecrement,
   onAddToCart,
   addLabel,
+  addVariant,
   onClick,
   hideTag,
   nameClassName,
@@ -145,7 +148,7 @@ function CardBody({
             onDecrement={onDecrement}
             className="w-full"
           />
-          <AddToCartButtonS onClick={onAddToCart} label={addLabel} className="w-full" />
+          <AddToCartButtonS onClick={onAddToCart} label={addLabel} variant={addVariant} className="w-full" />
         </div>
       )}
     </>
@@ -185,6 +188,7 @@ export function MenuCardM({
   onDecrement,
   onAddToCart,
   addLabel,
+  addVariant,
   onClick,
   imageLoading,
   className = "",
@@ -223,7 +227,7 @@ export function MenuCardM({
             onIncrement={onIncrement}
             onDecrement={onDecrement}
           />
-          <AddToCartButtonS onClick={onAddToCart} label={addLabel} className="flex-1 min-w-0" />
+          <AddToCartButtonS onClick={onAddToCart} label={addLabel} variant={addVariant} className="flex-1 min-w-0" />
         </div>
       )}
     </div>

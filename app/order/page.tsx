@@ -36,7 +36,7 @@ import { useCartStore } from "@/lib/store";
 import { useMenuDataStore } from "@/lib/menuDataStore";
 import { defaultSelection, normalizeSelectMode } from "@/lib/menuOptions";
 import { openItemDetail } from "@/lib/itemOverlay";
-import { listActionLabel, opensDetailFromList } from "@/lib/listAction";
+import { listActionLabel, listActionVariant, opensDetailFromList } from "@/lib/listAction";
 import { useDraftQuantities } from "@/hooks/useDraftQuantities";
 import { applyTopLimit, hasImage } from "@/lib/orderHome";
 import { useOrderPageData, type CategorySection } from "@/hooks/useOrderPageData";
@@ -151,6 +151,7 @@ function OrderContent() {
     onDecrement: () => bumpDraft(item.id, -1),
     onAddToCart: () => addToCart(item),
     addLabel: listActionLabel(categories, item),
+    addVariant: listActionVariant(categories, item),
     onClick: () => openItemDetail(item.id),
   });
 
@@ -286,6 +287,7 @@ function OrderContent() {
                           showThumb={showThumb}
                           onAdd={() => addToCart(item)}
                           addLabel={listActionLabel(categories, item)}
+                          addVariant={listActionVariant(categories, item)}
                           onIncrement={() => bumpDraft(item.id, 1)}
                           onDecrement={() => bumpDraft(item.id, -1)}
                           onClick={() => openItemDetail(item.id)}
