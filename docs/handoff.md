@@ -32,6 +32,14 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 
 ## 直近までの進捗
 
+### 2026-09-19: カルーセルの進捗バーを廃止
+
+- トップの横スライドの下に出ていた灰色のバーを**廃止**（天真の指示）。「見切れ」でスライドできることは伝わるため
+- `MenuCarousel` / `MenuCarouselWide` / `MenuCarouselM` から進捗バーを外し、使われなくなった
+  `components/ui/CarouselProgress.tsx` と `hooks/useScrollProgress.ts` を削除
+- 経緯: Carousel Dots（Figma 594:7928）→ 2026-09-13 に進捗バーへ置き換え → 2026-09-19 に廃止
+- 自動で往復する `RecommendCarousel` はもともとバーを出していない。横スクロール自体は変えていない
+
 ### 2026-09-19: ヘッダーのロゴからトップへ戻れるように
 
 - `OrderHeader` のロゴを `/order`（トップ）へのリンクにした（天真の指示）。メニューページの「トップへ戻る」と同じ行き先
