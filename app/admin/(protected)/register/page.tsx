@@ -12,7 +12,16 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { businessDateToday } from "@/lib/dateFormat";
-import { updateOrderStatusIfUnchanged } from "@/lib/api";
+import {
+  STORE_ID,
+  addItemsFromRegister,
+  deleteOrderFromRegister,
+  deleteOrderItemFromRegister,
+  updateOrderStatusIfUnchanged,
+} from "@/lib/api";
+import { newOrderId } from "@/lib/orderId";
+import { useMenuDataStore } from "@/lib/menuDataStore";
+import { isSoldOutError, isUnavailableError } from "@/lib/soldOut";
 import { formatJstHm } from "@/lib/dateFormat";
 import { dineInTableKey } from "@/lib/kitchenGrouping";
 import { describeDbError } from "@/lib/dbError";
@@ -23,6 +32,9 @@ import TopBar from "@/components/admin/TopBar";
 import TableChip from "@/components/admin/register/TableChip";
 import BillCard from "@/components/admin/register/BillCard";
 import CheckoutConfirmAlert from "@/components/admin/register/CheckoutConfirmAlert";
+import BillEditor, { type BillEditorItem, type BillEditorOrder } from "@/components/admin/register/BillEditor";
+import AddItemPanel from "@/components/admin/register/AddItemPanel";
+import DangerConfirmAlert from "@/components/admin/register/DangerConfirmAlert";
 import { PICKUP_NO_LABEL, formatPickupNo, internalOrderRef } from "@/lib/pickupNo";
 
 type OrderStatus = "pending" | "preparing" | "served" | "picked_up" | "paid";
@@ -87,6 +99,24 @@ export default function RegisterPage() {
      「接続できていない」と出す。以前は取得に失敗しても古い一覧を出し続けるだけで、
      Wi-Fi 断・セッション切れに誰も気づけなかった（2026-09-16 の裏取り） */
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
+  /* ── 伝票の編集（2026-09-21、洋輔さん経由の店舗の要望）──
+     通常は見るだけ。「伝票を直す」を押している間だけ消す・足すができる。
+     会計の直前に触る画面なので、明示的に切り替えないと消せないようにしている */
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: "item"; orderId: string; item: BillEditorItem }
+    | { kind: "order"; order: BillEditorOrder }
+    | null
+  >(null);
+
+  /* 追加する商品を選ぶための一覧。お客様側と同じストアを使い回す（is_available=true だけ入る）。
+     Realtime は張らない（レジは3秒ごとに注文を取り直しており、これ以上購読を増やさない） */
+  const menuCategories = useMenuDataStore((s) => s.categories);
+  const menuItems      = useMenuDataStore((s) => s.menuItems);
+  const menuOptions    = useMenuDataStore((s) => s.menuOptions);
+  const fetchMenu      = useMenuDataStore((s) => s.fetchAll);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -260,6 +290,21 @@ export default function RegisterPage() {
       orderCount: targetOrders.length,
       checkInLabel: formatJstHm(earliestCreatedAt),
       orderRefs: targetOrders.map((o) => ({ id: o.id, updatedAt: o.updated_at })),
+      /* 追加は「同じ卓への新しい注文」なので、卓の情報を先頭の注文から引き継ぐ */
+      baseOrder: targetOrders[0],
+      /* 編集モードは伝票（注文1回ぶん）ごとに並べる。どの行がどの伝票かが見えないと危ない */
+      editorOrders: targetOrders.map<BillEditorOrder>((o) => ({
+        id: o.id,
+        pickupNo: o.pickup_no,
+        timeLabel: formatJstHm(o.created_at),
+        isTakeout: o.order_type === "takeout",
+        items: o.items.map<BillEditorItem>((it) => ({
+          id: it.id,
+          name: it.menu_item_name,
+          quantity: it.quantity,
+          unitPrice: it.unit_price,
+        })),
+      })),
       // 受渡番号（テーブル会計で複数注文がまとまっている場合は全件並べる）と
       // 内部照合用ID（注文IDの先頭6桁）。両者は別物として扱う
       pickupNos: targetOrders.map((o) => o.pickup_no),
@@ -283,6 +328,106 @@ export default function RegisterPage() {
       setSelected(null);
     }
   }, [tableBills, takeoutOrders, selected]);
+
+  /* 追加する商品の一覧は開いた時点で1回だけ取る（30秒 TTL のストア） */
+  useEffect(() => {
+    void fetchMenu();
+  }, [fetchMenu]);
+
+  /* 卓を選び直したら編集モードを抜ける。別の卓を編集中のまま消すのを防ぐ */
+  useEffect(() => {
+    setEditing(false);
+    setAddOpen(false);
+    setPendingDelete(null);
+  }, [selected]);
+
+  /* ── 伝票の編集 ──
+     どれも書いたあとに必ず取り直す。レジは3秒ごとに一覧を上書きするので、
+     画面だけ先に変えると次の取得で戻ってしまう（厨房のような保留の仕組みは持たせない） */
+  const afterWrite = async () => {
+    setBusy(false);
+    setPendingDelete(null);
+    await loadOrders();
+  };
+
+  const handleDeleteItem = async () => {
+    if (pendingDelete?.kind !== "item" || !selectedData) return;
+    const ref = selectedData.orderRefs.find((o) => o.id === pendingDelete.orderId);
+    if (!ref) return;
+    setBusy(true);
+    try {
+      const r = await deleteOrderItemFromRegister(pendingDelete.item.id, ref.updatedAt);
+      if (!r.ok) {
+        alert(
+          "削除できませんでした。\n別の端末で先に操作されたか、会計済みになった可能性があります。\n画面を最新にしました。"
+        );
+      }
+    } catch (err) {
+      alert("削除できませんでした。\n" + describeDbError(err));
+    } finally {
+      await afterWrite();
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (pendingDelete?.kind !== "order" || !selectedData) return;
+    const ref = selectedData.orderRefs.find((o) => o.id === pendingDelete.order.id);
+    if (!ref) return;
+    setBusy(true);
+    try {
+      const ok = await deleteOrderFromRegister(ref.id, ref.updatedAt);
+      if (!ok) {
+        alert(
+          "削除できませんでした。\n別の端末で先に操作されたか、会計済みになった可能性があります。\n画面を最新にしました。"
+        );
+      }
+    } catch (err) {
+      alert("削除できませんでした。\n" + describeDbError(err));
+    } finally {
+      await afterWrite();
+    }
+  };
+
+  const handleAddItem = async (args: {
+    item: { id: string; price: number };
+    quantity: number;
+    optionIds: string[];
+  }) => {
+    if (!selectedData) return;
+    const base = selectedData.baseOrder;
+    setBusy(true);
+    try {
+      await addItemsFromRegister({
+        orderId: newOrderId(),
+        storeId: STORE_ID,
+        tableNumber: base.table_number,
+        tableId: base.table_id,
+        tableLabel: base.table_label,
+        orderType: base.order_type,
+        items: [
+          {
+            menuItemId: args.item.id,
+            quantity: args.quantity,
+            // 商品そのものの価格。オプションの価格はサーバーが DB から引いて足す
+            unitPrice: args.item.price,
+            optionIds: args.optionIds,
+          },
+        ],
+      });
+      setAddOpen(false);
+    } catch (err) {
+      if (isSoldOutError(err)) {
+        alert("売り切れの商品は追加できません。");
+      } else if (isUnavailableError(err)) {
+        alert("この商品（またはオプション）は今のメニューにありません。追加できません。");
+      } else {
+        alert("追加できませんでした。\n" + describeDbError(err));
+      }
+    } finally {
+      setBusy(false);
+      await loadOrders();
+    }
+  };
 
   const handleCloseOut = async () => {
     if (!selectedData) return;
@@ -396,29 +541,63 @@ export default function RegisterPage() {
                   注文{selectedData.orderCount}回・入店 {selectedData.checkInLabel}
                 </p>
 
-                <BillCard
-                  items={selectedData.items.map((it) => ({
-                    id: it.id,
-                    name: it.menu_item_name,
-                    quantity: it.quantity,
-                    unitPrice: it.unit_price,
-                    isTakeout: it.is_takeout,
-                  }))}
-                  subtotal={selectedData.subtotal}
-                  discount={selectedData.discount}
-                  tax={selectedData.tax}
-                  taxIncluded={selectedData.taxIncluded}
-                  taxRate={selectedData.taxRate}
-                  total={selectedData.total}
-                />
+                {/* 編集中は伝票ごとの並びに切り替える。会計のボタンも出さない
+                    （直している途中に会計を押してしまわないように。2026-09-21） */}
+                {editing ? (
+                  <BillEditor
+                    orders={selectedData.editorOrders}
+                    busy={busy}
+                    onDeleteItem={(orderId, item) =>
+                      setPendingDelete({ kind: "item", orderId, item })
+                    }
+                    onDeleteOrder={(order) => setPendingDelete({ kind: "order", order })}
+                    onAdd={() => setAddOpen(true)}
+                  />
+                ) : (
+                  <BillCard
+                    items={selectedData.items.map((it) => ({
+                      id: it.id,
+                      name: it.menu_item_name,
+                      quantity: it.quantity,
+                      unitPrice: it.unit_price,
+                      isTakeout: it.is_takeout,
+                    }))}
+                    subtotal={selectedData.subtotal}
+                    discount={selectedData.discount}
+                    tax={selectedData.tax}
+                    taxIncluded={selectedData.taxIncluded}
+                    taxRate={selectedData.taxRate}
+                    total={selectedData.total}
+                  />
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => setConfirmOpen(true)}
-                  className="bg-accent-primary active:bg-accent-pressed py-[var(--space-16)] rounded-[var(--radius-full)] type-jp-heading-m text-accent-contrast w-full"
-                >
-                  会計済みにする
-                </button>
+                {editing ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(false)}
+                    disabled={busy}
+                    className="bg-surface-ink disabled:opacity-50 py-[var(--space-16)] rounded-[var(--radius-full)] type-jp-heading-m text-text-inverse w-full"
+                  >
+                    編集を終える
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-[var(--space-12)]">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmOpen(true)}
+                      className="bg-accent-primary active:bg-accent-pressed py-[var(--space-16)] rounded-[var(--radius-full)] type-jp-heading-m text-accent-contrast w-full"
+                    >
+                      会計済みにする
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(true)}
+                      className="bg-surface-white border border-border py-[var(--space-12)] rounded-[var(--radius-full)] type-jp-body-bold text-text-secondary w-full"
+                    >
+                      伝票を直す
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </main>
@@ -434,6 +613,49 @@ export default function RegisterPage() {
             confirming={closing}
             onCancel={() => setConfirmOpen(false)}
             onConfirm={handleCloseOut}
+          />
+
+          {/* ── 伝票を直す（明細を消す／伝票ごと消す／足す）── */}
+          <DangerConfirmAlert
+            open={pendingDelete?.kind === "item"}
+            title="この商品を消しますか？"
+            body="伝票からこの1行が消え、金額を計算し直します。"
+            detailLeft={pendingDelete?.kind === "item" ? pendingDelete.item.name : ""}
+            detailRight={pendingDelete?.kind === "item" ? `×${pendingDelete.item.quantity}` : ""}
+            confirmLabel="削除する"
+            busy={busy}
+            onCancel={() => setPendingDelete(null)}
+            onConfirm={handleDeleteItem}
+          />
+
+          <DangerConfirmAlert
+            open={pendingDelete?.kind === "order"}
+            title="この伝票を消しますか？"
+            body="この注文の明細がすべて消えます。厨房に出た紙の伝票は戻せません。"
+            detailLeft={
+              pendingDelete?.kind === "order"
+                ? `${PICKUP_NO_LABEL} ${formatPickupNo(pendingDelete.order.pickupNo)}`
+                : ""
+            }
+            detailRight={
+              pendingDelete?.kind === "order"
+                ? `${pendingDelete.order.items.reduce((n, it) => n + it.quantity, 0)}点`
+                : ""
+            }
+            confirmLabel="削除する"
+            busy={busy}
+            onCancel={() => setPendingDelete(null)}
+            onConfirm={handleDeleteOrder}
+          />
+
+          <AddItemPanel
+            open={addOpen}
+            categories={menuCategories}
+            items={menuItems}
+            optionsOf={(id) => menuOptions[id] ?? []}
+            busy={busy}
+            onCancel={() => setAddOpen(false)}
+            onAdd={handleAddItem}
           />
         </>
       )}

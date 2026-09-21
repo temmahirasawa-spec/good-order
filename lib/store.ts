@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { newOrderId } from "./orderId";
 import { persist } from "zustand/middleware";
 import * as Sentry from "@sentry/nextjs";
 import type { MenuItem } from "./menu";
@@ -14,17 +15,8 @@ import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "
 
 const STORE_ID = "10000000-0000-0000-0000-000000000001";
 
-function generateUuid(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  // フォールバック（古い環境用）
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+/* 採番は lib/orderId.ts にまとめた（レジからの追加でも同じものを使うため） */
+const generateUuid = newOrderId;
 
 /**
  * 注文を DB に保存する。

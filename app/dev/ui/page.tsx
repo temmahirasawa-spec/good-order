@@ -47,6 +47,9 @@ import { AddToCartButton, CartButton, BackButton, LinkButton } from "@/component
 import BottomViewCartBar from "@/components/ui/BottomViewCartBar";
 import { Video16x9, Video9x16 } from "@/components/ui/VideoBlock";
 import ModalCloseButton from "@/components/ui/ModalCloseButton";
+import BillEditor, { type BillEditorOrder } from "@/components/admin/register/BillEditor";
+import AddItemPanel from "@/components/admin/register/AddItemPanel";
+import DangerConfirmAlert from "@/components/admin/register/DangerConfirmAlert";
 import OptionCard from "@/components/ui/OptionCard";
 import InfoRow from "@/components/ui/InfoRow";
 import NavItem from "@/components/admin/nav/NavItem";
@@ -565,6 +568,89 @@ function ViewCartCountDemo() {
   );
 }
 
+/* ── レジの伝票編集（2026-09-21）。明細を消す／伝票ごと消す／足す ── */
+const registerEditOrders: BillEditorOrder[] = [
+  {
+    id: "o1",
+    pickupNo: 58,
+    timeLabel: "16:09",
+    isTakeout: false,
+    items: [
+      { id: "i1", name: "パンケーキ　チョコバナナクッキー", quantity: 1, unitPrice: 1870 },
+      { id: "i2", name: "ハーブチキンのシーザーサラダ", quantity: 1, unitPrice: 1320 },
+    ],
+  },
+  {
+    id: "o2",
+    pickupNo: 59,
+    timeLabel: "16:24",
+    isTakeout: false,
+    items: [
+      { id: "i3", name: "パンケーキ　チョコバナナクッキー", quantity: 1, unitPrice: 1870 },
+      { id: "i4", name: "カフェラテ", quantity: 2, unitPrice: 660 },
+    ],
+  },
+];
+
+function RegisterEditDemo() {
+  const [itemOpen, setItemOpen] = useState(false);
+  const [orderOpen, setOrderOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  return (
+    <div className="flex flex-col gap-[16px] max-w-[600px]">
+      <p className="type-jp-caption text-text-secondary">
+        レジ「伝票を直す」を押した状態。編集中は伝票（注文1回ぶん）ごとに並び、金額は出さない
+        （消したあとの金額はサーバーが計算し直すため）
+      </p>
+      <BillEditor
+        orders={registerEditOrders}
+        busy={false}
+        onDeleteItem={() => setItemOpen(true)}
+        onDeleteOrder={() => setOrderOpen(true)}
+        onAdd={() => setAddOpen(true)}
+      />
+      <DangerConfirmAlert
+        open={itemOpen}
+        title="この商品を消しますか？"
+        body="伝票からこの1行が消え、金額を計算し直します。"
+        detailLeft="カフェラテ"
+        detailRight="×2"
+        confirmLabel="削除する"
+        busy={false}
+        onCancel={() => setItemOpen(false)}
+        onConfirm={() => setItemOpen(false)}
+      />
+      <DangerConfirmAlert
+        open={orderOpen}
+        title="この伝票を消しますか？"
+        body="この注文の明細がすべて消えます。厨房に出た紙の伝票は戻せません。"
+        detailLeft="受渡番号 #59"
+        detailRight="3点"
+        confirmLabel="削除する"
+        busy={false}
+        onCancel={() => setOrderOpen(false)}
+        onConfirm={() => setOrderOpen(false)}
+      />
+      <AddItemPanel
+        open={addOpen}
+        categories={[sampleCat]}
+        items={[sampleItem, sampleDrink]}
+        optionsOf={(id) =>
+          id === sampleDrink.id
+            ? [
+                { id: "hot", name: "HOT", price: 0 },
+                { id: "iced", name: "ICED", price: 0 },
+              ]
+            : []
+        }
+        busy={false}
+        onCancel={() => setAddOpen(false)}
+        onAdd={() => setAddOpen(false)}
+      />
+    </div>
+  );
+}
+
 /* ── 1杯ごとの選択（lib/perCup.ts・案B）のデモ。数量4、3杯目だけ ICED・食後 ── */
 function PerCupDemo() {
   const options = [
@@ -990,6 +1076,9 @@ export default function UiGalleryPage() {
 
       <Section title="提供タイミング（ServingTimingCards / SegmentedControl / ServingTimingBadge）">
         <ServingTimingDemo />
+      </Section>
+      <Section title="レジの伝票編集（BillEditor / AddItemPanel / DangerConfirmAlert）">
+        <RegisterEditDemo />
       </Section>
       <Section title="ViewCartCountButton（下部バーの数字つき、components/ui/ViewCartCountButton.tsx）">
         <ViewCartCountDemo />
