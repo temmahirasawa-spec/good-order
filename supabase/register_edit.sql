@@ -266,6 +266,12 @@ $$;
 -- ────────────────────────────────────────────────────────────
 -- recalc_bill_totals は中から呼ぶだけなので anon/authenticated には開けない。
 REVOKE ALL ON FUNCTION public.recalc_bill_totals(uuid) FROM PUBLIC, anon, authenticated;
+
+-- ⚠ CREATE FUNCTION は既定で **PUBLIC に EXECUTE を与える**。
+-- 関数の中で役割を見ているので実害は無いが、ログインしていない相手が呼べる状態にはしない。
+-- REVOKE を先に書かないと anon に実行権が残る（2026-09-21、本番に流したあと気づいて締め直した）。
+REVOKE ALL ON FUNCTION public.register_delete_order_item(uuid, timestamptz) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.register_delete_order(uuid, timestamptz)      FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.register_delete_order_item(uuid, timestamptz) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.register_delete_order(uuid, timestamptz)      TO authenticated;
 
@@ -273,9 +279,12 @@ GRANT EXECUTE ON FUNCTION public.register_delete_order(uuid, timestamptz)      T
 -- ────────────────────────────────────────────────────────────
 -- 5. 実行後の確認
 -- ────────────────────────────────────────────────────────────
---   SELECT proname FROM pg_proc
---    WHERE proname IN ('recalc_bill_totals','register_delete_order_item','register_delete_order');
---   -- 3行返れば OK
+--   SELECT p.proname, array_to_string(p.proacl, ' | ') AS grants
+--     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--    WHERE n.nspname='public'
+--      AND p.proname IN ('recalc_bill_totals','register_delete_order_item','register_delete_order');
+--   -- 3行。register_* は authenticated だけ、recalc_bill_totals は誰にも付いていないこと
+--   -- （2026-09-21 に本番で確認済み）
 --
 --   -- 金額が合っているか（会計前の注文。小計 − 割引 と 合計 の関係を見る）
 --   SELECT o.id, o.total_amount, o.discount_amount, o.tax_amount,
