@@ -428,6 +428,86 @@ export async function markOrderPickedUp(
   return { ok: updatedAt !== undefined, conflict: updatedAt === undefined, updatedAt };
 }
 
+/* ── レジの伝票編集（supabase/register_edit.sql） ──
+ *
+ * 会計の画面で「明細を消す」「伝票ごと消す」。**会計前の注文だけ**が対象で、
+ * 会計済み（paid）は DB 側で弾く。売上（paid しか見ていない）は動かない。
+ * 役割の判定・金額の作り直しはすべて RPC の中（RLS では「レジは会計前を触れる」を表現できない）。
+ *
+ * 楽観ロックは注文の updated_at。**次の操作には戻ってきた updated_at を渡すこと。**
+ * 古い値のまま2回投げると必ず自分自身と競合する（markOrderPickedUp と同じ約束）。 */
+export interface RegisterEditResult {
+  ok: boolean;
+  /** 最後の1行を消したので、注文ごと消えた */
+  orderDeleted: boolean;
+  /** 更新後の updated_at。注文が残ったときだけ返る */
+  updatedAt?: string;
+}
+
+/** 明細を1行消す。最後の1行だった場合は注文ごと消える（明細0件の注文は厨房から消えないため） */
+export async function deleteOrderItemFromRegister(
+  itemId: string,
+  expectedOrderUpdatedAt: string
+): Promise<RegisterEditResult> {
+  const { data, error } = await supabase.rpc("register_delete_order_item", {
+    p_item_id: itemId,
+    p_expected_updated_at: expectedOrderUpdatedAt,
+  });
+  if (error) throw error;
+  const r = (data ?? {}) as { ok?: boolean; order_deleted?: boolean; updated_at?: string };
+  return {
+    ok: r.ok === true,
+    orderDeleted: r.order_deleted === true,
+    updatedAt: typeof r.updated_at === "string" ? r.updated_at : undefined,
+  };
+}
+
+/** 伝票（注文1回ぶん）ごと消す。false は競合・会計済み・見つからない */
+export async function deleteOrderFromRegister(
+  orderId: string,
+  expectedUpdatedAt: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("register_delete_order", {
+    p_order_id: orderId,
+    p_expected_updated_at: expectedUpdatedAt,
+  });
+  if (error) throw error;
+  return data === true;
+}
+
+/** レジから商品を足す。**新しい注文として place_order を呼ぶ**ので、
+ *  厨房伝票（追加(N)）・受渡番号・セットドリンク割引・消費税がそのまま効く。 */
+export async function addItemsFromRegister(args: {
+  orderId: string;
+  storeId: string;
+  tableNumber: number | null;
+  tableId: string | null;
+  tableLabel: string | null;
+  orderType: "dine_in" | "takeout";
+  items: { menuItemId: string; quantity: number; unitPrice: number; optionIds: string[] }[];
+}): Promise<void> {
+  const total = args.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const { error } = await supabase.rpc("place_order", {
+    p_order_id:     args.orderId,
+    p_store_id:     args.storeId,
+    p_table_number: args.tableNumber,
+    p_table_id:     args.tableId,
+    p_table_label:  args.tableLabel,
+    p_order_type:   args.orderType,
+    // 合計はサーバーが計算し直すので互換のために渡すだけ（set_drink_discount.sql）
+    p_total_amount: total,
+    p_items: args.items.map((i) => ({
+      menu_item_id:   i.menuItemId,
+      quantity:       i.quantity,
+      unit_price:     i.unitPrice,
+      // レジから足す分は提供タイミングを選ばない
+      serving_timing: null,
+      options:        i.optionIds.map((id) => ({ option_id: id })),
+    })),
+  }).abortSignal(AbortSignal.timeout(15_000));
+  if (error) throw error;
+}
+
 /* ── 2. スタッフ呼び出しの個別対応 ── */
 export type StaffCallStatus = "waiting" | "acknowledged" | "done";
 
