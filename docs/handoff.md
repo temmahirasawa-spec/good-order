@@ -57,6 +57,7 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
   - 正しい値段の注文をランダムに 320 件作り、直す前と後で保存結果が完全に一致することを確認（一回きり。リポジトリには入れていない）
   - テスト用の割引・税の関数は本番と同じ中身（コメントと空白を除いて照合）。PGlite は Postgres 18、本番は 17.6
   - lib/*.ts は Node の型ストリップ＋解決フック（`tests/support/ts-hooks.mjs`）で読む。Node 22（CI）と 25（手元）で確認
+  - **マージ後は、本体の作業ツリー（とワークツリー）で一度 `npm install`** が要る（devDependency が増えたため。無いと `npm test` が `@electric-sql/pglite` を見つけられずに落ちる）
 - 本番で読んで分かったこと: 注文 815 件のうち、端末の値段とメニューの値段が違った明細は 1 件だけ
   （9/16 12:31 のフレンチトースト プレーン。送られた 1,650 円・いまのメニューは 1,340 円）
 - `.eslintrc.json` に `"root": true`: ワークツリー（本体のフォルダの中にある）で `npm install` すると、本体側の
