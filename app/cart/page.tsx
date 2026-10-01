@@ -45,6 +45,7 @@ export default function CartPage() {
   const updateLineQuantity = useCartStore((s) => s.updateLineQuantity);
   const removeLine = useCartStore((s) => s.removeLine);
   const setServingTiming = useCartStore((s) => s.setServingTiming);
+  const syncPricesWithMenu = useCartStore((s) => s.syncPricesWithMenu);
   const orderType = useCartStore((s) => s.orderType);
   const tableId = useCartStore((s) => s.tableId);
   const tableLabel = useCartStore((s) => s.tableLabel);
@@ -80,6 +81,13 @@ export default function CartPage() {
     startRealtime();
     return () => stopRealtime();
   }, [startRealtime, stopRealtime]);
+
+  /* メニューを読んだら、カートの値段を最新に合わせる（lib/cartPricing.ts）。
+     会計はサーバーが DB の値段で計算する（supabase/order_server_pricing.sql）ので、
+     カートに入れたあとで値段が変わっても、画面に出す値段と会計の値段がずれないように */
+  useEffect(() => {
+    syncPricesWithMenu();
+  }, [menuItems, menuOptions, syncPricesWithMenu]);
 
   /* 売り切れの行（最新のメニューで判定）。1つでもあれば注文ボタンを止める */
   const soldOutIds = soldOutIdsIn(items, menuItems);

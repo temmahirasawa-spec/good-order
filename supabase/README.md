@@ -47,6 +47,8 @@ Supabase ダッシュボード → SQL Editor に1本ずつ貼って実行する
 | 28 | `menu_item_options.sql` | メニューのオプション（トッピング）。`place_order` / `claim_print_job` を差し替える。**27の後** |
 | 29 | `sold_out.sql` | 売り切れ（`menu_items.is_sold_out`）。`place_order` を差し替えて売り切れの商品を弾く。**28の後** |
 | 30 | `receipt_copies.sql` | 伝票の枚数（`stores.receipt_copies`: 1枚 / 毎回2枚 / 両方あるときだけ2枚）。`claim_print_job` を差し替える。**28の後** |
+| … | （2026-09-13 以降のファイルはこの表に未記載。`git log -- supabase/` の順に流す） | |
+| — | `order_server_pricing.sql` | 注文の値段をサーバーで決める（2026-10-01）。`place_order` を差し替え、お客様の端末が送った値段を使わず `menu_items.price` から計算する。**`set_drink_table_scope.sql` / `tax_mode.sql` / `register_edit.sql` の後** |
 
 ### 順番が特に効くところ
 

@@ -40,7 +40,8 @@
 - 3回直しても同じ箇所で落ちる場合だけ、**何を試して何が起きたか**を添えて相談する
 
 `npm run check` = `typecheck`（`tsc --noEmit`）→ `lint`（`next lint --max-warnings 0`）
-→ `design`（デザイントークンQA）→ `build`（`next build`）。1つでも落ちたらそこで止まる。
+→ `design`（デザイントークンQA）→ `test`（回帰テスト。`tests/`）→ `build`（`next build`）。
+1つでも落ちたらそこで止まる。
 
 UIを変更した場合は、`/dev/ui`（コンポーネントギャラリー）に該当コンポーネントの
 セクションを追加・更新すること。目視確認の導線を切らさないため。
@@ -131,6 +132,11 @@ Figma でデザイン作業を行う場合は、着手前に必ず `docs/specs/d
     列を足すだけ・関数を差し替えるだけの SQL は自分の判断で流してよい
   - 鍵（service role key 等）をリポジトリ・会話・スクリーンショットに置かない。**このリポジトリは public です**
 - **RLSを緩めない**。特に金額・会計に関わる権限（`paid`）は `register` / `manager` のみ
+- **注文の金額はサーバーが DB のメニューから決める。お客様の端末が送った値段を使わない**
+  （`supabase/order_server_pricing.sql`。2026-10-01 に 9/16 の点検 O3 を直した）。
+  金額に関わる SQL（`place_order`・セットドリンク割引・税）を足したら、
+  `tests/support/db.mjs` の `PRICING_SQL_FILES` の末尾に足して `npm test` を通す。
+  テストはリポジトリの SQL をそのまま手元の Postgres（PGlite）に流して確かめる
 - 既存のビジネスロジック・データフローは、指示されない限り**変更しない**。
   リデザイン作業では「見た目だけを差し替える」が原則
 
@@ -168,6 +174,7 @@ Figma でデザイン作業を行う場合は、着手前に必ず `docs/specs/d
 | `prompts/` | リデザイン作業の連番Stepプロンプト |
 | `.github/workflows/` | GitHub Actions。`check.yml` が PR と main で `npm run check` を回す |
 | `scripts/` | 検査スクリプト。`check-design-tokens.mjs` が生の色コードを検出する |
+| `tests/` | 回帰テスト（`npm test`。`npm run check` にも含む）。注文の値段・割引・税を PGlite で確かめる。本番にはつながない |
 | `PROMPT-TEMPLATE.md` | 作業を依頼するときのプロンプト雛形。完了条件の書き方 |
 | `docs/handoff.md` | 実装の経緯と判断の履歴。**セッション開始時に読む** |
 | `assets/` | 素材ストック。**Next.js の配信対象外**（`public/` と混同しない） |

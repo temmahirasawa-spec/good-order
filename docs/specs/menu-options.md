@@ -138,7 +138,7 @@
 | `menu_items.options_select_mode` | text、既定 'multiple'。CHECK: 'multiple'（チェック）/ 'single'（ラジオ） |
 | `menu_item_options`（新設） | id / menu_item_id / name / price（integer、既定 0 ＝無料）/ display_order / is_available / created_at。RLS は menu_items と同じ（読み取り全員、書き込み認証済み） |
 | `order_item_options`（新設） | id / order_item_id / option_id（消えても残るよう NULL 可）/ name / price（注文時点のスナップショット）。RLS は order_items と同じ |
-| `place_order()` | 明細の `options: [{option_id}]` を受け取り、**価格はサーバー側で DB から引き直して** `unit_price` に足す（お客様側の値を信用しない） |
+| `place_order()` | 明細の `options: [{option_id}]` を受け取り、**価格はサーバー側で DB から引き直して** `unit_price` に足す（お客様側の値を信用しない）。2026-10-01 から**商品そのものの価格も** `menu_items.price` から引く（`supabase/order_server_pricing.sql`） |
 | `claim_print_job()` | 明細に `options: [{name, price}]` を足す |
 | 初期データ | グリーンサラダボウル（`17bc4c4d-…`）に ON と12件。画像のとおり: アボカド120 / キャロットラペ100 / さつまいもコンポート100 / かぼちゃマッシュ100 / ブロッコリー100 / ハーブ蒸し鶏180 / 無添加ロースハム200 / スモークサーモン180 / 生ハム180 / ゆで卵100 / カッテージチーズ120 / グリークヨーグルト120 |
 

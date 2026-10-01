@@ -37,7 +37,7 @@ jobs:
       - name: 依存をインストール
         run: npm ci
 
-      - name: typecheck → lint → build
+      - name: typecheck → lint → design → test → build
         run: npm run check
         env:
           # lib/supabase.ts がモジュール先頭で createClient() を呼ぶため、

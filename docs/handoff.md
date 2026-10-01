@@ -32,6 +32,43 @@ Next.js 14 (App Router) + TypeScript + Tailwind + Supabase（Postgres/Auth/Stora
 
 ## 直近までの進捗
 
+### 2026-10-01: 注文の値段をサーバーで決める（9/16 の点検 O3）
+
+- 依頼（天真）: お客様のスマホが送った値段をそのまま使っている問題（1円に書き換えても通る）を直す。
+  YORKYS は 10/5 前後に事業停止の見込みで、夙川店が続くかは「まだ分からない」。
+  **「他の店に売る前の必須の修正」として進める**（天真の回答）。いまの本番を止めない入れ方にした
+- `supabase/order_server_pricing.sql`: `place_order` を差し替え。商品の値段は `menu_items.price`。
+  `p_items` の `unit_price` は**値段に使わない**（古い画面との互換のため受け取り、0以上の検証も残す）。
+  セットドリンク割引にも DB の値段に置き換えた明細を渡す。税・オプション・提供タイミング・売り切れ・消えた卓の救済・再送は同じ
+  - その店のメニューに無い商品は `23503` ＋文面に `menu_item_id` で弾く（画面の `isUnavailableError` に乗り、
+    今までの外部キー違反と同じ「お取り扱いが終わった商品」の案内になる）
+  - 端末の値段と食い違ったら `RAISE WARNING 'place_order price_mismatch: …'`（本番は log_min_messages = warning なので
+    Supabase の Logs に残る）。改ざんや古いカートに後から気づくため
+- **⚠ SQL はまだ本番に流していない。** 流すのは天真（今回の依頼の指示）。順番は SQL → マージ（どちらが先でも壊れない作り）。
+  戻し方は `set_drink_table_scope.sql` の section 3 をもう一度流す
+- 画面: `lib/cartPricing.ts` の `withCurrentPrices`。カートを開いたとき・送る直前に、カートの値段を最新のメニューに合わせる
+  （会計はサーバーが DB の値段で決めるので、画面だけ古い値段にならないように）。値段が同じなら何も起きない＝**見た目の変更なし**
+- 決めたこと: **食い違っても注文は止めない**（DB の値段で通す）。止めると、古い画面を開いたままのお客様が
+  「通信エラー」で詰む（9/15 の障害と同じ壊れ方）。お客様に見える新しい文言も要らない
+- テスト: `tests/`（`npm test`。**`npm run check` に入れた**）。PGlite（`@electric-sql/pglite`、devDependency）に
+  `tests/fixtures/schema.sql`（本番の列を写した表）とリポジトリの `supabase/*.sql` をそのまま流して `place_order` を動かす。
+  38件（値段・オプション・割引・卓単位の割引・1杯ごと・テイクアウト・外税・弾き方・再送・レジの作り直し・画面の計算との一致）
+  - 直す前の関数で流すと 20 件が落ちることを確認（テストが穴を見つけられる）
+  - 正しい値段の注文をランダムに 320 件作り、直す前と後で保存結果が完全に一致することを確認（一回きり。リポジトリには入れていない）
+  - テスト用の割引・税の関数は本番と同じ中身（コメントと空白を除いて照合）。PGlite は Postgres 18、本番は 17.6
+  - lib/*.ts は Node の型ストリップ＋解決フック（`tests/support/ts-hooks.mjs`）で読む。Node 22（CI）と 25（手元）で確認
+- 本番で読んで分かったこと: 注文 815 件のうち、端末の値段とメニューの値段が違った明細は 1 件だけ
+  （9/16 12:31 のフレンチトースト プレーン。送られた 1,650 円・いまのメニューは 1,340 円）
+- `.eslintrc.json` に `"root": true`: ワークツリー（本体のフォルダの中にある）で `npm install` すると、本体側の
+  `.eslintrc.json` まで読んで `@next/next` プラグインが二重になり lint が落ちたため。普通の取り出し方では何も変わらない
+- Vercel の確認（依頼 4）: `SUPABASE_SERVICE_ROLE_KEY` は **2026-10-01 時点でも encrypted（＝Non-sensitive）**。`CRON_SECRET` も同じ。
+  Sensitive への付け替えは天真の作業（鍵の値を扱うため AI はやらない。9/15 の節を参照）。
+  確認のしかた: `vercel env ls --json --project yorkys-orderly --scope temmahirasawa-1946s-projects` を、node で key と type だけに絞って表示
+  （値は出さない）。**Vercel の MCP コネクタからは yorkys-orderly が見えない**（404。見えるのは good-order-lp など3つだけ）
+- 残り（未対応）:
+  - 非表示（`is_available = false`）の商品は今もサーバーが通す（画面側は赤くして止めている）。値段は DB の値段になる
+  - 店が値段を変えた瞬間に注文が重なると（数秒の競合）、画面とレジで値段が違いうる。正はレジ（DB）
+
 ### 2026-09-21: レジで伝票を直せるようにした（明細を消す／伝票ごと消す／足す）
 
 - 洋輔さん経由の店舗の要望。仕様は `docs/specs/register-edit.md`
