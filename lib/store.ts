@@ -9,6 +9,7 @@ import { isAcceptingOrders } from "./api";
 import { useMenuDataStore } from "./menuDataStore";
 import { cartLineKey, defaultServingTimingFor, type ServingTiming } from "./servingTiming";
 import { optionsKey, optionsTotal, type SelectedOption } from "./menuOptions";
+import { withCurrentPrices } from "./cartPricing";
 import { isSoldOut, isSoldOutError, isUnavailableError, soldOutIdsIn } from "./soldOut";
 import { calcSetDrinkDiscount, fetchSetDrinkSetting, fetchSetDrinkTableContext, SET_DRINK_DEFAULT, type SetDrinkSetting, type SetDrinkTableContext } from "./setDrink";
 import { calcOrderTotals, fetchTaxSetting, TAX_DEFAULT, type TaxSetting } from "./tax";
@@ -68,7 +69,8 @@ async function saveOrderToDb(
       p_items: items.map((ci) => ({
         menu_item_id:   ci.item.id,
         quantity:       ci.quantity,
-        // 商品そのものの価格。オプションの価格はサーバー側（place_order）が DB から引いて足す
+        // 商品そのものの価格。**サーバーは値段に使わない**（DB の menu_items.price で計算し直す。
+        // supabase/order_server_pricing.sql）。食い違いをログに残すためと、古い SQL との互換のために送る
         unit_price:     ci.item.price,
         // 提供タイミング（supabase/serving_timing.sql）。選べない商品は null
         serving_timing: ci.servingTiming ?? null,
@@ -216,6 +218,11 @@ interface CartStore {
   updateLineQuantity: (line: CartItem, quantity: number) => void;
   /** カート行の提供タイミングを変える。移動先に同じ行があれば数量を合流させる */
   setServingTiming: (line: CartItem, to: ServingTiming) => void;
+  /**
+   * カートの値段（商品・オプション）を最新のメニュー（menuDataStore）に合わせる。
+   * 会計はサーバーが DB の値段で計算するので、画面だけ古い値段にならないように（lib/cartPricing.ts）
+   */
+  syncPricesWithMenu: () => void;
   clearCart: () => void;
   placeOrder: () => Promise<PlaceOrderResult>;
 
@@ -325,9 +332,20 @@ export const useCartStore = create<CartStore>()(
         set({ items: items.map((i) => (i === source ? { ...i, servingTiming: to } : i)) });
       },
 
+      syncPricesWithMenu: () => {
+        const { menuItems, menuOptions } = useMenuDataStore.getState();
+        const items = get().items;
+        const next = withCurrentPrices(items, menuItems, menuOptions);
+        // 変わった行が無ければ同じ配列が返る。そのときはストアを書き換えない
+        if (next !== items) set({ items: next });
+      },
+
       clearCart: () => set({ items: [] }),
 
       placeOrder: async () => {
+        /* 送る前に値段を最新のメニューに合わせる。会計はサーバーが DB の値段で計算するので、
+           履歴（完了画面）に残す金額をそれと揃えるため（supabase/order_server_pricing.sql） */
+        get().syncPricesWithMenu();
         const current = get().items;
         if (current.length === 0) return { ok: false, reason: "empty" };
 
